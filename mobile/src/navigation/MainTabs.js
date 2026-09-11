@@ -1,39 +1,57 @@
-import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import React from "react";
+import { StyleSheet } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
-import HomeScreen from '../screens/HomeScreen';
-import PlaceholderScreen from '../screens/PlaceholderScreen';
-import { COLORS } from '../theme/colors';
+import HomeScreen from "../screens/HomeScreen";
+import PlaceholderScreen from "../screens/PlaceholderScreen";
+import { COLORS } from "../theme/colors";
+import { useTheme } from "../theme/theme";
+import HomeIcon from "../icons/HomeIcon";
+import WorkoutIcon from "../icons/WorkOutIcon";
+import MealsIcon from "../icons/MealsIcon";
+import ProgressIcon from "../icons/ProgressIcon";
+import ProfileIcon from "../icons/ProfileIcon";
 
 const Tab = createBottomTabNavigator();
 
-const WorkoutsScreen = () => <PlaceholderScreen title="Workouts" emoji="🏋️" />;
-const MealsScreen = () => <PlaceholderScreen title="Meals" emoji="🍽️" />;
-const ProgressScreen = () => <PlaceholderScreen title="Progress" emoji="📈" />;
-const ProfileScreen = () => <PlaceholderScreen title="Profile" emoji="👤" />;
+const WorkoutsScreen = () => (
+  <PlaceholderScreen title="Workouts" Icon={WorkoutIcon} />
+);
+const MealsScreen = () => <PlaceholderScreen title="Meals" Icon={MealsIcon} />;
+const ProgressScreen = () => (
+  <PlaceholderScreen title="Progress" Icon={ProgressIcon} />
+);
+const ProfileScreen = () => (
+  <PlaceholderScreen title="Profile" Icon={ProfileIcon} />
+);
 
-const iconFor = (name, focused) => {
+const iconFor = (name, focused, color) => {
   const icons = {
-    Home: '🏠',
-    Workouts: '🏋️',
-    Meals: '🍽️',
-    Progress: '📈',
-    Profile: '👤',
+    Home: HomeIcon,
+    Workouts: WorkoutIcon,
+    Meals: MealsIcon,
+    Progress: ProgressIcon,
+    Profile: ProfileIcon,
   };
-  return <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>{icons[name]}</Text>;
+  const Icon = icons[name];
+  return <Icon color={color} size={22} />;
 };
 
 export default function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarStyle: [
+          styles.tabBar,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ],
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused }) => iconFor(route.name, focused),
+        tabBarIcon: ({ focused, color }) => iconFor(route.name, focused, color),
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -54,7 +72,5 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 10,
   },
-  tabIcon: { fontSize: 20, opacity: 0.6 },
-  tabIconFocused: { opacity: 1 },
-  tabLabel: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+  tabLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
 });

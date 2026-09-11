@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../theme/colors';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useTheme } from "../theme/theme";
 
 export default function ProgressBar({ step, totalSteps }) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.barContainer}>
@@ -11,12 +13,14 @@ export default function ProgressBar({ step, totalSteps }) {
             key={index}
             style={[
               styles.segment,
-              index < step ? styles.segmentActive : styles.segmentInactive,
+              {
+                backgroundColor: index < step ? colors.primary : colors.border,
+              },
             ]}
           />
         ))}
       </View>
-      <Text style={styles.text}>
+      <Text style={[styles.text, { color: colors.textSecondary }]}>
         {step} of {totalSteps}
       </Text>
     </View>
@@ -24,10 +28,8 @@ export default function ProgressBar({ step, totalSteps }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', marginBottom: 30 },
-  barContainer: { flex: 1, flexDirection: 'row', gap: 6 },
+  container: { flexDirection: "row", alignItems: "center", marginBottom: 30 },
+  barContainer: { flex: 1, flexDirection: "row", gap: 6 },
   segment: { flex: 1, height: 4, borderRadius: 2 },
-  segmentActive: { backgroundColor: COLORS.primary },
-  segmentInactive: { backgroundColor: COLORS.border },
-  text: { color: COLORS.textSecondary, fontSize: 13, marginLeft: 12 },
+  text: { fontSize: 13, marginLeft: 12 },
 });

@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "gymini",
+    "slug": "gymini",
     "version": "1.0.0",
     "orientation": "portrait",
+    "backgroundColor": "#0D0D0D",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
