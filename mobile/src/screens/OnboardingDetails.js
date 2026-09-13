@@ -26,7 +26,7 @@ export default function OnboardingDetails({ navigation, route }) {
   const [days, setDays] = useState(null);
 
   const handleContinue = () => {
-    if (!sex || !age || !height || !weight || !days) {
+    if (!sex || !age || !height || !weight || days === null) {
       return Alert.alert("Missing info", "Please fill all fields to continue.");
     }
     navigation.navigate("OnboardingActivity", {
@@ -120,7 +120,7 @@ export default function OnboardingDetails({ navigation, route }) {
 
           <Text style={styles.fieldLabel}>WORKOUT DAYS PER WEEK</Text>
           <View style={styles.daysRow}>
-            {[1, 2, 3, 4, 5, 6].map((num) => (
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((num) => (
               <TouchableOpacity
                 key={num}
                 style={[styles.dayBtn, days === num && styles.dayBtnActive]}

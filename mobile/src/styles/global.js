@@ -11,7 +11,7 @@ export const lightColors = {
   accent: "#6B45D3",
   primary: "#6B45D3",
   accentMuted: "rgba(107, 69, 211, 0.15)",
-  border: "#8877b9",
+  border: "#a29cb5",
   warning: "#ff5c4d",
   success: "#d9ff4d",
 };

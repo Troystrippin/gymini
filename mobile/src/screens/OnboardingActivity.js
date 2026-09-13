@@ -60,12 +60,14 @@ export default function OnboardingActivity({ navigation, route }) {
     try {
       await completeOnboarding({
         goal,
-        biologicalSex,
-        age,
-        height,
-        weight,
-        workoutDaysPerWeek,
-        activityLevel: selected,
+        details: {
+          biologicalSex,
+          age,
+          heightCm: height,
+          weightKg: weight,
+          workoutDaysPerWeek,
+          activityLevel: selected,
+        },
       });
     } catch (err) {
       Alert.alert(

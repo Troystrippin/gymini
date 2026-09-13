@@ -1,17 +1,17 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import WorkoutCard from "../components/WorkoutCard";
 
 // ---- Sample workout data (we'll replace with real data later) ----
 const WORKOUT = {
@@ -41,14 +41,25 @@ const WORKOUT = {
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { toggleTheme, mode, colors } = useTheme();
+  const [exercises, setExercises] = useState(WORKOUT.exercises);
   const firstName = user?.fullName?.split(" ")[0] || "Pare";
 
-  const completedCount = WORKOUT.exercises.filter((e) => e.done).length;
-  const totalCount = WORKOUT.exercises.length;
+  const completedCount = exercises.filter((exercise) => exercise.done).length;
+  const totalCount = exercises.length;
   const progress = completedCount / totalCount;
 
+  const toggleExercise = (exerciseId) => {
+    setExercises((currentExercises) =>
+      currentExercises.map((exercise) =>
+        exercise.id === exerciseId
+          ? { ...exercise, done: !exercise.done }
+          : exercise,
+      ),
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <StatusBar
         barStyle={mode === "dark" ? "light-content" : "dark-content"}
         backgroundColor={colors.background}
@@ -62,9 +73,12 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.date}>{getTodayString()}</Text>
-            <Text style={styles.greeting}>
+            <Text style={[styles.greeting, { color: colors.text }]}>
               Good Morning,{"\n"}
-              <Text style={styles.greetingName}>{firstName}</Text> 👋
+              <Text style={[styles.greetingName, { color: colors.primary }]}>
+                {firstName}
+              </Text>{" "}
+              👋
             </Text>
           </View>
           <TouchableOpacity
@@ -80,30 +94,29 @@ export default function HomeScreen() {
 
         {/* ---- STATS ROW ---- */}
         <View style={styles.statsRow}>
-          <StatCard label="CALORIES" value="1,000" emoji="🔥" progress={0.5} />
-          <StatCard label="STREAK" value="4 days" emoji="⚡" progress={0.7} />
+          <StatCard
+            label="CALORIES"
+            value="1,000"
+            emoji="🔥"
+            progress={0.5}
+            colors={colors}
+          />
+          <StatCard
+            label="STREAK"
+            value="4 days"
+            emoji="⚡"
+            progress={0.7}
+            colors={colors}
+          />
         </View>
 
-        {/* ---- TODAY'S WORKOUT CARD ---- */}
-        <View style={styles.workoutCard}>
-          <View style={styles.workoutHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.workoutLabel}>TODAY'S WORKOUT</Text>
-              <Text style={styles.workoutTitle}>
-                {WORKOUT.title}{" "}
-                <Text style={styles.workoutEmoji}>{WORKOUT.emoji}</Text>
-              </Text>
-            </View>
-            <ProgressRing progress={progress} />
-          </View>
-
-          {/* Exercise list */}
-          <View style={styles.exerciseList}>
-            {WORKOUT.exercises.map((ex) => (
-              <ExerciseRow key={ex.id} exercise={ex} />
-            ))}
-          </View>
-        </View>
+        <WorkoutCard
+          workout={WORKOUT}
+          exercises={exercises}
+          progress={progress}
+          onToggle={toggleExercise}
+          colors={colors}
+        />
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -141,84 +154,24 @@ function getTodayString() {
   return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-function StatCard({ label, value, emoji, progress }) {
+function StatCard({ label, value, emoji, progress, colors }) {
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
       <View style={styles.statHeader}>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+          {label}
+        </Text>
         <Text style={styles.statEmoji}>{emoji}</Text>
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <View style={styles.statBarBg}>
-        <View style={[styles.statBarFill, { width: `${progress * 100}%` }]} />
-      </View>
-    </View>
-  );
-}
-
-function ProgressRing({ progress }) {
-  const size = 76;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle
-          stroke={COLORS.border}
-          fill="none"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-        />
-        <Circle
-          stroke={COLORS.primary}
-          fill="none"
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
-    </View>
-  );
-}
-
-function ExerciseRow({ exercise }) {
-  return (
-    <View style={[styles.exerciseRow, exercise.done && styles.exerciseRowDone]}>
-      <View
-        style={[styles.checkCircle, exercise.done && styles.checkCircleDone]}
-      >
-        {exercise.done && <Text style={styles.checkMark}>✓</Text>}
-      </View>
-      <View style={{ flex: 1, marginLeft: 14 }}>
-        <Text
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <View style={[styles.statBarBg, { backgroundColor: colors.border }]}>
+        <View
           style={[
-            styles.exerciseName,
-            exercise.done && styles.exerciseNameDone,
+            styles.statBarFill,
+            { width: `${progress * 100}%`, backgroundColor: colors.primary },
           ]}
-        >
-          {exercise.name}
-        </Text>
-        <Text style={styles.exerciseMuscle}>{exercise.muscle}</Text>
+        />
       </View>
-      <Text style={styles.exerciseSets}>{exercise.sets}</Text>
     </View>
   );
 }
@@ -242,7 +195,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: COLORS.text,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -257,6 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBackground,
     borderRadius: 18,
     padding: 16,
+    elevation: 4,
   },
   statHeader: {
     flexDirection: "row",
@@ -287,69 +241,5 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: COLORS.primary,
     borderRadius: 3,
-  },
-
-  // Workout card
-  workoutCard: {
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 20,
-    padding: 18,
-  },
-  workoutHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  workoutLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  workoutTitle: { color: COLORS.text, fontSize: 22, fontWeight: "800" },
-  workoutEmoji: { fontSize: 22 },
-  progressText: { color: COLORS.text, fontSize: 14, fontWeight: "800" },
-
-  // Exercises
-  exerciseList: { gap: 10 },
-  exerciseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1E1E36",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  exerciseRowDone: {
-    backgroundColor: "#2A2550",
-    borderColor: COLORS.primary,
-  },
-  checkCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: COLORS.textSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkCircleDone: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  checkMark: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  exerciseName: { color: COLORS.text, fontSize: 15, fontWeight: "700" },
-  exerciseNameDone: {
-    color: COLORS.textSecondary,
-    textDecorationLine: "line-through",
-  },
-  exerciseMuscle: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
-  exerciseSets: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    fontWeight: "700",
   },
 });

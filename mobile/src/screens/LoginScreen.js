@@ -21,6 +21,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useContext(AuthContext);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password)
@@ -95,7 +96,15 @@ export default function LoginScreen({ navigation }) {
         />
 
         <View style={styles.row}>
-          <Text style={styles.remember}>☐ Remember me</Text>
+          <TouchableOpacity
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(!rememberMe)}
+          >
+            <View
+              style={[styles.checkbox, rememberMe && styles.checkboxChecked]}
+            />
+            <Text style={styles.remember}>Remember me</Text>
+          </TouchableOpacity>
           <TouchableOpacity>
             <Text style={styles.forgot}>Forgot Password?</Text>
           </TouchableOpacity>
@@ -172,6 +181,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   remember: { color: COLORS.textSecondary, fontSize: 13 },
+  rememberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
   forgot: { color: COLORS.primary, fontSize: 13, fontWeight: "600" },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 24 },
   line: { flex: 1, height: 1, backgroundColor: COLORS.border },
