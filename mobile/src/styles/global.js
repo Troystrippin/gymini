@@ -14,6 +14,7 @@ export const lightColors = {
   border: "#a29cb5",
   warning: "#ff5c4d",
   success: "#d9ff4d",
+  selectedcard: "#c3bade",
 };
 
 export const darkColors = {
@@ -30,6 +31,7 @@ export const darkColors = {
   border: "#434242",
   warning: "#ff5c4d",
   success: "#d9ff4d",
+  selectedcard: "rgba(107, 69, 211, 0.15)",
 };
 
 export function getGlobalStyles(colors) {

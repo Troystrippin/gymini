@@ -2,6 +2,7 @@ import React from "react";
 import { StatusBar, View } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { AuthProvider } from "./src/context/AuthContext";
+import { PlanDraftProvider } from "./src/context/PlanDraftContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider, useTheme } from "./src/theme/theme";
 
@@ -38,7 +39,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <PlanDraftProvider>
+          <AppContent />
+        </PlanDraftProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -13,7 +13,15 @@ export const AuthProvider = ({ children }) => {
       const token = await AsyncStorage.getItem('token');
       const storedUser = await AsyncStorage.getItem('user');
       if (token && storedUser) {
-        setUser(JSON.parse(storedUser));
+        const cachedUser = JSON.parse(storedUser);
+        setUser(cachedUser);
+
+        try {
+          const response = await api.get('/auth/me');
+          await AsyncStorage.setItem('user', JSON.stringify(response.data));
+          setUser(response.data);
+        } catch (error) {
+        }
       }
       setIsLoading(false);
     };

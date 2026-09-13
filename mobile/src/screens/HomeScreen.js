@@ -12,6 +12,7 @@ import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
 import WorkoutCard from "../components/WorkoutCard";
+import StatCard from "../components/StatCard";
 
 // ---- Sample workout data (we'll replace with real data later) ----
 const WORKOUT = {
@@ -154,28 +155,6 @@ function getTodayString() {
   return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-function StatCard({ label, value, emoji, progress, colors }) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
-      <View style={styles.statHeader}>
-        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-          {label}
-        </Text>
-        <Text style={styles.statEmoji}>{emoji}</Text>
-      </View>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <View style={[styles.statBarBg, { backgroundColor: colors.border }]}>
-        <View
-          style={[
-            styles.statBarFill,
-            { width: `${progress * 100}%`, backgroundColor: colors.primary },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1, backgroundColor: COLORS.background },
@@ -205,41 +184,4 @@ const styles = StyleSheet.create({
 
   // Stats
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.cardBackground,
-    borderRadius: 18,
-    padding: 16,
-    elevation: 4,
-  },
-  statHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  statEmoji: { fontSize: 18 },
-  statValue: {
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: "800",
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  statBarBg: {
-    height: 6,
-    backgroundColor: COLORS.border,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  statBarFill: {
-    height: "100%",
-    backgroundColor: COLORS.primary,
-    borderRadius: 3,
-  },
 });

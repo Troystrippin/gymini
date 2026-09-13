@@ -11,20 +11,15 @@ import WorkoutIcon from "../icons/WorkOutIcon";
 import MealsIcon from "../icons/MealsIcon";
 import ProgressIcon from "../icons/ProgressIcon";
 import ProfileIcon from "../icons/ProfileIcon";
+import ProfileScreen from "../screens/ProfileScreen";
+import PlanScreen from "../screens/PlanScreen";
 
 const Tab = createBottomTabNavigator();
 
-const WorkoutsScreen = () => (
-  <PlaceholderScreen title="Workouts" Icon={WorkoutIcon} />
-);
 const MealsScreen = () => <PlaceholderScreen title="Meals" Icon={MealsIcon} />;
 const ProgressScreen = () => (
   <PlaceholderScreen title="Progress" Icon={ProgressIcon} />
 );
-const ProfileScreen = () => (
-  <PlaceholderScreen title="Profile" Icon={ProfileIcon} />
-);
-
 const iconFor = (name, focused, color) => {
   const icons = {
     Home: HomeIcon,
@@ -55,7 +50,7 @@ export default function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Workouts" component={WorkoutsScreen} />
+      <Tab.Screen name="Workouts" component={PlanScreen} />
       <Tab.Screen name="Meals" component={MealsScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />

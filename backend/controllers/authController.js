@@ -39,6 +39,7 @@ const registerUser = async (req, res) => {
         _id: user.id,
         fullName: user.fullName,
         email: user.email,
+        createdAt: user.createdAt,
         token: generateToken(user._id),
         onboardingCompleted: user.onboardingCompleted,
       });
@@ -64,6 +65,7 @@ const loginUser = async (req, res) => {
         _id: user.id,
         fullName: user.fullName,
         email: user.email,
+        createdAt: user.createdAt,
         token: generateToken(user._id),
         onboardingCompleted: user.onboardingCompleted,
         profile: {
