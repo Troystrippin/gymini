@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,58 +6,86 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
 import WorkoutCard from "../components/WorkoutCard";
 import StatCard from "../components/StatCard";
-
-// ---- Sample workout data (we'll replace with real data later) ----
-const WORKOUT = {
-  title: "Leg Day",
-  emoji: "🦵",
-  exercises: [
-    { id: 1, name: "Barbell Squat", muscle: "Quads", sets: "4×8", done: true },
-    {
-      id: 2,
-      name: "Romanian Deadlift",
-      muscle: "Hamstrings",
-      sets: "3×10",
-      done: true,
-    },
-    { id: 3, name: "Leg Press", muscle: "Quads", sets: "3×12", done: false },
-    {
-      id: 4,
-      name: "Walking Lunge",
-      muscle: "Glutes",
-      sets: "3×20",
-      done: false,
-    },
-    { id: 5, name: "Calf Raise", muscle: "Calves", sets: "4×15", done: false },
-  ],
-};
+import api from "../api/api";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { toggleTheme, mode, colors } = useTheme();
-  const [exercises, setExercises] = useState(WORKOUT.exercises);
+  const [workout, setWorkout] = useState(null);
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const firstName = user?.fullName?.split(" ")[0] || "Pare";
 
-  const completedCount = exercises.filter((exercise) => exercise.done).length;
+  const completedCount = exercises.filter((e) => e.done).length;
   const totalCount = exercises.length;
-  const progress = completedCount / totalCount;
+  const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
-  const toggleExercise = (exerciseId) => {
-    setExercises((currentExercises) =>
-      currentExercises.map((exercise) =>
-        exercise.id === exerciseId
-          ? { ...exercise, done: !exercise.done }
-          : exercise,
-      ),
-    );
+  // Refetch every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchTodayWorkout();
+    }, [])
+  );
+
+  const fetchTodayWorkout = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/workouts/today");
+      setWorkout(res.data);
+      setExercises(res.data.exercises || []);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setWorkout(null);
+        setExercises([]);
+      } else {
+        Alert.alert("Error", err.response?.data?.message || err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const toggleExercise = async (exerciseId) => {
+    // Optimistic UI update
+    setExercises((prev) =>
+      prev.map((e) => (e._id === exerciseId ? { ...e, done: !e.done } : e))
+    );
+
+    try {
+      await api.patch(`/workouts/${workout._id}/exercises/${exerciseId}`);
+    } catch (err) {
+      // Revert on failure
+      setExercises((prev) =>
+        prev.map((e) => (e._id === exerciseId ? { ...e, done: !e.done } : e))
+      );
+      Alert.alert("Error", "Could not update exercise");
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: colors.background }]}
+      >
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={{ flex: 1 }}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -70,7 +98,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* ---- HEADER ---- */}
+        {/* HEADER */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.date}>{getTodayString()}</Text>
@@ -82,18 +110,14 @@ export default function HomeScreen() {
               👋
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.settingsBtn}
-            onPress={toggleTheme}
-            accessibilityRole="button"
-          >
+          <TouchableOpacity style={styles.settingsBtn} onPress={toggleTheme}>
             <Text style={styles.settingsIcon}>
               {mode === "dark" ? "☀️" : "🌙"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* ---- STATS ROW ---- */}
+        {/* STATS */}
         <View style={styles.statsRow}>
           <StatCard
             label="CALORIES"
@@ -111,21 +135,34 @@ export default function HomeScreen() {
           />
         </View>
 
-        <WorkoutCard
-          workout={WORKOUT}
-          exercises={exercises}
-          progress={progress}
-          onToggle={toggleExercise}
-          colors={colors}
-        />
+        {/* WORKOUT */}
+        {workout && exercises.length > 0 ? (
+          <WorkoutCard
+            workout={workout}
+            exercises={exercises}
+            progress={progress}
+            onToggle={toggleExercise}
+            colors={colors}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>💤</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No workout plan yet
+            </Text>
+            <Text
+              style={[styles.emptySubtext, { color: colors.textSecondary }]}
+            >
+              Create one to get started
+            </Text>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-// ---- Helpers ----
 
 function getTodayString() {
   const days = [
@@ -159,8 +196,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: 20, paddingTop: 10 },
-
-  // Header
   header: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
   date: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 6 },
   greeting: {
@@ -181,7 +216,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   settingsIcon: { fontSize: 22 },
-
-  // Stats
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
+  emptyState: { padding: 40, alignItems: "center" },
+  emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
+  emptySubtext: { fontSize: 13 },
 });

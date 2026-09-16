@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Alert,
   Modal,
@@ -8,508 +8,344 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import Stepper from "../components/Stepper";
+import api from "../api/api";
 
-const EXERCISES = [
-  {
-    id: "1",
-    name: "Barbell Bench Press",
-    muscle: "Chest",
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    description:
-      "Lower the bar to mid-chest, then press it back up under control.",
-  },
-  {
-    id: "2",
-    name: "Pull-Up",
-    muscle: "Back",
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    description:
-      "Pull your chin above the bar while keeping your body controlled.",
-  },
-  {
-    id: "3",
-    name: "Barbell Squat",
-    muscle: "Legs",
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    description:
-      "Squat with a neutral spine, then drive through your feet to stand.",
-  },
-  {
-    id: "4",
-    name: "Dumbbell Shoulder Press",
-    muscle: "Shoulders",
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    description:
-      "Press the dumbbells overhead from shoulder height and lower slowly.",
-  },
-  {
-    id: "5",
-    name: "Plank",
-    muscle: "Core",
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    description: "Hold a straight line from your shoulders to your heels.",
-  },
+const MUSCLE_GROUPS = [
+  "Chest",
+  "Back",
+  "Legs",
+  "Shoulders",
+  "Core",
+  "Arms",
+  "Full Body",
+  "Cardio",
 ];
-
-const CATEGORIES = ["All", "Chest", "Back", "Legs", "Shoulders", "Core"];
+const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 export default function PlanScreen() {
   const { colors } = useTheme();
-  const [view, setView] = useState("Plan");
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
+  const navigation = useNavigation();
+
   const {
     draftExercises,
-    addExercise,
-    addCustomExercise,
     removeExercise,
     updateExercise,
-    isInDraft,
-    clearDraft,
+    addCustomExercise,
     replaceDraft,
+    savePlan,
+    savingPlan,
   } = usePlanDraft();
-  const [activeExercise, setActiveExercise] = useState(null);
-  const [customModalVisible, setCustomModalVisible] = useState(false);
-  const [customName, setCustomName] = useState("");
-  const [customDescription, setCustomDescription] = useState("");
+
   const [planName, setPlanName] = useState("");
   const [savedPlans, setSavedPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const [activeSavedPlan, setActiveSavedPlan] = useState(null);
 
-  const filteredExercises = EXERCISES.filter((exercise) => {
-    const matchesSearch = exercise.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesCategory = category === "All" || exercise.muscle === category;
-    return matchesSearch && matchesCategory;
-  });
+  // Custom exercise modal
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customGroup, setCustomGroup] = useState("Chest");
+  const [customEquip, setCustomEquip] = useState("Bodyweight");
+  const [customDiff, setCustomDiff] = useState("Beginner");
+  const [customDescription, setCustomDescription] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const toggleExercise = (exercise) => {
-    if (!isInDraft(exercise.id))
-      addExercise({
-        _id: exercise.id,
-        name: exercise.name,
-        muscleGroup: exercise.muscle,
-      });
-    setActiveExercise(null);
+  // ── Load saved plans on focus ────────────────────────────────────
+  const fetchSavedPlans = useCallback(async () => {
+    try {
+      setLoadingPlans(true);
+      const res = await api.get("/plans");
+      setSavedPlans(res.data || []);
+    } catch (err) {
+      console.error("fetch plans:", err.message);
+    } finally {
+      setLoadingPlans(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSavedPlans();
+    }, [fetchSavedPlans]),
+  );
+
+  // ── Save current draft ───────────────────────────────────────────
+  const handleSavePlan = async () => {
+    const trimmed = planName.trim();
+    if (!trimmed || draftExercises.length === 0) return;
+    try {
+      await savePlan(trimmed);
+      setPlanName("");
+      await fetchSavedPlans();
+      Alert.alert("Saved!", `"${trimmed}" is now your active plan.`);
+    } catch (err) {
+      Alert.alert("Save failed", err.message);
+    }
   };
 
-  const handleAddCustom = () => {
+  // ── Create custom exercise ───────────────────────────────────────
+  const handleAddCustom = async () => {
     if (!customName.trim()) return;
-    addCustomExercise(customName, customDescription);
-    setCustomName("");
-    setCustomDescription("");
-    setCustomModalVisible(false);
-    setView("Plan");
+    try {
+      setCreating(true);
+      const res = await api.post("/exercises", {
+        name: customName.trim(),
+        muscleGroup: customGroup,
+        equipment: customEquip.trim() || "Bodyweight",
+        difficulty: customDiff,
+        description: customDescription.trim(),
+      });
+      addCustomExercise(
+        res.data.name,
+        res.data.description || "",
+        res.data.muscleGroup,
+      );
+      setCustomName("");
+      setCustomGroup("Chest");
+      setCustomEquip("Bodyweight");
+      setCustomDiff("Beginner");
+      setCustomDescription("");
+      setCustomModalVisible(false);
+    } catch (err) {
+      Alert.alert(
+        "Could not create",
+        err.response?.data?.message || err.message,
+      );
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const handleSavePlan = () => {
-    const trimmedName = planName.trim();
-    if (!trimmedName || draftExercises.length === 0) return;
-
-    setSavedPlans((currentPlans) => [
-      ...currentPlans,
-      {
-        id: `${Date.now()}`,
-        name: trimmedName,
-        exercises: draftExercises,
-      },
-    ]);
-    setPlanName("");
-    clearDraft();
-  };
-
+  // ── Saved plan actions ───────────────────────────────────────────
   const handleEditSavedPlan = () => {
     if (!activeSavedPlan) return;
-    replaceDraft(activeSavedPlan.exercises);
-    setPlanName(activeSavedPlan.name);
-    setSavedPlans((currentPlans) =>
-      currentPlans.filter((plan) => plan.id !== activeSavedPlan.id),
+    replaceDraft(
+      activeSavedPlan.exercises.map((ex, idx) => ({
+        exerciseId: ex.exerciseId || `custom-${idx}-${Date.now()}`,
+        name: ex.name,
+        muscleGroup: ex.muscleGroup,
+        description: ex.description || "",
+        sets: ex.sets,
+        reps: ex.reps,
+        isCustom: ex.isCustom,
+      })),
     );
+    setPlanName(activeSavedPlan.name);
     setActiveSavedPlan(null);
-    setView("Plan");
   };
 
   const handleRemoveSavedPlan = () => {
     if (!activeSavedPlan) return;
     Alert.alert(
       "Remove plan?",
-      `Are you sure you want to remove \"${activeSavedPlan.name}\"?`,
+      `Are you sure you want to remove "${activeSavedPlan.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => {
-            setSavedPlans((currentPlans) =>
-              currentPlans.filter((plan) => plan.id !== activeSavedPlan.id),
-            );
-            setActiveSavedPlan(null);
+          onPress: async () => {
+            try {
+              await api.delete(`/plans/${activeSavedPlan._id}`);
+              setActiveSavedPlan(null);
+              fetchSavedPlans();
+            } catch (err) {
+              Alert.alert("Delete failed", err.message);
+            }
           },
         },
       ],
     );
   };
 
-  const handleRemoveSavedExercise = (exerciseId) => {
-    if (!activeSavedPlan) return;
-
-    const updatedPlan = {
-      ...activeSavedPlan,
-      exercises: activeSavedPlan.exercises.filter(
-        (exercise) => exercise.exerciseId !== exerciseId,
-      ),
-    };
-
-    setSavedPlans((currentPlans) =>
-      currentPlans.map((plan) =>
-        plan.id === updatedPlan.id ? updatedPlan : plan,
-      ),
-    );
-    setActiveSavedPlan(updatedPlan);
-  };
-
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
-        <View
-          style={[styles.switcher, { backgroundColor: colors.cardBackground }]}
-        >
-          {["Plan", "Browse"].map((option) => {
-            const selected = view === option;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                onPress={() => setView(option)}
+
+        {/* ── Current Draft ─────────────────────────────────────── */}
+        <View style={styles.section}>
+          <TextInput
+            value={planName}
+            onChangeText={setPlanName}
+            placeholder="Plan name, e.g. Leg Day"
+            placeholderTextColor={colors.textSecondary}
+            style={[
+              styles.planNameInput,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+          />
+
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            My Plan
+          </Text>
+
+          {draftExercises.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.textSecondary }]}>
+              Your plan is empty. Add exercises from Browse below.
+            </Text>
+          ) : (
+            draftExercises.map((exercise) => (
+              <View
+                key={exercise.exerciseId}
                 style={[
-                  styles.switchOption,
-                  selected && { backgroundColor: colors.primary },
+                  styles.planCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                  },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.switchText,
-                    { color: selected ? "#FFFFFF" : colors.textSecondary },
-                  ]}
-                >
-                  {option}
-                </Text>
-              </Pressable>
-            );
-          })}
+                <View style={styles.planHeader}>
+                  <View style={styles.exerciseInfo}>
+                    <Text style={[styles.exerciseName, { color: colors.text }]}>
+                      {exercise.name}
+                    </Text>
+                    {exercise.muscleGroup ? (
+                      <Text
+                        style={[
+                          styles.exerciseMuscle,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {exercise.muscleGroup}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => removeExercise(exercise.exerciseId)}
+                  >
+                    <Text
+                      style={[styles.remove, { color: colors.textSecondary }]}
+                    >
+                      ×
+                    </Text>
+                  </Pressable>
+                </View>
+                <View style={styles.steppers}>
+                  <Stepper
+                    label="Sets"
+                    value={exercise.sets}
+                    onChange={(value) =>
+                      updateExercise(exercise.exerciseId, "sets", value)
+                    }
+                  />
+                  <Stepper
+                    label="Reps"
+                    value={exercise.reps}
+                    onChange={(value) =>
+                      updateExercise(exercise.exerciseId, "reps", value)
+                    }
+                  />
+                </View>
+              </View>
+            ))
+          )}
+
+          <Pressable
+            onPress={() => navigation.navigate("BrowseExercises")}
+            style={[styles.secondaryButton, { borderColor: colors.primary }]}
+          >
+            <Text
+              style={[styles.secondaryButtonText, { color: colors.primary }]}
+            >
+              Add from Browse
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setCustomModalVisible(true)}
+            style={[styles.secondaryButton, { borderColor: colors.border }]}
+          >
+            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+              Add Custom Exercise
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleSavePlan}
+            disabled={
+              !planName.trim() || draftExercises.length === 0 || savingPlan
+            }
+            style={[
+              styles.saveButton,
+              {
+                backgroundColor:
+                  planName.trim() && draftExercises.length > 0
+                    ? colors.primary
+                    : colors.border,
+                opacity: savingPlan ? 0.6 : 1,
+              },
+            ]}
+          >
+            {savingPlan ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save Plan</Text>
+            )}
+          </Pressable>
         </View>
 
-        {view === "Plan" ? (
-          <View style={styles.section}>
-            <TextInput
-              value={planName}
-              onChangeText={setPlanName}
-              placeholder="Plan name, e.g. Leg Day"
-              placeholderTextColor={colors.textSecondary}
-              style={[
-                styles.planNameInput,
-                {
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
+        {/* ── Saved Plans ───────────────────────────────────────── */}
+        <View style={[styles.savedSection, { marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Saved Plans
+          </Text>
+
+          {loadingPlans ? (
+            <ActivityIndicator
+              color={colors.primary}
+              style={{ marginTop: 20 }}
             />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              My Plan
+          ) : savedPlans.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.textSecondary }]}>
+              No saved plans yet.
             </Text>
-            {draftExercises.length === 0 ? (
-              <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                Your plan is empty. Open Browse to add exercises.
-              </Text>
-            ) : (
-              draftExercises.map((exercise) => (
-                <View
-                  key={exercise.exerciseId}
-                  style={[
-                    styles.planCard,
-                    {
-                      backgroundColor: colors.cardBackground,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.planHeader}>
-                    <View style={styles.exerciseInfo}>
-                      <Text
-                        style={[styles.exerciseName, { color: colors.text }]}
-                      >
-                        {exercise.name}
-                      </Text>
-                      {exercise.muscleGroup ? (
-                        <Text
-                          style={[
-                            styles.exerciseMuscle,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          {exercise.muscleGroup}
-                        </Text>
-                      ) : null}
-                      {exercise.description ? (
-                        <Text
-                          style={[
-                            styles.exerciseDescription,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          {exercise.description}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Pressable
-                      style={styles.removeButton}
-                      onPress={() => removeExercise(exercise.exerciseId)}
-                    >
-                      <Text
-                        style={[styles.remove, { color: colors.textSecondary }]}
-                      >
-                        ×
-                      </Text>
-                    </Pressable>
-                  </View>
-                  <View style={styles.steppers}>
-                    <Stepper
-                      label="Sets"
-                      value={exercise.sets}
-                      onChange={(value) =>
-                        updateExercise(exercise.exerciseId, "sets", value)
-                      }
-                    />
-                    <Stepper
-                      label="Reps"
-                      value={exercise.reps}
-                      onChange={(value) =>
-                        updateExercise(exercise.exerciseId, "reps", value)
-                      }
-                    />
-                  </View>
-                </View>
-              ))
-            )}
-            <Pressable
-              onPress={() => setView("Browse")}
-              style={[styles.secondaryButton, { borderColor: colors.primary }]}
-            >
-              <Text
-                style={[styles.secondaryButtonText, { color: colors.primary }]}
-              >
-                Add from Browse
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setCustomModalVisible(true)}
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
-            >
-              <Text
-                style={[styles.secondaryButtonText, { color: colors.text }]}
-              >
-                Add Custom Exercise
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSavePlan}
-              disabled={!planName.trim() || draftExercises.length === 0}
-              style={[
-                styles.saveButton,
-                {
-                  backgroundColor:
-                    planName.trim() && draftExercises.length > 0
-                      ? colors.primary
-                      : colors.border,
-                },
-              ]}
-            >
-              <Text style={styles.saveButtonText}>Save Plan</Text>
-            </Pressable>
-
-            {savedPlans.length > 0 && (
-              <View style={styles.savedSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Saved Plans
-                </Text>
-                {savedPlans.map((savedPlan) => (
-                  <Pressable
-                    key={savedPlan.id}
-                    onPress={() => setActiveSavedPlan(savedPlan)}
-                    style={[
-                      styles.savedPlan,
-                      { backgroundColor: colors.cardBackground },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.savedPlanName, { color: colors.text }]}
-                    >
-                      {savedPlan.name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.exerciseMuscle,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {savedPlan.exercises.length} exercise
-                      {savedPlan.exercises.length === 1 ? "" : "s"}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Search exercises"
-              placeholderTextColor={colors.textSecondary}
-              style={[
-                styles.search,
-                {
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                  color: colors.text,
-                },
-              ]}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryList}
-            >
-              {CATEGORIES.map((option) => {
-                const selected = category === option;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => setCategory(option)}
-                    style={[
-                      styles.categoryChip,
-                      {
-                        backgroundColor: selected
-                          ? colors.primary
-                          : colors.cardBackground,
-                        borderColor: selected ? colors.primary : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        color: selected ? "#FFFFFF" : colors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {option}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            {filteredExercises.map((exercise) => (
-              <ExerciseRow
-                key={exercise.id}
-                exercise={exercise}
-                selected={isInDraft(exercise.id)}
-                onPress={() => setActiveExercise(exercise)}
-                colors={colors}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      <Modal
-        visible={Boolean(activeExercise)}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActiveExercise(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setActiveExercise(null)}
-          />
-          {activeExercise ? (
-            <View
-              style={[styles.modalCard, { backgroundColor: colors.background }]}
-            >
-              <View
+          ) : (
+            savedPlans.map((savedPlan) => (
+              <Pressable
+                key={savedPlan._id}
+                onPress={() => setActiveSavedPlan(savedPlan)}
                 style={[
-                  styles.media,
+                  styles.savedPlan,
                   { backgroundColor: colors.cardBackground },
                 ]}
               >
                 <Text
-                  style={[styles.mediaText, { color: colors.textSecondary }]}
+                  style={[styles.savedPlanName, { color: colors.text }]}
                 >
-                  {activeExercise.muscle}
-                </Text>
-              </View>
-              <View style={styles.modalBody}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {activeExercise.name}
+                  {savedPlan.name}
                 </Text>
                 <Text
-                  style={[styles.modalMeta, { color: colors.textSecondary }]}
-                >
-                  {activeExercise.muscle} · {activeExercise.equipment} ·{" "}
-                  {activeExercise.difficulty}
-                </Text>
-                <Text style={[styles.description, { color: colors.text }]}>
-                  {activeExercise.description}
-                </Text>
-                <Pressable
-                  onPress={() => toggleExercise(activeExercise)}
-                  disabled={isInDraft(activeExercise.id)}
                   style={[
-                    styles.addButton,
-                    {
-                      backgroundColor: isInDraft(activeExercise.id)
-                        ? colors.cardBackground
-                        : colors.primary,
-                    },
+                    styles.exerciseMuscle,
+                    { color: colors.textSecondary },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.addButtonText,
-                      {
-                        color: isInDraft(activeExercise.id)
-                          ? colors.textSecondary
-                          : "#FFFFFF",
-                      },
-                    ]}
-                  >
-                    {isInDraft(activeExercise.id)
-                      ? "Already Added"
-                      : "Add to Plan"}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
+                  {savedPlan.exercises?.length || 0} exercise
+                  {(savedPlan.exercises?.length || 0) === 1 ? "" : "s"}
+                </Text>
+              </Pressable>
+            ))
+          )}
         </View>
-      </Modal>
+      </ScrollView>
 
+      {/* ── Saved Plan Detail Modal ─────────────────────────────── */}
       <Modal
         visible={Boolean(activeSavedPlan)}
         transparent
@@ -534,7 +370,10 @@ export default function PlanScreen() {
                     {activeSavedPlan.name}
                   </Text>
                   <Text
-                    style={[styles.modalMeta, { color: colors.textSecondary }]}
+                    style={[
+                      styles.modalMeta,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     {activeSavedPlan.exercises.length} exercise
                     {activeSavedPlan.exercises.length === 1 ? "" : "s"}
@@ -552,10 +391,10 @@ export default function PlanScreen() {
                 </Pressable>
               </View>
 
-              <View style={styles.savedExerciseList}>
-                {activeSavedPlan.exercises.map((exercise) => (
+              <ScrollView style={styles.savedExerciseList}>
+                {activeSavedPlan.exercises.map((exercise, idx) => (
                   <View
-                    key={exercise.exerciseId}
+                    key={exercise._id || idx}
                     style={[
                       styles.savedExercise,
                       { backgroundColor: colors.cardBackground },
@@ -564,7 +403,10 @@ export default function PlanScreen() {
                     <View style={styles.savedExerciseContent}>
                       <View style={styles.exerciseInfo}>
                         <Text
-                          style={[styles.exerciseName, { color: colors.text }]}
+                          style={[
+                            styles.exerciseName,
+                            { color: colors.text },
+                          ]}
                         >
                           {exercise.name}
                         </Text>
@@ -579,23 +421,6 @@ export default function PlanScreen() {
                           </Text>
                         ) : null}
                       </View>
-                      <Pressable
-                        style={styles.removeButton}
-                        onPress={() =>
-                          handleRemoveSavedExercise(exercise.exerciseId)
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove ${exercise.name}`}
-                      >
-                        <Text
-                          style={[
-                            styles.remove,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          ×
-                        </Text>
-                      </Pressable>
                     </View>
                     <Text
                       style={[
@@ -607,7 +432,7 @@ export default function PlanScreen() {
                     </Text>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
 
               <View style={styles.savedModalActions}>
                 <Pressable
@@ -617,7 +442,7 @@ export default function PlanScreen() {
                     { backgroundColor: colors.primary },
                   ]}
                 >
-                  <Text style={styles.addButtonText}>Edit Plan</Text>
+                  <Text style={styles.addButtonText}>Load to Edit</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleRemoveSavedPlan}
@@ -641,6 +466,7 @@ export default function PlanScreen() {
         </View>
       </Modal>
 
+      {/* ── Custom Exercise Modal ───────────────────────────────── */}
       <Modal
         visible={customModalVisible}
         transparent
@@ -651,32 +477,154 @@ export default function PlanScreen() {
           <View
             style={[styles.customCard, { backgroundColor: colors.background }]}
           >
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Custom Exercise
-            </Text>
-            <TextInput
-              value={customName}
-              onChangeText={setCustomName}
-              placeholder="Exercise name"
-              placeholderTextColor={colors.textSecondary}
-              style={[
-                styles.customInput,
-                { color: colors.text, borderColor: colors.border },
-              ]}
-              autoFocus
-            />
-            <TextInput
-              value={customDescription}
-              onChangeText={setCustomDescription}
-              placeholder="Description (optional)"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              numberOfLines={3}
-              style={[
-                styles.customDescriptionInput,
-                { color: colors.text, borderColor: colors.border },
-              ]}
-            />
+            <ScrollView>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Custom Exercise
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                NAME
+              </Text>
+              <TextInput
+                value={customName}
+                onChangeText={setCustomName}
+                placeholder="Exercise name"
+                placeholderTextColor={colors.textSecondary}
+                style={[
+                  styles.customInput,
+                  { color: colors.text, borderColor: colors.border },
+                ]}
+                autoFocus
+              />
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  { color: colors.textSecondary, marginTop: 12 },
+                ]}
+              >
+                MUSCLE GROUP
+              </Text>
+              <View style={styles.chipRowInline}>
+                {MUSCLE_GROUPS.map((g) => {
+                  const active = customGroup === g;
+                  return (
+                    <Pressable
+                      key={g}
+                      onPress={() => setCustomGroup(g)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: active
+                            ? colors.primary
+                            : colors.cardBackground,
+                          borderColor: active
+                            ? colors.primary
+                            : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: active ? "#FFF" : colors.text,
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {g}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  { color: colors.textSecondary, marginTop: 12 },
+                ]}
+              >
+                EQUIPMENT
+              </Text>
+              <TextInput
+                value={customEquip}
+                onChangeText={setCustomEquip}
+                placeholder="e.g. Dumbbell"
+                placeholderTextColor={colors.textSecondary}
+                style={[
+                  styles.customInput,
+                  { color: colors.text, borderColor: colors.border },
+                ]}
+              />
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  { color: colors.textSecondary, marginTop: 12 },
+                ]}
+              >
+                DIFFICULTY
+              </Text>
+              <View style={styles.chipRowInline}>
+                {DIFFICULTIES.map((d) => {
+                  const active = customDiff === d;
+                  return (
+                    <Pressable
+                      key={d}
+                      onPress={() => setCustomDiff(d)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: active
+                            ? colors.primary
+                            : colors.cardBackground,
+                          borderColor: active
+                            ? colors.primary
+                            : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: active ? "#FFF" : colors.text,
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {d}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  { color: colors.textSecondary, marginTop: 12 },
+                ]}
+              >
+                DESCRIPTION (OPTIONAL)
+              </Text>
+              <TextInput
+                value={customDescription}
+                onChangeText={setCustomDescription}
+                placeholder="How to perform it..."
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                numberOfLines={3}
+                style={[
+                  styles.customDescriptionInput,
+                  { color: colors.text, borderColor: colors.border },
+                ]}
+              />
+            </ScrollView>
+
             <View style={styles.modalActions}>
               <Pressable onPress={() => setCustomModalVisible(false)}>
                 <Text
@@ -687,17 +635,19 @@ export default function PlanScreen() {
               </Pressable>
               <Pressable
                 onPress={handleAddCustom}
-                disabled={!customName.trim()}
+                disabled={!customName.trim() || creating}
               >
                 <Text
                   style={[
                     styles.actionText,
                     {
-                      color: customName.trim() ? colors.primary : colors.border,
+                      color: customName.trim()
+                        ? colors.primary
+                        : colors.border,
                     },
                   ]}
                 >
-                  Add
+                  {creating ? "Adding..." : "Add"}
                 </Text>
               </Pressable>
             </View>
@@ -708,56 +658,10 @@ export default function PlanScreen() {
   );
 }
 
-function ExerciseRow({ exercise, selected, onPress, colors }) {
-  const muscle = exercise.muscle ?? exercise.muscleGroup;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      style={[
-        styles.exercise,
-        {
-          backgroundColor: selected
-            ? colors.selectedcard
-            : colors.cardBackground,
-          borderColor: selected ? colors.primary : colors.border,
-        },
-      ]}
-    >
-      <View style={styles.exerciseInfo}>
-        <Text style={[styles.exerciseName, { color: colors.text }]}>
-          {exercise.name}
-        </Text>
-        <Text style={[styles.exerciseMuscle, { color: colors.textSecondary }]}>
-          {muscle}
-        </Text>
-      </View>
-      <Text style={[styles.check, { color: colors.primary }]}>
-        {selected ? "✓" : "+"}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
   title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
-  switcher: {
-    borderRadius: 12,
-    flexDirection: "row",
-    marginBottom: 24,
-    padding: 4,
-  },
-  switchOption: {
-    alignItems: "center",
-    borderRadius: 9,
-    flex: 1,
-    paddingVertical: 11,
-  },
-  switchText: { fontSize: 15, fontWeight: "700" },
   section: { gap: 12 },
   sectionTitle: { fontSize: 20, fontWeight: "800" },
   planNameInput: {
@@ -766,49 +670,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     padding: 13,
   },
-  search: { borderRadius: 10, borderWidth: 1, fontSize: 15, padding: 13 },
-  categoryList: { gap: 8, paddingBottom: 2 },
-  categoryChip: {
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  customDescriptionInput: {
-    borderRadius: 10,
-    borderWidth: 1,
-    fontSize: 15,
-    marginTop: 10,
-    minHeight: 80,
-    padding: 12,
-    textAlignVertical: "top",
-  },
-  exercise: {
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: "row",
-    padding: 14,
-    elevation: 4,
-  },
-  exerciseInfo: { flex: 1, minWidth: 0 },
-  exerciseName: { fontSize: 15, fontWeight: "700" },
-  exerciseMuscle: { fontSize: 12, marginTop: 4 },
-  exerciseDescription: { fontSize: 13, lineHeight: 18, marginTop: 6 },
-  check: { fontSize: 24, fontWeight: "700", marginLeft: 12 },
+  empty: { fontSize: 14, marginVertical: 8 },
   planCard: {
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
     gap: 14,
-    elevation: 4,
   },
   planHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  removeButton: { alignSelf: "flex-start", marginLeft: 8, paddingTop: 0 },
+  exerciseInfo: { flex: 1, minWidth: 0 },
+  exerciseName: { fontSize: 15, fontWeight: "700" },
+  exerciseMuscle: { fontSize: 12, marginTop: 4 },
+  removeButton: { alignSelf: "flex-start", marginLeft: 8 },
   remove: { fontSize: 24 },
   steppers: { flexDirection: "row", gap: 15, justifyContent: "center" },
   secondaryButton: {
@@ -820,8 +697,8 @@ const styles = StyleSheet.create({
   secondaryButtonText: { fontSize: 14, fontWeight: "700" },
   saveButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   saveButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
-  savedSection: { gap: 10, marginTop: 12 },
-  savedPlan: { borderRadius: 10, padding: 14, elevation: 4 },
+  savedSection: { gap: 10 },
+  savedPlan: { borderRadius: 10, padding: 14 },
   savedPlanName: { fontSize: 16, fontWeight: "800" },
   savedModal: {
     borderTopLeftRadius: 20,
@@ -834,17 +711,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 16,
   },
-  savedExerciseList: { gap: 10 },
-  savedExercise: {
-    borderRadius: 10,
-    padding: 12,
-  },
+  savedExerciseList: { maxHeight: 300 },
+  savedExercise: { borderRadius: 10, padding: 12, marginBottom: 8 },
   savedExerciseContent: {
-    alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  savedExerciseMeta: { fontSize: 12, fontWeight: "700" },
+  savedExerciseMeta: { fontSize: 12, fontWeight: "700", marginTop: 6 },
   savedModalActions: { gap: 10, marginTop: 20 },
   removePlanButton: {
     alignItems: "center",
@@ -857,26 +730,42 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  modalCard: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-  },
-  media: { alignItems: "center", height: 150, justifyContent: "center" },
-  mediaText: { fontSize: 18, fontWeight: "700" },
-  modalBody: { padding: 20 },
   modalTitle: { fontSize: 21, fontWeight: "800", marginBottom: 6 },
   modalMeta: { fontSize: 13, marginBottom: 14 },
-  description: { fontSize: 15, lineHeight: 22, marginBottom: 20 },
   addButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   addButtonText: { fontSize: 15, fontWeight: "800", color: "white" },
-  customCard: { borderRadius: 16, margin: 24, padding: 20 },
+  customCard: { borderRadius: 16, margin: 24, padding: 20, maxHeight: "80%" },
   customInput: {
     borderRadius: 10,
     borderWidth: 1,
     fontSize: 15,
-    marginTop: 12,
     padding: 12,
+  },
+  customDescriptionInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 15,
+    marginTop: 8,
+    minHeight: 70,
+    padding: 12,
+    textAlignVertical: "top",
+  },
+  chipRowInline: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  chip: {
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
   modalActions: {
     flexDirection: "row",

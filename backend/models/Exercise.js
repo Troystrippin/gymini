@@ -2,46 +2,42 @@ const mongoose = require("mongoose");
 
 const ExerciseSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
     muscleGroup: {
       type: String,
       required: true,
       trim: true,
       enum: [
-        "chest",
-        "back",
-        "shoulders",
-        "arms",
-        "legs",
-        "core",
-        "full body",
-        "cardio",
+        "Chest",
+        "Back",
+        "Shoulders",
+        "Arms",
+        "Legs",
+        "Core",
+        "Full Body",
+        "Cardio",
+        "Other",
       ],
     },
-    equipment: {
-      type: String,
-      default: "none", // this can be enum but i leave it just like that for more flexible choice for creator
-      trim: true,
-    },
-    instructions: {
-      type: String,
-      default: "",
-    },
-    medaiUrl: {
-      type: String, //optional image/video/image kung masipag maghanap source
-      default: "",
-    },
+    equipment: { type: String, default: "Bodyweight", trim: true },
+    description: { type: String, default: "" },
+    mediaUrl: { type: String, default: null },
     difficulty: {
       type: String,
-      enum: ["beginner", "intermidiate", "advance"],
-      default: "beginner",
+      enum: ["Beginner", "Intermediate", "Advanced"],
+      default: "Beginner",
+    },
+    isCustom: { type: Boolean, default: false, index: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
     },
   },
   { timestamps: true },
 );
+
+ExerciseSchema.index({ name: "text", description: "text" });
 
 module.exports = mongoose.model("Exercise", ExerciseSchema);

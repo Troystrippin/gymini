@@ -4,6 +4,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
 import PlaceholderScreen from "../screens/PlaceholderScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import WorkoutStack from "./WorkoutStack";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
 import HomeIcon from "../icons/HomeIcon";
@@ -11,8 +13,6 @@ import WorkoutIcon from "../icons/WorkOutIcon";
 import MealsIcon from "../icons/MealsIcon";
 import ProgressIcon from "../icons/ProgressIcon";
 import ProfileIcon from "../icons/ProfileIcon";
-import ProfileScreen from "../screens/ProfileScreen";
-import PlanScreen from "../screens/PlanScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +20,7 @@ const MealsScreen = () => <PlaceholderScreen title="Meals" Icon={MealsIcon} />;
 const ProgressScreen = () => (
   <PlaceholderScreen title="Progress" Icon={ProgressIcon} />
 );
+
 const iconFor = (name, focused, color) => {
   const icons = {
     Home: HomeIcon,
@@ -41,16 +42,20 @@ export default function MainTabs() {
         headerShown: false,
         tabBarStyle: [
           styles.tabBar,
-          { backgroundColor: colors.background, borderTopColor: colors.border },
+          {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+          },
         ],
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused, color }) => iconFor(route.name, focused, color),
+        tabBarIcon: ({ focused, color }) =>
+          iconFor(route.name, focused, color),
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Workouts" component={PlanScreen} />
+      <Tab.Screen name="Workouts" component={WorkoutStack} />
       <Tab.Screen name="Meals" component={MealsScreen} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />

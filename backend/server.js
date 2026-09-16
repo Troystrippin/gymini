@@ -1,28 +1,28 @@
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 const express = require("express");
-
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
 // --- Import Routes ---
 const authRoutes = require("./routes/authRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
+const exerciseRoutes = require("./routes/exerciseRoutes");
+const planRoutes = require("./routes/planRoutes");
 
 // --- Mount Routes ---
 app.use("/api/auth", authRoutes);
+app.use("/api/workouts", workoutRoutes);
+app.use("/api/exercises", exerciseRoutes);
+app.use("/api/plans", planRoutes);
 
-// Basic Route for testing
-app.get("/", (req, res) => {
-  res.send("GYMini API is running...");
-});
+app.get("/", (req, res) => res.send("GYMini API is running..."));
 
-// Database Connection
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 

@@ -49,7 +49,7 @@ const WorkoutLogSchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamos: true },
+  { timestamps: true },
 );
 // Speeds up Progress tab queries like "all logs for this user, most recent first"
 WorkoutLogSchema.index({ userId: 1, dateCompleted: -1 });

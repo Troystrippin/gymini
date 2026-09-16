@@ -20,7 +20,7 @@ export default function WorkoutCard({
           </Text>
           <Text style={[styles.workoutTitle, { color: colors.text }]}>
             {workout.title}{" "}
-            <Text style={styles.workoutEmoji}>{workout.emoji}</Text>
+            <Text style={styles.workoutEmoji}>{workout.emoji || "🏋️"}</Text>
           </Text>
         </View>
         <ProgressRing progress={progress} colors={colors} />
@@ -29,7 +29,7 @@ export default function WorkoutCard({
       <View style={styles.exerciseList}>
         {exercises.map((exercise) => (
           <ExerciseRow
-            key={exercise.id}
+            key={exercise._id}
             exercise={exercise}
             onPress={onToggle}
             colors={colors}
@@ -82,7 +82,7 @@ function ExerciseRow({ exercise, onPress, colors }) {
   return (
     <TouchableOpacity
       activeOpacity={0.8}
-      onPress={() => onPress(exercise.id)}
+      onPress={() => onPress(exercise._id)}
       style={[
         styles.exerciseRow,
         { backgroundColor: colors.background, borderColor: "transparent" },
@@ -93,7 +93,9 @@ function ExerciseRow({ exercise, onPress, colors }) {
       ]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: exercise.done }}
-      accessibilityLabel={`${exercise.name}, ${exercise.done ? "completed" : "not completed"}`}
+      accessibilityLabel={`${exercise.name}, ${
+        exercise.done ? "completed" : "not completed"
+      }`}
     >
       <View
         style={[
@@ -114,16 +116,15 @@ function ExerciseRow({ exercise, onPress, colors }) {
             { color: exercise.done ? colors.textSecondary : colors.text },
             exercise.done && styles.exerciseNameDone,
           ]}
-          w
         >
           {exercise.name}
         </Text>
         <Text style={[styles.exerciseMuscle, { color: colors.textSecondary }]}>
-          {exercise.muscle}
+          {exercise.muscle || "—"}
         </Text>
       </View>
       <Text style={[styles.exerciseSets, { color: colors.textSecondary }]}>
-        {exercise.sets}
+        {exercise.sets || ""}
       </Text>
     </TouchableOpacity>
   );
@@ -166,7 +167,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
-  exerciseRowDone: {},
   checkCircle: {
     width: 26,
     height: 26,
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkCircleDone: {},
   checkMark: { color: "#fff", fontSize: 14, fontWeight: "900" },
   exerciseInfo: { flex: 1, marginLeft: 14 },
   exerciseName: { fontSize: 15, fontWeight: "700" },

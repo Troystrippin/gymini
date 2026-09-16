@@ -1,43 +1,41 @@
 const mongoose = require("mongoose");
 
-// this is the personalize (not shared but can be) exercise plan  for user
 const PlanExerciseSchema = new mongoose.Schema(
   {
+    // Catalog ref — null when the exercise is user-created (isCustom: true).
     exerciseId: {
-      type: mongoose.Schema.Types.ObjectId, //this is will get the exercise that User picked
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Exercise",
-      required: true,
+      default: null,
     },
-    sets: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    reps: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    completed: {
-      type: Boolean, //this uses the toggle completed exercise in home
-      default: false,
-    },
+    // Snapshot so custom exercises work AND so we don't break
+    // if the catalog exercise is later edited/deleted.
+    name: { type: String, required: true },
+    muscleGroup: { type: String, default: null },
+    description: { type: String, default: "" },
+    isCustom: { type: Boolean, default: false },
+    sets: { type: Number, required: true, min: 1, default: 3 },
+    reps: { type: Number, required: true, min: 1, default: 10 },
+    completed: { type: Boolean, default: false },
+    order: { type: Number, default: 0 },
   },
-  { _id: false },
+  // _id: true so each subdoc has its own _id for toggling.
+  { _id: true },
 );
 
-//this is the overall workout plan this will show the different exercise user sets fot their plan
 const WorkoutPlanSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     name: {
       type: String,
       required: true,
-      trim: true, //for personalize naming for User exercise plan Leg day etc.
+      trim: true,
+      default: "My Plan",
     },
     exercises: {
       type: [PlanExerciseSchema],

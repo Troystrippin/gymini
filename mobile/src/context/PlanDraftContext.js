@@ -1,9 +1,17 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+} from "react";
+import api from "../api/api";
 
 const PlanDraftContext = createContext(null);
 
 export function PlanDraftProvider({ children }) {
   const [draftExercises, setDraftExercises] = useState([]);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const addExercise = useCallback((exercise) => {
     setDraftExercises((prev) => {
@@ -14,6 +22,7 @@ export function PlanDraftProvider({ children }) {
           exerciseId: exercise._id,
           name: exercise.name,
           muscleGroup: exercise.muscleGroup,
+          description: exercise.description || "",
           sets: 3,
           reps: 10,
           isCustom: false,
@@ -22,25 +31,25 @@ export function PlanDraftProvider({ children }) {
     });
   }, []);
 
-  // Custom exercise: not part of the dev-seeded catalog, lives only on this plan.
-  // exerciseId is a temp client-side id (isCustom: true tells the backend not to
-  // treat it as a ref into the Exercise collection).
-  const addCustomExercise = useCallback((name, description = "") => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    setDraftExercises((prev) => [
-      ...prev,
-      {
-        exerciseId: `custom-${Date.now()}`,
-        name: trimmed,
-        description: description.trim(),
-        muscleGroup: null,
-        sets: 3,
-        reps: 10,
-        isCustom: true,
-      },
-    ]);
-  }, []);
+  const addCustomExercise = useCallback(
+    (name, description = "", muscleGroup = null) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setDraftExercises((prev) => [
+        ...prev,
+        {
+          exerciseId: `custom-${Date.now()}`,
+          name: trimmed,
+          description: description.trim(),
+          muscleGroup,
+          sets: 3,
+          reps: 10,
+          isCustom: true,
+        },
+      ]);
+    },
+    [],
+  );
 
   const removeExercise = useCallback((exerciseId) => {
     setDraftExercises((prev) =>
@@ -51,7 +60,9 @@ export function PlanDraftProvider({ children }) {
   const updateExercise = useCallback((exerciseId, field, value) => {
     setDraftExercises((prev) =>
       prev.map((e) =>
-        e.exerciseId === exerciseId ? { ...e, [field]: Math.max(1, value) } : e,
+        e.exerciseId === exerciseId
+          ? { ...e, [field]: Math.max(1, value) }
+          : e,
       ),
     );
   }, []);
@@ -61,11 +72,54 @@ export function PlanDraftProvider({ children }) {
     [draftExercises],
   );
 
-  const clearDraft = useCallback(() => setDraftExercises([]), []);
+  const clearDraft = useCallback(() => {
+    setDraftExercises([]);
+    setSaveError(null);
+  }, []);
+
   const replaceDraft = useCallback(
     (exercises) =>
       setDraftExercises(exercises.map((exercise) => ({ ...exercise }))),
     [],
+  );
+
+  const savePlan = useCallback(
+    async (planName = "My Plan") => {
+      if (draftExercises.length === 0) {
+        throw new Error("Add at least one exercise before saving.");
+      }
+      try {
+        setSavingPlan(true);
+        setSaveError(null);
+
+        const payload = {
+          name: planName,
+          exercises: draftExercises.map((e) => ({
+            exerciseId: e.isCustom ? null : e.exerciseId,
+            name: e.name,
+            muscleGroup: e.muscleGroup,
+            description: e.description || "",
+            sets: e.sets,
+            reps: e.reps,
+            isCustom: e.isCustom,
+          })),
+        };
+
+        const res = await api.post("/plans", payload);
+        clearDraft();
+        return res.data;
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          "Could not save plan";
+        setSaveError(msg);
+        throw new Error(msg);
+      } finally {
+        setSavingPlan(false);
+      }
+    },
+    [draftExercises, clearDraft],
   );
 
   return (
@@ -79,6 +133,9 @@ export function PlanDraftProvider({ children }) {
         isInDraft,
         clearDraft,
         replaceDraft,
+        savePlan,
+        savingPlan,
+        saveError,
       }}
     >
       {children}
