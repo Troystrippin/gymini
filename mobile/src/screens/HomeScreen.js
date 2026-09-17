@@ -20,6 +20,15 @@ import StatCard from "../components/StatCard";
 import api from "../api/api";
 import { MEALS, SELECTED_MEALS_KEY } from "../data/mealPlans";
 
+const MEAL_TYPE_ICONS = {
+  breakfast: "🍳",
+  lunch: "🥗",
+  dinner: "🍽️",
+  snack: "🍎",
+};
+
+const MEAL_TYPE_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
+
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { toggleTheme, mode, colors } = useTheme();
@@ -59,6 +68,17 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  const totalCalories = selectedMeals.reduce((sum, meal) => {
+    const num = parseInt(meal.calories, 10);
+    return sum + (Number.isNaN(num) ? 0 : num);
+  }, 0);
+
+  // One meal per type slot (first match if the user picked more than one of a type)
+  const mealsByType = MEAL_TYPE_ORDER.map((type) => ({
+    type,
+    meal: selectedMeals.find((m) => m.type === type) || null,
+  }));
 
   if (loading) {
     return (
@@ -147,28 +167,109 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Meals")}
-          activeOpacity={0.85}
+        {/* MEAL PLAN */}
+        <View
           style={[
             styles.mealPreview,
             { backgroundColor: colors.cardBackground },
           ]}
         >
-          <Text style={[styles.mealLabel, { color: colors.textSecondary }]}>
-            TODAY'S MEAL PLAN
-          </Text>
-          <Text style={[styles.mealTitle, { color: colors.text }]}>
-            {selectedMeals.length
-              ? `${selectedMeals.length} meals selected`
-              : "Build your meal plan"}
-          </Text>
-          <Text style={[styles.mealMeta, { color: colors.primary }]}>
-            {selectedMeals.length
-              ? selectedMeals.map((meal) => meal.name).join(" · ")
-              : "Browse meals to get started"}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.mealHeaderRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.mealLabel, { color: colors.textSecondary }]}>
+                TODAY'S MEAL PLAN
+              </Text>
+              <Text style={[styles.mealTitle, { color: colors.text }]}>
+                {selectedMeals.length
+                  ? `${selectedMeals.length} of 4 meals set`
+                  : "Build your meal plan"}
+              </Text>
+            </View>
+            {selectedMeals.length > 0 && (
+              <View
+                style={[
+                  styles.caloriesPill,
+                  { backgroundColor: colors.background },
+                ]}
+              >
+                <Text
+                  style={[styles.caloriesPillText, { color: colors.primary }]}
+                >
+                  {totalCalories} kcal
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.mealList}>
+            {mealsByType.map(({ type, meal }) => (
+              <TouchableOpacity
+                key={type}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("Meals")}
+                style={[styles.mealRow, { borderColor: colors.border }]}
+              >
+                <View
+                  style={[
+                    styles.mealRowIcon,
+                    {
+                      backgroundColor: meal ? colors.background : "transparent",
+                      borderColor: colors.border,
+                      borderWidth: meal ? 0 : 1,
+                      borderStyle: meal ? "solid" : "dashed",
+                    },
+                  ]}
+                >
+                  <Text style={styles.mealRowIconText}>
+                    {MEAL_TYPE_ICONS[type.toLowerCase()]}
+                  </Text>
+                </View>
+
+                <View style={styles.mealRowInfo}>
+                  <Text
+                    style={[
+                      styles.mealRowType,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {type.toUpperCase()}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.mealRowName,
+                      { color: meal ? colors.text : colors.textSecondary },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {meal ? meal.name : "Not set"}
+                  </Text>
+                </View>
+
+                {meal ? (
+                  <Text
+                    style={[styles.mealRowCalories, { color: colors.primary }]}
+                  >
+                    {meal.calories}
+                  </Text>
+                ) : (
+                  <Text style={[styles.mealRowAdd, { color: colors.primary }]}>
+                    + Add
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Meals")}
+            activeOpacity={0.85}
+            style={styles.browseButton}
+          >
+            <Text style={[styles.browseButtonText, { color: colors.primary }]}>
+              Browse all meals →
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -233,7 +334,41 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
   emptySubtext: { fontSize: 13 },
   mealPreview: { borderRadius: 18, marginTop: 20, padding: 18 },
+  mealHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
   mealLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   mealTitle: { fontSize: 20, fontWeight: "800", marginTop: 6 },
-  mealMeta: { fontSize: 13, fontWeight: "700", marginTop: 10 },
+  caloriesPill: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  caloriesPillText: { fontSize: 12, fontWeight: "800" },
+  mealList: { marginTop: 16, gap: 10 },
+  mealRow: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    padding: 10,
+  },
+  mealRowIcon: {
+    alignItems: "center",
+    borderRadius: 10,
+    height: 38,
+    justifyContent: "center",
+    marginRight: 12,
+    width: 38,
+  },
+  mealRowIconText: { fontSize: 18 },
+  mealRowInfo: { flex: 1 },
+  mealRowType: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  mealRowName: { fontSize: 14, fontWeight: "700", marginTop: 2 },
+  mealRowCalories: { fontSize: 12, fontWeight: "800", marginLeft: 8 },
+  mealRowAdd: { fontSize: 12, fontWeight: "800", marginLeft: 8 },
+  browseButton: { alignItems: "center", marginTop: 14 },
+  browseButtonText: { fontSize: 13, fontWeight: "800" },
 });
