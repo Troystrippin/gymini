@@ -1,14 +1,12 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTheme } from "../theme/theme";
-
-import PlanScreen from "../screens/PlanScreen";
-import BrowseExercisesScreen from "../screens/BrowseExercisesScreen";
-import WorkoutSessionScreen from "../screens/WorkoutSessionScreen";
+import MealsScreen from "../screens/MealsScreen";
+import MyMealPlanScreen from "../screens/MyMealPlanScreen";
 
 const Stack = createNativeStackNavigator();
 
-export default function WorkoutStack() {
+export default function MealsStack() {
   const { colors } = useTheme();
 
   return (
@@ -19,9 +17,8 @@ export default function WorkoutStack() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="PlanList" component={PlanScreen} />
-      <Stack.Screen name="BrowseExercises" component={BrowseExercisesScreen} />
-      <Stack.Screen name="WorkoutSession" component={WorkoutSessionScreen} />
+      <Stack.Screen name="BrowseMeals" component={MealsScreen} />
+      <Stack.Screen name="MyMealPlan" component={MyMealPlanScreen} />
     </Stack.Navigator>
   );
 }

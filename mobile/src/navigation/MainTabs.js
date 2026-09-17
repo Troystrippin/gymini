@@ -6,6 +6,7 @@ import HomeScreen from "../screens/HomeScreen";
 import PlaceholderScreen from "../screens/PlaceholderScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import WorkoutStack from "./WorkoutStack";
+import MealsStack from "./MealsStack";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
 import HomeIcon from "../icons/HomeIcon";
@@ -16,7 +17,6 @@ import ProfileIcon from "../icons/ProfileIcon";
 
 const Tab = createBottomTabNavigator();
 
-const MealsScreen = () => <PlaceholderScreen title="Meals" Icon={MealsIcon} />;
 const ProgressScreen = () => (
   <PlaceholderScreen title="Progress" Icon={ProgressIcon} />
 );
@@ -50,13 +50,12 @@ export default function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused, color }) =>
-          iconFor(route.name, focused, color),
+        tabBarIcon: ({ focused, color }) => iconFor(route.name, focused, color),
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Workouts" component={WorkoutStack} />
-      <Tab.Screen name="Meals" component={MealsScreen} />
+      <Tab.Screen name="Meals" component={MealsStack} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

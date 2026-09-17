@@ -1,6 +1,7 @@
 import React from "react";
 import { StatusBar, View } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "./src/context/AuthContext";
 import { PlanDraftProvider } from "./src/context/PlanDraftContext";
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -37,12 +38,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <PlanDraftProvider>
-          <AppContent />
-        </PlanDraftProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <PlanDraftProvider>
+            <AppContent />
+          </PlanDraftProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

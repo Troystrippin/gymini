@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -22,6 +22,7 @@ const GOALS = [
   { id: "Lose Weight", label: "Fat Loss", icon: "🔥" },
   { id: "Build Muscle", label: "Muscle Gain", icon: "💪" },
   { id: "Improve Endurance", label: "Endurance", icon: "🏃" },
+  { id: "Stay Active", label: "Stay Active", icon: "🌿" },
   { id: "Athletic Performance", label: "Athletic", icon: "⚡" },
 ];
 
@@ -43,7 +44,14 @@ function getFitnessLevel(activityLevel) {
 export default function ProfileScreen() {
   const { user, logout, completeOnboarding } = useContext(AuthContext);
   const { colors, mode } = useTheme();
-  const [selectedGoal, setSelectedGoal] = useState(user?.profile?.goal ?? null);
+  const profileGoal = user?.profile?.goal ?? user?.goal ?? null;
+  const details = user?.profile?.details ?? user?.details;
+  const [selectedGoal, setSelectedGoal] = useState(profileGoal);
+
+  useEffect(() => {
+    setSelectedGoal(profileGoal);
+  }, [profileGoal]);
+
   const name = user?.fullName || "Your name";
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString(undefined, {
@@ -57,7 +65,6 @@ export default function ProfileScreen() {
     .slice(0, 2)
     .map((part) => part[0].toUpperCase())
     .join("");
-  const details = user?.profile?.details;
   const fitnessLevel = getFitnessLevel(details?.activityLevel);
   const weight = details?.weightKg;
   const height = details?.heightCm;

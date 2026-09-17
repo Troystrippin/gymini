@@ -6,11 +6,13 @@ export default function WorkoutCard({
   workout,
   exercises,
   progress,
-  onToggle,
+  onPress,
   colors,
 }) {
   return (
-    <View
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
       style={[styles.workoutCard, { backgroundColor: colors.cardBackground }]}
     >
       <View style={styles.workoutHeader}>
@@ -19,8 +21,7 @@ export default function WorkoutCard({
             TODAY'S WORKOUT
           </Text>
           <Text style={[styles.workoutTitle, { color: colors.text }]}>
-            {workout.title}{" "}
-            <Text style={styles.workoutEmoji}>{workout.emoji || "🏋️"}</Text>
+            {workout.title}
           </Text>
         </View>
         <ProgressRing progress={progress} colors={colors} />
@@ -28,15 +29,10 @@ export default function WorkoutCard({
 
       <View style={styles.exerciseList}>
         {exercises.map((exercise) => (
-          <ExerciseRow
-            key={exercise._id}
-            exercise={exercise}
-            onPress={onToggle}
-            colors={colors}
-          />
+          <ExerciseRow key={exercise._id} exercise={exercise} colors={colors} />
         ))}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -78,11 +74,9 @@ function ProgressRing({ progress, colors }) {
   );
 }
 
-function ExerciseRow({ exercise, onPress, colors }) {
+function ExerciseRow({ exercise, colors }) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => onPress(exercise._id)}
+    <View
       style={[
         styles.exerciseRow,
         { backgroundColor: colors.background, borderColor: "transparent" },
@@ -91,11 +85,6 @@ function ExerciseRow({ exercise, onPress, colors }) {
           borderColor: colors.primary,
         },
       ]}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: exercise.done }}
-      accessibilityLabel={`${exercise.name}, ${
-        exercise.done ? "completed" : "not completed"
-      }`}
     >
       <View
         style={[
@@ -126,7 +115,7 @@ function ExerciseRow({ exercise, onPress, colors }) {
       <Text style={[styles.exerciseSets, { color: colors.textSecondary }]}>
         {exercise.sets || ""}
       </Text>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -148,7 +137,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   workoutTitle: { fontSize: 22, fontWeight: "800" },
-  workoutEmoji: { fontSize: 22 },
   progressRing: {
     width: 76,
     height: 76,

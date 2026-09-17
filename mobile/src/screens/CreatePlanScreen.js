@@ -234,7 +234,6 @@ export default function CreatePlanScreen() {
                 <Text
                   style={{
                     color: colors.textSecondary,
-                    fontFamily: "SpaceGrotesk-Regular",
                   }}
                 >
                   Cancel
@@ -255,7 +254,6 @@ export default function CreatePlanScreen() {
                 <Text
                   style={{
                     color: "#000",
-                    fontFamily: "SpaceGrotesk-Regular",
                     fontWeight: "600",
                   }}
                 >
@@ -279,15 +277,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  headerBtn: { fontFamily: "SpaceGrotesk-Regular", fontSize: 15 },
-  headerTitle: { fontFamily: "SpaceGrotesk-Regular", fontSize: 17 },
+  headerBtn: { fontSize: 15 },
+  headerTitle: { fontSize: 17 },
   nameInput: {
     marginHorizontal: 20,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     marginBottom: 20,
   },
@@ -299,7 +296,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionLabel: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 12,
     letterSpacing: 0.5,
   },
@@ -310,7 +306,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  addBtnText: { fontFamily: "SpaceGrotesk-Regular", fontSize: 13 },
+  addBtnText: { fontSize: 13 },
   list: { paddingHorizontal: 20, paddingBottom: 40 },
   exerciseCard: {
     borderWidth: 1,
@@ -322,16 +318,15 @@ const styles = StyleSheet.create({
   },
   exerciseInfo: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  exerciseName: { fontFamily: "SpaceGrotesk-Regular", fontSize: 15 },
+  exerciseName: { fontSize: 15 },
   customTag: {
     borderWidth: 1,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
-  customTagText: { fontFamily: "SpaceGrotesk-Regular", fontSize: 10 },
+  customTagText: { fontSize: 10 },
   exerciseMeta: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 12,
     marginTop: 2,
   },
@@ -339,7 +334,6 @@ const styles = StyleSheet.create({
   removeBtn: { padding: 4 },
   emptyState: { paddingTop: 60, alignItems: "center", paddingHorizontal: 30 },
   emptyText: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 14,
     textAlign: "center",
   },
@@ -358,7 +352,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalTitle: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 17,
     marginBottom: 14,
   },
@@ -367,11 +360,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
   },
   customHint: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 12,
     marginTop: 8,
     marginBottom: 18,

@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import api from "../api/api";
 
 const PlanDraftContext = createContext(null);
@@ -60,9 +55,7 @@ export function PlanDraftProvider({ children }) {
   const updateExercise = useCallback((exerciseId, field, value) => {
     setDraftExercises((prev) =>
       prev.map((e) =>
-        e.exerciseId === exerciseId
-          ? { ...e, [field]: Math.max(1, value) }
-          : e,
+        e.exerciseId === exerciseId ? { ...e, [field]: Math.max(1, value) } : e,
       ),
     );
   }, []);
@@ -84,7 +77,7 @@ export function PlanDraftProvider({ children }) {
   );
 
   const savePlan = useCallback(
-    async (planName = "My Plan") => {
+    async (planName = "My Plan", planId = null) => {
       if (draftExercises.length === 0) {
         throw new Error("Add at least one exercise before saving.");
       }
@@ -105,14 +98,14 @@ export function PlanDraftProvider({ children }) {
           })),
         };
 
-        const res = await api.post("/plans", payload);
+        const res = planId
+          ? await api.put(`/plans/${planId}`, payload)
+          : await api.post("/plans", payload);
         clearDraft();
         return res.data;
       } catch (err) {
         const msg =
-          err.response?.data?.message ||
-          err.message ||
-          "Could not save plan";
+          err.response?.data?.message || err.message || "Could not save plan";
         setSaveError(msg);
         throw new Error(msg);
       } finally {

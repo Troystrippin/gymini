@@ -49,6 +49,7 @@ const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 export default function BrowseExercisesScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const accentTextColor = "#FFFFFF";
   const { addExercise, isInDraft, savePlan, savingPlan, draftExercises } =
     usePlanDraft();
 
@@ -104,8 +105,7 @@ export default function BrowseExercisesScreen() {
   // ── Filtered list ────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return exercises.filter((ex) => {
-      const matchesCategory =
-        category === "All" || ex.muscleGroup === category;
+      const matchesCategory = category === "All" || ex.muscleGroup === category;
       const matchesSearch = ex.name
         .toLowerCase()
         .includes(search.trim().toLowerCase());
@@ -192,10 +192,10 @@ export default function BrowseExercisesScreen() {
           </Text>
         </View>
         {added && (
-          <View
-            style={[styles.addedBadge, { backgroundColor: colors.accent }]}
-          >
-            <Text style={styles.addedBadgeText}>Added</Text>
+          <View style={[styles.addedBadge, { backgroundColor: colors.accent }]}>
+            <Text style={[styles.addedBadgeText, { color: accentTextColor }]}>
+              Added
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -266,7 +266,7 @@ export default function BrowseExercisesScreen() {
               <Text
                 style={[
                   styles.chipText,
-                  { color: active ? "#000" : colors.text },
+                  { color: active ? accentTextColor : colors.text },
                 ]}
               >
                 {cat}
@@ -294,7 +294,9 @@ export default function BrowseExercisesScreen() {
             ]}
             onPress={fetchExercises}
           >
-            <Text style={{ color: "#000", fontWeight: "600" }}>Retry</Text>
+            <Text style={{ color: accentTextColor, fontWeight: "600" }}>
+              Retry
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -312,9 +314,7 @@ export default function BrowseExercisesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text
-                style={[styles.emptyText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No exercises match your search.
               </Text>
             </View>
@@ -337,7 +337,10 @@ export default function BrowseExercisesScreen() {
           />
           {activeExercise && (
             <View
-              style={[styles.modalSheet, { backgroundColor: colors.background }]}
+              style={[
+                styles.modalSheet,
+                { backgroundColor: colors.background },
+              ]}
             >
               <View
                 style={[styles.modalHandle, { backgroundColor: colors.border }]}
@@ -372,9 +375,7 @@ export default function BrowseExercisesScreen() {
                   {activeExercise.muscleGroup} · {activeExercise.equipment} ·{" "}
                   {activeExercise.difficulty}
                 </Text>
-                <Text
-                  style={[styles.modalDescription, { color: colors.text }]}
-                >
+                <Text style={[styles.modalDescription, { color: colors.text }]}>
                   {activeExercise.description || "No description provided."}
                 </Text>
                 <TouchableOpacity
@@ -397,7 +398,7 @@ export default function BrowseExercisesScreen() {
                       {
                         color: isInDraft(activeExercise._id)
                           ? colors.textSecondary
-                          : "#000",
+                          : accentTextColor,
                       },
                     ]}
                   >
@@ -442,7 +443,9 @@ export default function BrowseExercisesScreen() {
                 Create Custom Exercise
               </Text>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
                 Name
               </Text>
               <TextInput
@@ -460,7 +463,9 @@ export default function BrowseExercisesScreen() {
                 ]}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
                 Muscle Group
               </Text>
               <ScrollView
@@ -485,7 +490,7 @@ export default function BrowseExercisesScreen() {
                       <Text
                         style={[
                           styles.chipText,
-                          { color: active ? "#000" : colors.text },
+                          { color: active ? accentTextColor : colors.text },
                         ]}
                       >
                         {g}
@@ -495,7 +500,9 @@ export default function BrowseExercisesScreen() {
                 })}
               </ScrollView>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
                 Equipment
               </Text>
               <TextInput
@@ -513,7 +520,9 @@ export default function BrowseExercisesScreen() {
                 ]}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
                 Difficulty
               </Text>
               <View style={styles.chipRowInline}>
@@ -534,7 +543,7 @@ export default function BrowseExercisesScreen() {
                       <Text
                         style={[
                           styles.chipText,
-                          { color: active ? "#000" : colors.text },
+                          { color: active ? accentTextColor : colors.text },
                         ]}
                       >
                         {d}
@@ -544,7 +553,9 @@ export default function BrowseExercisesScreen() {
                 })}
               </View>
 
-              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
                 Description (optional)
               </Text>
               <TextInput
@@ -578,9 +589,11 @@ export default function BrowseExercisesScreen() {
                 disabled={creating}
               >
                 {creating ? (
-                  <ActivityIndicator color="#000" />
+                  <ActivityIndicator color={accentTextColor} />
                 ) : (
-                  <Text style={[styles.modalAddBtnText, { color: "#000" }]}>
+                  <Text
+                    style={[styles.modalAddBtnText, { color: accentTextColor }]}
+                  >
                     Create & Add to Plan
                   </Text>
                 )}
@@ -662,9 +675,11 @@ export default function BrowseExercisesScreen() {
                 disabled={savingPlan}
               >
                 {savingPlan ? (
-                  <ActivityIndicator color="#000" />
+                  <ActivityIndicator color={accentTextColor} />
                 ) : (
-                  <Text style={[styles.modalAddBtnText, { color: "#000" }]}>
+                  <Text
+                    style={[styles.modalAddBtnText, { color: accentTextColor }]}
+                  >
                     Save Plan
                   </Text>
                 )}
@@ -694,11 +709,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   headerBtn: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     minWidth: 60,
   },
-  headerTitle: { fontFamily: "SpaceGrotesk-Regular", fontSize: 17 },
+  headerTitle: { fontSize: 17 },
 
   searchInput: {
     marginHorizontal: 20,
@@ -706,7 +720,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     marginBottom: 14,
   },
@@ -721,7 +734,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  chipText: { fontFamily: "SpaceGrotesk-Regular", fontSize: 13 },
+  chipText: { fontSize: 13 },
 
   list: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
@@ -734,23 +747,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardInfo: { flex: 1 },
-  cardName: { fontFamily: "SpaceGrotesk-Regular", fontSize: 15 },
+  cardName: { fontSize: 15 },
   cardMeta: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 12,
     marginTop: 2,
   },
   addedBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
   addedBadgeText: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 11,
-    color: "#000",
     fontWeight: "600",
   },
 
   emptyState: { paddingTop: 60, alignItems: "center", paddingHorizontal: 30 },
   emptyText: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 14,
     textAlign: "center",
   },
@@ -782,22 +791,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   mediaPlaceholderText: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 14,
   },
   modalBody: { padding: 20 },
   modalTitle: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 20,
     marginBottom: 8,
   },
   modalMeta: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 13,
     marginBottom: 14,
   },
   modalDescription: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
@@ -808,13 +813,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalAddBtnText: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     fontWeight: "600",
   },
 
   fieldLabel: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 12,
     marginBottom: 6,
     marginTop: 4,
@@ -826,7 +829,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     marginBottom: 14,
   },

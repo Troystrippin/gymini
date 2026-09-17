@@ -19,6 +19,11 @@ const UserSchema = new mongoose.Schema(
       required: [true, "Please add a password"],
       minlength: 6,
     },
+    activePlanId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WorkoutPlan",
+      default: null,
+    },
 
     // --- Onboarding Info ---
     onboardingCompleted: {

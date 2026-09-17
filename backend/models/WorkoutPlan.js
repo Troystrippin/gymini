@@ -35,6 +35,7 @@ const WorkoutPlanSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 30,
       default: "My Plan",
     },
     exercises: {

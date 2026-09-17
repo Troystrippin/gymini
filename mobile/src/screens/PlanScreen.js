@@ -31,6 +31,7 @@ const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 export default function PlanScreen() {
   const { colors } = useTheme();
+  const accentTextColor = "#FFFFFF";
   const navigation = useNavigation();
 
   const {
@@ -47,6 +48,8 @@ export default function PlanScreen() {
   const [savedPlans, setSavedPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [activeSavedPlan, setActiveSavedPlan] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [editingPlanId, setEditingPlanId] = useState(null);
 
   // Custom exercise modal
   const [customModalVisible, setCustomModalVisible] = useState(false);
@@ -63,6 +66,7 @@ export default function PlanScreen() {
       setLoadingPlans(true);
       const res = await api.get("/plans");
       setSavedPlans(res.data || []);
+      setSelectedPlanId(res.data?.find((plan) => plan.isActive)?._id || null);
     } catch (err) {
       console.error("fetch plans:", err.message);
     } finally {
@@ -81,10 +85,14 @@ export default function PlanScreen() {
     const trimmed = planName.trim();
     if (!trimmed || draftExercises.length === 0) return;
     try {
-      await savePlan(trimmed);
+      await savePlan(trimmed, editingPlanId);
       setPlanName("");
+      setEditingPlanId(null);
       await fetchSavedPlans();
-      Alert.alert("Saved!", `"${trimmed}" is now your active plan.`);
+      Alert.alert(
+        editingPlanId ? "Plan updated!" : "Saved!",
+        `"${trimmed}" is now your active plan.`,
+      );
     } catch (err) {
       Alert.alert("Save failed", err.message);
     }
@@ -138,7 +146,21 @@ export default function PlanScreen() {
       })),
     );
     setPlanName(activeSavedPlan.name);
+    setEditingPlanId(activeSavedPlan._id);
     setActiveSavedPlan(null);
+  };
+
+  const handleSelectPlan = async (plan) => {
+    try {
+      await api.put(`/plans/${plan._id}/select`);
+      setSelectedPlanId(plan._id);
+      setActiveSavedPlan(plan);
+    } catch (err) {
+      Alert.alert(
+        "Selection failed",
+        err.response?.data?.message || err.message,
+      );
+    }
   };
 
   const handleRemoveSavedPlan = () => {
@@ -165,10 +187,13 @@ export default function PlanScreen() {
     );
   };
 
+  const handleStartSavedPlan = () => {
+    setActiveSavedPlan(null);
+    navigation.navigate("WorkoutSession");
+  };
+
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
 
@@ -178,6 +203,7 @@ export default function PlanScreen() {
             value={planName}
             onChangeText={setPlanName}
             placeholder="Plan name, e.g. Leg Day"
+            maxLength={30}
             placeholderTextColor={colors.textSecondary}
             style={[
               styles.planNameInput,
@@ -293,9 +319,11 @@ export default function PlanScreen() {
             ]}
           >
             {savingPlan ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={accentTextColor} />
             ) : (
-              <Text style={styles.saveButtonText}>Save Plan</Text>
+              <Text style={[styles.saveButtonText, { color: accentTextColor }]}>
+                Save Plan
+              </Text>
             )}
           </Pressable>
         </View>
@@ -319,15 +347,20 @@ export default function PlanScreen() {
             savedPlans.map((savedPlan) => (
               <Pressable
                 key={savedPlan._id}
-                onPress={() => setActiveSavedPlan(savedPlan)}
+                onPress={() => handleSelectPlan(savedPlan)}
                 style={[
                   styles.savedPlan,
-                  { backgroundColor: colors.cardBackground },
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor:
+                      selectedPlanId === savedPlan._id
+                        ? colors.primary
+                        : "transparent",
+                    borderWidth: 1,
+                  },
                 ]}
               >
-                <Text
-                  style={[styles.savedPlanName, { color: colors.text }]}
-                >
+                <Text style={[styles.savedPlanName, { color: colors.text }]}>
                   {savedPlan.name}
                 </Text>
                 <Text
@@ -370,10 +403,7 @@ export default function PlanScreen() {
                     {activeSavedPlan.name}
                   </Text>
                   <Text
-                    style={[
-                      styles.modalMeta,
-                      { color: colors.textSecondary },
-                    ]}
+                    style={[styles.modalMeta, { color: colors.textSecondary }]}
                   >
                     {activeSavedPlan.exercises.length} exercise
                     {activeSavedPlan.exercises.length === 1 ? "" : "s"}
@@ -403,10 +433,7 @@ export default function PlanScreen() {
                     <View style={styles.savedExerciseContent}>
                       <View style={styles.exerciseInfo}>
                         <Text
-                          style={[
-                            styles.exerciseName,
-                            { color: colors.text },
-                          ]}
+                          style={[styles.exerciseName, { color: colors.text }]}
                         >
                           {exercise.name}
                         </Text>
@@ -435,29 +462,50 @@ export default function PlanScreen() {
               </ScrollView>
 
               <View style={styles.savedModalActions}>
+                <View style={styles.savedModalActionRow}>
+                  <Pressable
+                    onPress={handleEditSavedPlan}
+                    style={[
+                      styles.addButton,
+                      styles.savedModalActionButton,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.addButtonText, { color: accentTextColor }]}
+                    >
+                      Load to Edit
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleRemoveSavedPlan}
+                    style={[
+                      styles.removePlanButton,
+                      styles.savedModalActionButton,
+                      { borderColor: colors.border },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.secondaryButtonText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Remove Plan
+                    </Text>
+                  </Pressable>
+                </View>
                 <Pressable
-                  onPress={handleEditSavedPlan}
+                  onPress={handleStartSavedPlan}
                   style={[
-                    styles.addButton,
+                    styles.startButton,
                     { backgroundColor: colors.primary },
                   ]}
                 >
-                  <Text style={styles.addButtonText}>Load to Edit</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleRemoveSavedPlan}
-                  style={[
-                    styles.removePlanButton,
-                    { borderColor: colors.border },
-                  ]}
-                >
                   <Text
-                    style={[
-                      styles.secondaryButtonText,
-                      { color: colors.textSecondary },
-                    ]}
+                    style={[styles.addButtonText, { color: accentTextColor }]}
                   >
-                    Remove Plan
+                    Start Workout
                   </Text>
                 </Pressable>
               </View>
@@ -483,10 +531,7 @@ export default function PlanScreen() {
               </Text>
 
               <Text
-                style={[
-                  styles.fieldLabel,
-                  { color: colors.textSecondary },
-                ]}
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
               >
                 NAME
               </Text>
@@ -523,9 +568,7 @@ export default function PlanScreen() {
                           backgroundColor: active
                             ? colors.primary
                             : colors.cardBackground,
-                          borderColor: active
-                            ? colors.primary
-                            : colors.border,
+                          borderColor: active ? colors.primary : colors.border,
                         },
                       ]}
                     >
@@ -583,9 +626,7 @@ export default function PlanScreen() {
                           backgroundColor: active
                             ? colors.primary
                             : colors.cardBackground,
-                          borderColor: active
-                            ? colors.primary
-                            : colors.border,
+                          borderColor: active ? colors.primary : colors.border,
                         },
                       ]}
                     >
@@ -641,9 +682,7 @@ export default function PlanScreen() {
                   style={[
                     styles.actionText,
                     {
-                      color: customName.trim()
-                        ? colors.primary
-                        : colors.border,
+                      color: customName.trim() ? colors.primary : colors.border,
                     },
                   ]}
                 >
@@ -696,7 +735,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { fontSize: 14, fontWeight: "700" },
   saveButton: { alignItems: "center", borderRadius: 10, padding: 14 },
-  saveButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
+  saveButtonText: { fontSize: 15, fontWeight: "800" },
   savedSection: { gap: 10 },
   savedPlan: { borderRadius: 10, padding: 14 },
   savedPlanName: { fontSize: 16, fontWeight: "800" },
@@ -719,6 +758,9 @@ const styles = StyleSheet.create({
   },
   savedExerciseMeta: { fontSize: 12, fontWeight: "700", marginTop: 6 },
   savedModalActions: { gap: 10, marginTop: 20 },
+  savedModalActionRow: { flexDirection: "row", gap: 10 },
+  savedModalActionButton: { flex: 1 },
+  startButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   removePlanButton: {
     alignItems: "center",
     borderRadius: 10,
@@ -733,7 +775,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 21, fontWeight: "800", marginBottom: 6 },
   modalMeta: { fontSize: 13, marginBottom: 14 },
   addButton: { alignItems: "center", borderRadius: 10, padding: 14 },
-  addButtonText: { fontSize: 15, fontWeight: "800", color: "white" },
+  addButtonText: { fontSize: 15, fontWeight: "800" },
   customCard: { borderRadius: 16, margin: 24, padding: 20, maxHeight: "80%" },
   customInput: {
     borderRadius: 10,

@@ -6,9 +6,14 @@ const Exercise = require("../models/Exercise"); // side-effect: registers model
 // @route   GET /api/workouts/today
 const getTodayWorkout = async (req, res) => {
   try {
-    const plan = await WorkoutPlan.findOne({ userId: req.user._id }).sort({
-      createdAt: -1,
-    });
+    const plan = req.user.activePlanId
+      ? await WorkoutPlan.findOne({
+          _id: req.user.activePlanId,
+          userId: req.user._id,
+        })
+      : await WorkoutPlan.findOne({ userId: req.user._id }).sort({
+          createdAt: -1,
+        });
 
     if (!plan) {
       return res.status(404).json({ message: "No workout plan found" });

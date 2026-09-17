@@ -37,7 +37,7 @@ export default function Stepper({ label, value, onChange, min = 1, step = 1 }) {
 
 const styles = StyleSheet.create({
   wrapper: { alignItems: "center" },
-  label: { fontFamily: "SpaceGrotesk-Regular", fontSize: 12, marginBottom: 4 },
+  label: { fontSize: 12, marginBottom: 4 },
   control: {
     flexDirection: "row",
     alignItems: "center",
@@ -46,9 +46,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   btn: { paddingHorizontal: 12, paddingVertical: 6 },
-  btnText: { fontFamily: "SpaceGrotesk-Regular", fontSize: 18 },
+  btnText: { fontSize: 18 },
   value: {
-    fontFamily: "SpaceGrotesk-Regular",
     fontSize: 15,
     minWidth: 28,
     textAlign: "center",

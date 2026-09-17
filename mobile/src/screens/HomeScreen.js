@@ -10,32 +10,36 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
 import WorkoutCard from "../components/WorkoutCard";
 import StatCard from "../components/StatCard";
 import api from "../api/api";
+import { MEALS, SELECTED_MEALS_KEY } from "../data/mealPlans";
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { toggleTheme, mode, colors } = useTheme();
+  const navigation = useNavigation();
   const [workout, setWorkout] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMeals, setSelectedMeals] = useState([]);
 
   const firstName = user?.fullName?.split(" ")[0] || "Pare";
-
-  const completedCount = exercises.filter((e) => e.done).length;
-  const totalCount = exercises.length;
-  const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
   // Refetch every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchTodayWorkout();
-    }, [])
+      AsyncStorage.getItem(SELECTED_MEALS_KEY).then((storedIds) => {
+        const ids = storedIds ? JSON.parse(storedIds) : [];
+        setSelectedMeals(MEALS.filter((meal) => ids.includes(meal.id)));
+      });
+    }, []),
   );
 
   const fetchTodayWorkout = async () => {
@@ -53,23 +57,6 @@ export default function HomeScreen() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const toggleExercise = async (exerciseId) => {
-    // Optimistic UI update
-    setExercises((prev) =>
-      prev.map((e) => (e._id === exerciseId ? { ...e, done: !e.done } : e))
-    );
-
-    try {
-      await api.patch(`/workouts/${workout._id}/exercises/${exerciseId}`);
-    } catch (err) {
-      // Revert on failure
-      setExercises((prev) =>
-        prev.map((e) => (e._id === exerciseId ? { ...e, done: !e.done } : e))
-      );
-      Alert.alert("Error", "Could not update exercise");
     }
   };
 
@@ -140,8 +127,10 @@ export default function HomeScreen() {
           <WorkoutCard
             workout={workout}
             exercises={exercises}
-            progress={progress}
-            onToggle={toggleExercise}
+            progress={0}
+            onPress={() =>
+              navigation.navigate("Workouts", { screen: "WorkoutSession" })
+            }
             colors={colors}
           />
         ) : (
@@ -157,6 +146,29 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Meals")}
+          activeOpacity={0.85}
+          style={[
+            styles.mealPreview,
+            { backgroundColor: colors.cardBackground },
+          ]}
+        >
+          <Text style={[styles.mealLabel, { color: colors.textSecondary }]}>
+            TODAY'S MEAL PLAN
+          </Text>
+          <Text style={[styles.mealTitle, { color: colors.text }]}>
+            {selectedMeals.length
+              ? `${selectedMeals.length} meals selected`
+              : "Build your meal plan"}
+          </Text>
+          <Text style={[styles.mealMeta, { color: colors.primary }]}>
+            {selectedMeals.length
+              ? selectedMeals.map((meal) => meal.name).join(" · ")
+              : "Browse meals to get started"}
+          </Text>
+        </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -220,4 +232,8 @@ const styles = StyleSheet.create({
   emptyState: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
   emptySubtext: { fontSize: 13 },
+  mealPreview: { borderRadius: 18, marginTop: 20, padding: 18 },
+  mealLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
+  mealTitle: { fontSize: 20, fontWeight: "800", marginTop: 6 },
+  mealMeta: { fontSize: 13, fontWeight: "700", marginTop: 10 },
 });
