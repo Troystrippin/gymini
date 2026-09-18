@@ -13,7 +13,7 @@ export const lightColors = {
   accentMuted: "rgba(107, 69, 211, 0.15)",
   border: "#a29cb5",
   warning: "#ff5c4d",
-  success: "#d9ff4d",
+  success: "#8eb20a",
   selectedcard: "#c3bade",
 };
 

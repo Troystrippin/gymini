@@ -3,9 +3,9 @@ import { StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
-import PlaceholderScreen from "../screens/PlaceholderScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import WorkoutStack from "./WorkoutStack";
+import ProgressScreen from "../screens/ProgressScreen";
 import MealsStack from "./MealsStack";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
@@ -16,10 +16,6 @@ import ProgressIcon from "../icons/ProgressIcon";
 import ProfileIcon from "../icons/ProfileIcon";
 
 const Tab = createBottomTabNavigator();
-
-const ProgressScreen = () => (
-  <PlaceholderScreen title="Progress" Icon={ProgressIcon} />
-);
 
 const iconFor = (name, focused, color) => {
   const icons = {

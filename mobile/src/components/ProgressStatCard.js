@@ -1,9 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-export default function BodyStatCard({
+export default function ProgressStatCard({
   label,
   value,
+  description,
   icon: Icon,
   colors,
   style,
@@ -34,6 +35,9 @@ export default function BodyStatCard({
         ) : null}
       </View>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statDescription, { color: colors.success }]}>
+        {description}
+      </Text>
     </View>
   );
 }
@@ -42,7 +46,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     borderRadius: 18,
-    padding: 16,
+    padding: 14,
     minHeight: 50,
     minWidth: 100,
     borderLeftWidth: 3,
@@ -55,7 +59,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
   statEmoji: {
     fontSize: 18,
@@ -65,5 +69,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 8,
     marginBottom: 14,
+  },
+  statDescription: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
 });
