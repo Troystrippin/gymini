@@ -55,6 +55,14 @@ const authResponse = (user, accessToken, refreshToken) => ({
 const DUMMY_HASH =
   "$2a$10$CwTycUXWue0Thq9StjUM0uJ8ZcT0ZK1q0VpXt/qvUX8nQ4TGwBq3K";
 
+// ─────────────────────────────────────────────────────────────
+// TEMPORARY: auto-verify new users while email delivery is on
+// Resend sandbox (only the account owner's inbox receives mail).
+// Remove this flag and the `emailVerified` override below once a
+// verified sending domain is wired up.
+// ─────────────────────────────────────────────────────────────
+const AUTO_VERIFY_NEW_USERS = true;
+
 const registerUser = async (req, res, next) => {
   try {
     const { fullName, email, password } = req.body;
@@ -71,6 +79,7 @@ const registerUser = async (req, res, next) => {
       fullName,
       email,
       password: hashedPassword,
+      emailVerified: AUTO_VERIFY_NEW_USERS, // ← temp auto-verify
       // role defaults to "user" via schema
     });
 
@@ -78,16 +87,19 @@ const registerUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid user data" });
     }
 
-    const code = generate6DigitCode();
-    user.emailVerificationCode = hashCode(code);
-    user.emailVerificationExpires = minutesFromNow(
-      Number(process.env.EMAIL_VERIFICATION_TTL_MIN) || 10,
-    );
-    await user.save();
+    // Only generate + send a verification code when auto-verify is off.
+    if (!AUTO_VERIFY_NEW_USERS) {
+      const code = generate6DigitCode();
+      user.emailVerificationCode = hashCode(code);
+      user.emailVerificationExpires = minutesFromNow(
+        Number(process.env.EMAIL_VERIFICATION_TTL_MIN) || 10,
+      );
+      await user.save();
 
-    sendVerificationEmail(user, code).catch((err) => {
-      console.error("[register] verification email failed:", err.message);
-    });
+      sendVerificationEmail(user, code).catch((err) => {
+        console.error("[register] verification email failed:", err.message);
+      });
+    }
 
     const accessToken = signAccessToken(user._id);
     const refreshToken = await issueRefreshToken({
@@ -280,6 +292,13 @@ const verifyEmail = async (req, res, next) => {
 
 const resendVerification = async (req, res, next) => {
   try {
+    // If auto-verify is on, there is nothing to resend.
+    if (AUTO_VERIFY_NEW_USERS) {
+      return res.json({
+        message: "Email verification is currently disabled.",
+      });
+    }
+
     const { email } = req.body;
     const user = await User.findOne({ email });
 
