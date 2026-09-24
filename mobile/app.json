@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "gymini",
+    "name": "GYMINI",
     "slug": "gymini",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,9 +8,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.troyystrppn.gymini"
     },
     "android": {
+      "package": "com.troyystrppn.gymini",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,6 +25,17 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c64c3298-b7fe-40b1-b533-580be3090603"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c64c3298-b7fe-40b1-b533-580be3090603"
+    }
   }
 }
