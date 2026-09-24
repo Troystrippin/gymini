@@ -62,17 +62,6 @@ export default function Login() {
         >
           ◆◆ GYMINI
         </div>
-        <div
-          style={{
-            fontSize: 12,
-            color: COLORS.textSecondary,
-            textAlign: "center",
-            letterSpacing: 1,
-            marginBottom: 32,
-          }}
-        >
-          ADMIN DASHBOARD
-        </div>
 
         {error && (
           <div
