@@ -27,6 +27,14 @@ if (missing.length) {
 const app = express();
 
 // ─────────────────────────────────────────────────────────────
+// Trust proxy — Railway/Render/Heroku/Vercel sit behind a reverse
+// proxy that adds X-Forwarded-For. Without this, express-rate-limit
+// throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request.
+// ─────────────────────────────────────────────────────────────
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+// ─────────────────────────────────────────────────────────────
 // CORS — must run BEFORE helmet so its headers aren't stripped.
 // ─────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
@@ -68,7 +76,6 @@ app.use(
     contentSecurityPolicy: false, // API only — no HTML to secure
   }),
 );
-app.disable("x-powered-by");
 
 // --- Body parser with size limit ---
 app.use(express.json({ limit: "1mb" }));
