@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [workout, setWorkout] = useState(null);
   const [exercises, setExercises] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMeals, setSelectedMeals] = useState([]);
 
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchTodayWorkout();
+      fetchStats();
       AsyncStorage.getItem(SELECTED_MEALS_KEY).then((storedIds) => {
         const ids = storedIds ? JSON.parse(storedIds) : [];
         setSelectedMeals(MEALS.filter((meal) => ids.includes(meal.id)));
@@ -66,6 +68,17 @@ export default function HomeScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Phase 2.3: real workout stats (streak, totals) ──
+  const fetchStats = async () => {
+    try {
+      const res = await api.get("/workouts/stats");
+      setStats(res.data);
+    } catch (err) {
+      // Stats are nice-to-have; don't alert. Show zeros.
+      setStats(null);
     }
   };
 
@@ -124,20 +137,22 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* STATS */}
+        {/* STATS — real data from /workouts/stats */}
         <View style={styles.statsRow}>
           <StatCard
-            label="CALORIES"
-            value="1,000"
+            label="SESSIONS"
+            value={String(stats?.totalSessions ?? 0)}
             emoji="🔥"
-            progress={0.5}
+            progress={Math.min(1, (stats?.thisWeekSessions ?? 0) / 7)}
             colors={colors}
           />
           <StatCard
             label="STREAK"
-            value="4 days"
+            value={`${stats?.currentStreak ?? 0} ${
+              stats?.currentStreak === 1 ? "day" : "days"
+            }`}
             emoji="⚡"
-            progress={0.7}
+            progress={Math.min(1, (stats?.currentStreak ?? 0) / 7)}
             colors={colors}
           />
         </View>

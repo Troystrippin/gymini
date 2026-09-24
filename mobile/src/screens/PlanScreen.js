@@ -330,9 +330,19 @@ export default function PlanScreen() {
 
         {/* ── Saved Plans ───────────────────────────────────────── */}
         <View style={[styles.savedSection, { marginTop: 24 }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Saved Plans
-          </Text>
+          <View style={styles.savedHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Saved Plans
+            </Text>
+            <Pressable
+              onPress={() => navigation.navigate("WorkoutHistory")}
+              style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.historyLink, { color: colors.primary }]}>
+                History →
+              </Text>
+            </Pressable>
+          </View>
 
           {loadingPlans ? (
             <ActivityIndicator
@@ -737,6 +747,15 @@ const styles = StyleSheet.create({
   saveButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   saveButtonText: { fontSize: 15, fontWeight: "800" },
   savedSection: { gap: 10 },
+
+  // ── Phase 2.3: History link ──
+  savedHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyLink: { fontSize: 14, fontWeight: "700" },
+
   savedPlan: { borderRadius: 10, padding: 14 },
   savedPlanName: { fontSize: 16, fontWeight: "800" },
   savedModal: {

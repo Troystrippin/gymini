@@ -31,6 +31,7 @@ const CATEGORIES = [
   "Core",
   "Arms",
   "Cardio",
+  "Custom",
 ];
 
 const MUSCLE_GROUPS = [
@@ -84,9 +85,16 @@ export default function BrowseExercisesScreen() {
     try {
       setLoadError(null);
       const res = await api.get("/exercises");
-      setExercises(res.data || []);
+      // Handle both bare-array and wrapped { exercises: [...] } responses.
+      const list = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.exercises)
+          ? res.data.exercises
+          : [];
+      setExercises(list);
     } catch (err) {
       setLoadError(err.response?.data?.message || err.message);
+      setExercises([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,9 +112,10 @@ export default function BrowseExercisesScreen() {
 
   // ── Filtered list ────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return exercises.filter((ex) => {
+    const list = Array.isArray(exercises) ? exercises : [];
+    return list.filter((ex) => {
       const matchesCategory = category === "All" || ex.muscleGroup === category;
-      const matchesSearch = ex.name
+      const matchesSearch = (ex.name || "")
         .toLowerCase()
         .includes(search.trim().toLowerCase());
       return matchesCategory && matchesSearch;
@@ -142,10 +151,16 @@ export default function BrowseExercisesScreen() {
       setCDiff("Beginner");
       setCDesc("");
     } catch (err) {
-      Alert.alert(
-        "Could not create exercise",
-        err.response?.data?.message || err.message,
-      );
+      const data = err.response?.data;
+      let msg;
+      if (data?.errors && Array.isArray(data.errors)) {
+        msg =
+          `${data.message || "Could not create exercise"}:\n\n` +
+          data.errors.map((e) => `• ${e.field}: ${e.message}`).join("\n");
+      } else {
+        msg = data?.message || err.message || "Something went wrong";
+      }
+      Alert.alert("Could not create exercise", msg);
     } finally {
       setCreating(false);
     }
@@ -166,6 +181,7 @@ export default function BrowseExercisesScreen() {
       setSaveVisible(false);
       navigation.goBack();
     } catch (err) {
+      // err.message contains the full detailed validation list now.
       Alert.alert("Save failed", err.message);
     }
   };
@@ -192,7 +208,9 @@ export default function BrowseExercisesScreen() {
           </Text>
         </View>
         {added && (
-          <View style={[styles.addedBadge, { backgroundColor: colors.accent }]}>
+          <View
+            style={[styles.addedBadge, { backgroundColor: colors.accent }]}
+          >
             <Text style={[styles.addedBadgeText, { color: accentTextColor }]}>
               Added
             </Text>
@@ -314,7 +332,9 @@ export default function BrowseExercisesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.emptyText, { color: colors.textSecondary }]}
+              >
                 No exercises match your search.
               </Text>
             </View>

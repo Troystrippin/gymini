@@ -7,6 +7,8 @@ import { useTheme } from "../theme/theme";
 import SplashScreen from "../screens/SplashScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
+import VerifyEmailScreen from "../screens/VerifyEmailScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import OnboardingGoal from "../screens/OnboardingGoal";
 import OnboardingDetails from "../screens/OnboardingDetails";
 import OnboardingActivity from "../screens/OnboardingActivity";
@@ -40,7 +42,13 @@ const AppNavigator = () => {
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
         </>
+      ) : !user.emailVerified ? (
+        <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       ) : !user.onboardingCompleted ? (
         <>
           <Stack.Screen name="OnboardingGoal" component={OnboardingGoal} />

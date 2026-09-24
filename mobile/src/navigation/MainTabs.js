@@ -3,10 +3,10 @@ import { StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
-import ProfileScreen from "../screens/ProfileScreen";
 import WorkoutStack from "./WorkoutStack";
 import ProgressScreen from "../screens/ProgressScreen";
 import MealsStack from "./MealsStack";
+import ProfileStack from "./ProfileStack";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
 import HomeIcon from "../icons/HomeIcon";
@@ -53,7 +53,7 @@ export default function MainTabs() {
       <Tab.Screen name="Workouts" component={WorkoutStack} />
       <Tab.Screen name="Meals" component={MealsStack} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 }

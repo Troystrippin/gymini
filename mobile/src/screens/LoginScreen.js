@@ -1,38 +1,69 @@
-import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import {
+  validateEmail,
+  validateCurrentPassword,
+  showValidationAlert,
+} from "../utils/validation";
+
+const LABELS = {
+  email: "Email",
+  password: "Password",
+};
 
 export default function LoginScreen({ navigation }) {
   const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useContext(AuthContext);
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [submitting, setSubmitting] = useState(false);
+  const { login, sessionExpired, clearSessionExpired } =
+    useContext(AuthContext);
   const [rememberMe, setRememberMe] = useState(false);
 
+  useEffect(() => {
+    if (sessionExpired && (email || password)) clearSessionExpired();
+  }, [email, password, sessionExpired, clearSessionExpired]);
+
+  const errors = {
+    email: validateEmail(email),
+    password: validateCurrentPassword(password),
+  };
+
+  const handleBlur = (field) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
+
   const handleLogin = async () => {
-    if (!email || !password)
-      return Alert.alert("Error", "Please fill all fields");
+    setTouched({ email: true, password: true });
+
+    const hasErrors = showValidationAlert("Login Failed", errors, LABELS);
+    if (hasErrors) return;
+
     try {
-      await login(email, password);
+      setSubmitting(true);
+      await login(email.trim().toLowerCase(), password);
     } catch (err) {
       Alert.alert(
         "Login Failed",
-        err.response?.data?.message || "Something went wrong",
+        err.response?.data?.message || err.message || "Something went wrong",
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -52,6 +83,14 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.logo}>◆◆</Text>
           <Text style={styles.brand}>GYMINI</Text>
         </View>
+
+        {sessionExpired && (
+          <View style={styles.expiredBanner}>
+            <Text style={styles.expiredText}>
+              Your session expired. Please log in again.
+            </Text>
+          </View>
+        )}
 
         <View
           style={[
@@ -84,15 +123,25 @@ export default function LoginScreen({ navigation }) {
           label="Email"
           value={email}
           onChangeText={setEmail}
+          onBlur={() => handleBlur("email")}
           placeholder="example@gmail.com"
           keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={errors.email}
+          touched={touched.email}
         />
         <InputField
           label="Password"
           value={password}
           onChangeText={setPassword}
+          onBlur={() => handleBlur("password")}
           placeholder="Enter your password"
           secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={errors.password}
+          touched={touched.password}
         />
 
         <View style={styles.row}>
@@ -105,12 +154,18 @@ export default function LoginScreen({ navigation }) {
             />
             <Text style={styles.remember}>Remember me</Text>
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ForgotPassword")}
+          >
             <Text style={styles.forgot}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
 
-        <Button title="Login" onPress={handleLogin} />
+        <Button
+          title={submitting ? "Logging in..." : "Login"}
+          onPress={handleLogin}
+          disabled={submitting}
+        />
 
         <View style={styles.divider}>
           <View style={styles.line} />
@@ -163,6 +218,21 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 8,
   },
+  expiredBanner: {
+    backgroundColor: "rgba(255, 100, 100, 0.15)",
+    borderColor: "rgba(255, 100, 100, 0.4)",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  expiredText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    textAlign: "center",
+    fontWeight: "600",
+  },
   tabContainer: {
     flexDirection: "row",
     backgroundColor: COLORS.cardBackground,
@@ -181,10 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   remember: { color: COLORS.textSecondary, fontSize: 13 },
-  rememberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  rememberRow: { flexDirection: "row", alignItems: "center" },
   checkbox: {
     width: 18,
     height: 18,

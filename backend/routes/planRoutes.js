@@ -8,12 +8,24 @@ const {
   selectPlan,
 } = require("../controllers/planController");
 const { protect } = require("../middleware/authMiddleware");
+const { handleValidation } = require("../middleware/validate");
+const {
+  planIdParam,
+  savePlanRules,
+} = require("../validators/planValidators");
 
-router.post("/", protect, savePlan);
+router.post("/", protect, savePlanRules, handleValidation, savePlan);
 router.get("/", protect, getPlans);
-router.get("/:id", protect, getPlanById);
-router.put("/:id", protect, savePlan);
-router.put("/:id/select", protect, selectPlan);
-router.delete("/:id", protect, deletePlan);
+router.get("/:id", protect, planIdParam, handleValidation, getPlanById);
+router.put(
+  "/:id",
+  protect,
+  planIdParam,
+  savePlanRules,
+  handleValidation,
+  savePlan,
+);
+router.put("/:id/select", protect, planIdParam, handleValidation, selectPlan);
+router.delete("/:id", protect, planIdParam, handleValidation, deletePlan);
 
 module.exports = router;

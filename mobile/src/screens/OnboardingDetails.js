@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -15,6 +14,20 @@ import Button from "../components/Button";
 import ProgressBar from "../components/ProgressBar";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
+import {
+  validateAge,
+  validateHeight,
+  validateWeight,
+  showValidationAlert,
+} from "../utils/validation";
+
+const LABELS = {
+  biologicalSex: "Biological Sex",
+  age: "Age",
+  heightCm: "Height",
+  weightKg: "Weight",
+  workoutDaysPerWeek: "Workout Days / Week",
+};
 
 export default function OnboardingDetails({ navigation, route }) {
   const { colors } = useTheme();
@@ -24,15 +37,50 @@ export default function OnboardingDetails({ navigation, route }) {
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [days, setDays] = useState(null);
+  const [touched, setTouched] = useState({
+    sex: false,
+    age: false,
+    height: false,
+    weight: false,
+    days: false,
+  });
+
+  // ── Per-field errors ─────────────────────────────────────────────
+  const errors = {
+    biologicalSex: sex ? null : "Please select your biological sex",
+    age: !age
+      ? "Age is required"
+      : validateAge(age),
+    heightCm: !height
+      ? "Height is required"
+      : validateHeight(height),
+    weightKg: !weight
+      ? "Weight is required"
+      : validateWeight(weight),
+    workoutDaysPerWeek:
+      days === null ? "Please select your workout days per week" : null,
+  };
+
+  const handleBlur = (field) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleContinue = () => {
-    if (!sex || !age || !height || !weight || days === null) {
-      return Alert.alert("Missing info", "Please fill all fields to continue.");
-    }
+    // Reveal all inline errors
+    setTouched({
+      sex: true,
+      age: true,
+      height: true,
+      weight: true,
+      days: true,
+    });
+
+    // Block if any error
+    if (showValidationAlert("Cannot Continue", errors, LABELS)) return;
+
     navigation.navigate("OnboardingActivity", {
       goal,
       biologicalSex: sex,
-      age: parseInt(age),
+      age: parseInt(age, 10),
       height: parseFloat(height),
       weight: parseFloat(weight),
       workoutDaysPerWeek: days,
@@ -65,6 +113,7 @@ export default function OnboardingDetails({ navigation, route }) {
             you.
           </Text>
 
+          {/* ── Biological Sex ─────────────────────────────── */}
           <Text style={styles.fieldLabel}>BIOLOGICAL SEX</Text>
           <View style={styles.toggleRow}>
             {["Male", "Female"].map((option) => (
@@ -73,8 +122,14 @@ export default function OnboardingDetails({ navigation, route }) {
                 style={[
                   styles.toggleBtn,
                   sex === option && styles.toggleBtnActive,
+                  touched.sex &&
+                    errors.biologicalSex &&
+                    styles.toggleBtnError,
                 ]}
-                onPress={() => setSex(option)}
+                onPress={() => {
+                  setSex(option);
+                  handleBlur("sex");
+                }}
               >
                 <Text
                   style={[
@@ -87,44 +142,84 @@ export default function OnboardingDetails({ navigation, route }) {
               </TouchableOpacity>
             ))}
           </View>
+          {touched.sex && errors.biologicalSex ? (
+            <Text style={styles.errorText}>{errors.biologicalSex}</Text>
+          ) : null}
 
+          {/* ── Age ────────────────────────────────────────── */}
           <Text style={styles.fieldLabel}>Age</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              touched.age && errors.age && styles.inputError,
+            ]}
             value={age}
             onChangeText={setAge}
+            onBlur={() => handleBlur("age")}
             placeholder="yrs"
             placeholderTextColor={COLORS.textSecondary}
             keyboardType="number-pad"
+            maxLength={3}
           />
+          {touched.age && errors.age ? (
+            <Text style={styles.errorText}>{errors.age}</Text>
+          ) : null}
 
+          {/* ── Height ─────────────────────────────────────── */}
           <Text style={styles.fieldLabel}>Height</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              touched.height && errors.heightCm && styles.inputError,
+            ]}
             value={height}
             onChangeText={setHeight}
+            onBlur={() => handleBlur("height")}
             placeholder="cm"
             placeholderTextColor={COLORS.textSecondary}
             keyboardType="number-pad"
+            maxLength={3}
           />
+          {touched.height && errors.heightCm ? (
+            <Text style={styles.errorText}>{errors.heightCm}</Text>
+          ) : null}
 
+          {/* ── Weight ─────────────────────────────────────── */}
           <Text style={styles.fieldLabel}>Weight</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              touched.weight && errors.weightKg && styles.inputError,
+            ]}
             value={weight}
             onChangeText={setWeight}
+            onBlur={() => handleBlur("weight")}
             placeholder="kg"
             placeholderTextColor={COLORS.textSecondary}
             keyboardType="number-pad"
+            maxLength={3}
           />
+          {touched.weight && errors.weightKg ? (
+            <Text style={styles.errorText}>{errors.weightKg}</Text>
+          ) : null}
 
+          {/* ── Workout Days ───────────────────────────────── */}
           <Text style={styles.fieldLabel}>WORKOUT DAYS PER WEEK</Text>
           <View style={styles.daysRow}>
             {[0, 1, 2, 3, 4, 5, 6, 7].map((num) => (
               <TouchableOpacity
                 key={num}
-                style={[styles.dayBtn, days === num && styles.dayBtnActive]}
-                onPress={() => setDays(num)}
+                style={[
+                  styles.dayBtn,
+                  days === num && styles.dayBtnActive,
+                  touched.days &&
+                    errors.workoutDaysPerWeek &&
+                    styles.dayBtnError,
+                ]}
+                onPress={() => {
+                  setDays(num);
+                  handleBlur("days");
+                }}
               >
                 <Text
                   style={[styles.dayText, days === num && styles.dayTextActive]}
@@ -134,6 +229,9 @@ export default function OnboardingDetails({ navigation, route }) {
               </TouchableOpacity>
             ))}
           </View>
+          {touched.days && errors.workoutDaysPerWeek ? (
+            <Text style={styles.errorText}>{errors.workoutDaysPerWeek}</Text>
+          ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
@@ -164,7 +262,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 8,
   },
-  toggleRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
+
+  // Sex toggle
+  toggleRow: { flexDirection: "row", gap: 12, marginBottom: 4 },
   toggleBtn: {
     flex: 1,
     paddingVertical: 16,
@@ -175,8 +275,11 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   toggleBtnActive: { borderColor: COLORS.primary },
+  toggleBtnError: { borderColor: "#E53935" },
   toggleText: { color: COLORS.textSecondary, fontSize: 15, fontWeight: "600" },
   toggleTextActive: { color: COLORS.text },
+
+  // Text inputs
   input: {
     backgroundColor: COLORS.inputBg,
     borderRadius: 12,
@@ -186,9 +289,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     color: COLORS.text,
     fontSize: 15,
-    marginBottom: 20,
+    marginBottom: 4,
   },
-  daysRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  inputError: {
+    borderColor: "#E53935",
+    borderWidth: 1.5,
+  },
+
+  // Days picker
+  daysRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   dayBtn: {
     flex: 1,
     aspectRatio: 1,
@@ -200,7 +309,19 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   dayBtnActive: { borderColor: COLORS.primary },
+  dayBtnError: { borderColor: "#E53935" },
   dayText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: "700" },
   dayTextActive: { color: COLORS.text },
+
+  // Error text below each field
+  errorText: {
+    color: "#E53935",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+    marginBottom: 12,
+    marginLeft: 2,
+  },
+
   footer: { paddingHorizontal: 24, paddingBottom: 12 },
 });

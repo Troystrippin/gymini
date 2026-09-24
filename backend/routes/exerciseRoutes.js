@@ -1,14 +1,26 @@
 const express = require("express");
 const router = express.Router();
 const {
-  getExercises,
   createExercise,
-  deleteExercise,
+  getExercises,
+  getExerciseById,
 } = require("../controllers/exerciseController");
 const { protect } = require("../middleware/authMiddleware");
+const { handleValidation } = require("../middleware/validate");
+const {
+  exerciseIdParam,
+  createExerciseRules,
+  listExercisesRules,
+} = require("../validators/exerciseValidators");
 
-router.get("/", protect, getExercises);
-router.post("/", protect, createExercise);
-router.delete("/:id", protect, deleteExercise);
+router.get("/", listExercisesRules, handleValidation, getExercises);
+router.post(
+  "/",
+  protect,
+  createExerciseRules,
+  handleValidation,
+  createExercise,
+);
+router.get("/:id", exerciseIdParam, handleValidation, getExerciseById);
 
 module.exports = router;

@@ -1,7 +1,17 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+} from "react";
 import api from "../api/api";
 
 const PlanDraftContext = createContext(null);
+
+// Collision-safe id for a custom exercise. Date.now() alone can collide
+// if two customs are added within the same millisecond.
+const makeCustomId = () =>
+  `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export function PlanDraftProvider({ children }) {
   const [draftExercises, setDraftExercises] = useState([]);
@@ -33,7 +43,7 @@ export function PlanDraftProvider({ children }) {
       setDraftExercises((prev) => [
         ...prev,
         {
-          exerciseId: `custom-${Date.now()}`,
+          exerciseId: makeCustomId(),
           name: trimmed,
           description: description.trim(),
           muscleGroup,
@@ -58,6 +68,20 @@ export function PlanDraftProvider({ children }) {
         e.exerciseId === exerciseId ? { ...e, [field]: Math.max(1, value) } : e,
       ),
     );
+  }, []);
+
+  // Swap items for drag-to-reorder.
+  const reorderExercises = useCallback((from, to) => {
+    setDraftExercises((prev) => {
+      if (from === to) return prev;
+      if (from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
+        return prev;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   }, []);
 
   const isInDraft = useCallback(
@@ -92,9 +116,10 @@ export function PlanDraftProvider({ children }) {
             name: e.name,
             muscleGroup: e.muscleGroup,
             description: e.description || "",
-            sets: e.sets,
-            reps: e.reps,
-            isCustom: e.isCustom,
+            // Force integer bounds to match backend validator.
+            sets: Math.max(1, Math.min(50, Math.floor(Number(e.sets)) || 3)),
+            reps: Math.max(1, Math.min(200, Math.floor(Number(e.reps)) || 10)),
+            isCustom: Boolean(e.isCustom),
           })),
         };
 
@@ -104,8 +129,16 @@ export function PlanDraftProvider({ children }) {
         clearDraft();
         return res.data;
       } catch (err) {
-        const msg =
-          err.response?.data?.message || err.message || "Could not save plan";
+        const data = err.response?.data;
+        let msg;
+        if (data?.errors && Array.isArray(data.errors)) {
+          // Show the field-level errors from express-validator.
+          msg =
+            `${data.message || "Validation failed"}:\n\n` +
+            data.errors.map((e) => `• ${e.field}: ${e.message}`).join("\n");
+        } else {
+          msg = data?.message || err.message || "Could not save plan";
+        }
         setSaveError(msg);
         throw new Error(msg);
       } finally {
@@ -123,6 +156,7 @@ export function PlanDraftProvider({ children }) {
         addCustomExercise,
         removeExercise,
         updateExercise,
+        reorderExercises,
         isInDraft,
         clearDraft,
         replaceDraft,

@@ -26,22 +26,24 @@ const GOALS = [
   { id: "Athletic Performance", label: "Athletic", icon: "⚡" },
 ];
 
+// Derive a display-level label from the stored activityLevel enum.
+// Enum values (from User model): "Sedentary" | "Lightly Active"
+//                               | "Moderately Active" | "Very Active"
 function getFitnessLevel(activityLevel) {
-  if (
-    activityLevel === "Very Active" ||
-    activityLevel === "Athletic Performance"
-  ) {
-    return "Advance";
+  switch (activityLevel) {
+    case "Very Active":
+      return "Advanced";
+    case "Moderately Active":
+      return "Intermediate";
+    case "Lightly Active":
+    case "Sedentary":
+      return "Beginner";
+    default:
+      return null;
   }
-
-  if (activityLevel === "Moderately Active") {
-    return "Intermediate";
-  }
-
-  return activityLevel ? "Beginner" : null;
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { user, logout, completeOnboarding } = useContext(AuthContext);
   const { colors, mode } = useTheme();
   const profileGoal = user?.profile?.goal ?? user?.goal ?? null;
@@ -68,6 +70,7 @@ export default function ProfileScreen() {
   const fitnessLevel = getFitnessLevel(details?.activityLevel);
   const weight = details?.weightKg;
   const height = details?.heightCm;
+  const age = details?.age;
   const bmi = weight && height ? weight / (height / 100) ** 2 : null;
   const colorIndicator = !bmi
     ? "#B0BEC5"
@@ -80,6 +83,8 @@ export default function ProfileScreen() {
           : bmi < 40
             ? "#F44336"
             : "#7B1FA2";
+
+  const hasMissingStats = !weight || !height || !age;
 
   const handleGoalSelect = async (goal) => {
     setSelectedGoal(goal);
@@ -115,6 +120,41 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* ── Phase 2.1: Quick actions ──────────────────────────── */}
+        <View style={styles.actionsRow}>
+          <Pressable
+            onPress={() => navigation.navigate("EditProfile")}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.actionText, { color: colors.text }]}>
+              Edit Profile
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => navigation.navigate("ChangePassword")}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.actionText, { color: colors.text }]}>
+              Change Password
+            </Text>
+          </Pressable>
+        </View>
+
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
           Body Stats
         </Text>
@@ -123,33 +163,51 @@ export default function ProfileScreen() {
         >
           <BodyStatCard
             label="WEIGHT"
-            value={weight ? `${weight} kg` : "N/A"}
+            value={weight ? `${weight} kg` : "—"}
             icon={WeightIcon}
             colors={colors}
             leftBorderColor="#FF9800"
           />
           <BodyStatCard
             label="HEIGHT"
-            value={height ? `${height} cm` : "N/A"}
+            value={height ? `${height} cm` : "—"}
             icon={HeightIcon}
             colors={colors}
             leftBorderColor="#009688"
           />
           <BodyStatCard
             label="AGE"
-            value={details?.age ?? "N/A"}
+            value={age ?? "—"}
             icon={AgeIcon}
             colors={colors}
             leftBorderColor="#8297CD"
           />
           <BodyStatCard
             label="BMI"
-            value={bmi ? bmi.toFixed(1) : "N/A"}
+            value={bmi ? bmi.toFixed(1) : "—"}
             icon={BmiIcon}
             colors={colors}
             leftBorderColor={colorIndicator}
           />
         </View>
+
+        {hasMissingStats && (
+          <Pressable
+            onPress={() => navigation.navigate("EditProfile")}
+            style={({ pressed }) => [
+              styles.emptyHint,
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
+              Some stats are missing. Tap to complete your profile.
+            </Text>
+          </Pressable>
+        )}
 
         <GoalStatCard
           goals={GOALS}
@@ -186,7 +244,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     elevation: 4,
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: 16,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -201,6 +259,25 @@ const styles = StyleSheet.create({
   identity: { flex: 1, marginLeft: 16 },
   name: { fontSize: 20, fontWeight: "700", marginBottom: 4 },
   email: { fontSize: 14 },
+
+  // ── Phase 2.1 additions ──
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
   sectionTitle: { fontSize: 12, fontWeight: "700", marginBottom: 10 },
   statsRow: {
     borderRadius: 14,
@@ -209,6 +286,18 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
     padding: 14,
+  },
+  emptyHint: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  emptyHintText: {
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
   logoutButton: {
     alignItems: "center",

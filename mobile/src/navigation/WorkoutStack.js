@@ -5,6 +5,7 @@ import { useTheme } from "../theme/theme";
 import PlanScreen from "../screens/PlanScreen";
 import BrowseExercisesScreen from "../screens/BrowseExercisesScreen";
 import WorkoutSessionScreen from "../screens/WorkoutSessionScreen";
+import WorkoutHistoryScreen from "../screens/WorkoutHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,7 @@ export default function WorkoutStack() {
       <Stack.Screen name="PlanList" component={PlanScreen} />
       <Stack.Screen name="BrowseExercises" component={BrowseExercisesScreen} />
       <Stack.Screen name="WorkoutSession" component={WorkoutSessionScreen} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} />
     </Stack.Navigator>
   );
 }

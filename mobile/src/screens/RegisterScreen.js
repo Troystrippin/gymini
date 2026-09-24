@@ -1,38 +1,78 @@
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useState, useContext } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import {
+  validateFullName,
+  validateEmail,
+  validatePassword,
+  showValidationAlert,
+} from "../utils/validation";
+
+const LABELS = {
+  fullName: "Full Name",
+  email: "Email",
+  password: "Password",
+};
 
 export default function RegisterScreen({ navigation }) {
   const { colors } = useTheme();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState({
+    fullName: false,
+    email: false,
+    password: false,
+  });
+  const [submitting, setSubmitting] = useState(false);
   const { register } = useContext(AuthContext);
 
+  const errors = {
+    fullName: validateFullName(fullName),
+    email: validateEmail(email),
+    password: validatePassword(password),
+  };
+
+  const handleBlur = (field) =>
+    setTouched((prev) => ({ ...prev, [field]: true }));
+
   const handleRegister = async () => {
-    if (!fullName || !email || !password)
-      return Alert.alert("Error", "Please fill all fields");
+    // Reveal all inline errors too
+    setTouched({ fullName: true, email: true, password: true });
+
+    // Show popup if any field is invalid
+    const hasErrors = showValidationAlert(
+      "Registration Failed",
+      errors,
+      LABELS,
+    );
+    if (hasErrors) return;
+
     try {
-      await register(fullName, email, password);
+      setSubmitting(true);
+      await register(fullName.trim(), email.trim().toLowerCase(), password);
     } catch (err) {
+      // Server-side error → still show as a popup
+      const { Alert } = require("react-native");
       Alert.alert(
         "Registration Failed",
-        err.response?.data?.message || "Something went wrong",
+        err.response?.data?.message || err.message || "Something went wrong",
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -85,26 +125,41 @@ export default function RegisterScreen({ navigation }) {
           label="Full Name"
           value={fullName}
           onChangeText={setFullName}
+          onBlur={() => handleBlur("fullName")}
           placeholder="Kent Rashaun Sison"
+          error={errors.fullName}
+          touched={touched.fullName}
+          autoCapitalize="words"
         />
         <InputField
           label="Email"
           value={email}
           onChangeText={setEmail}
+          onBlur={() => handleBlur("email")}
           placeholder="example@gmail.com"
           keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={errors.email}
+          touched={touched.email}
         />
         <InputField
           label="Password"
           value={password}
           onChangeText={setPassword}
-          placeholder="Enter your password"
+          onBlur={() => handleBlur("password")}
+          placeholder="At least 8 chars, 1 letter, 1 number"
           secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={errors.password}
+          touched={touched.password}
         />
 
         <Button
-          title="Create Account"
+          title={submitting ? "Creating..." : "Create Account"}
           onPress={handleRegister}
+          disabled={submitting}
           style={{ marginTop: 16 }}
         />
 

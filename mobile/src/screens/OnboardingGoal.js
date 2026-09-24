@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SelectionCard from "../components/SelectionCard";
@@ -13,6 +12,7 @@ import Button from "../components/Button";
 import ProgressBar from "../components/ProgressBar";
 import { COLORS } from "../theme/colors";
 import { useTheme } from "../theme/theme";
+import { showValidationAlert } from "../utils/validation";
 
 const GOALS = [
   {
@@ -47,16 +47,18 @@ const GOALS = [
   },
 ];
 
+const LABELS = { goal: "Goal" };
+
 export default function OnboardingGoal({ navigation }) {
   const { colors } = useTheme();
   const [selected, setSelected] = useState(null);
 
+  const errors = {
+    goal: selected ? null : "Please choose one of the options to continue",
+  };
+
   const handleContinue = () => {
-    if (!selected)
-      return Alert.alert(
-        "Select a goal",
-        "Please choose one of the options to continue.",
-      );
+    if (showValidationAlert("Cannot Continue", errors, LABELS)) return;
     navigation.navigate("OnboardingDetails", { goal: selected });
   };
 

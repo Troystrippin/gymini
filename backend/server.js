@@ -1,28 +1,151 @@
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const { errorHandler, notFound } = require("./middleware/errorHandler");
 
-// --- Import Routes ---
+// --- Validate required env vars at boot ---
+const REQUIRED_ENV = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "SMTP_HOST",
+  "SMTP_USER",
+  "SMTP_PASS",
+];
+const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+if (missing.length) {
+  console.error(`❌ Missing required env vars: ${missing.join(", ")}`);
+  process.exit(1);
+}
+
+const app = express();
+
+// --- Security middleware ---
+app.use(helmet());
+app.disable("x-powered-by");
+
+// --- CORS: only allow known origins ---
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      // In dev, allow everything if no allowlist configured
+      if (process.env.NODE_ENV !== "production" && allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  }),
+);
+
+// --- Body parser with size limit ---
+app.use(express.json({ limit: "1mb" }));
+
+// ─────────────────────────────────────────────────────────────
+// Rate limiting
+// ─────────────────────────────────────────────────────────────
+
+// Global light limiter — safety net for the entire API.
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+);
+
+// Strict limiter — brute-force-sensitive endpoints only.
+// Applied to: register, login, forgot-password, reset-password, resend-verification
+// skipSuccessfulRequests: only FAILED requests count toward the limit,
+// so a legitimate user who logs in correctly is never throttled.
+const authStrictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  message: { message: "Too many attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Generous limiter — authenticated user actions (me, profile, change-password,
+// refresh, logout). High enough that normal use never hits it.
+const authGenerousLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// API limiter — protects plan/exercise/workout/admin routes from abuse.
+// Higher than authStrictLimiter because normal app usage involves many reads/writes.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// --- Health check ---
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    uptime: process.uptime(),
+  });
+});
+
+// --- Routes ---
 const authRoutes = require("./routes/authRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const exerciseRoutes = require("./routes/exerciseRoutes");
 const planRoutes = require("./routes/planRoutes");
-
-// --- Mount Routes ---
-app.use("/api/auth", authRoutes);
-app.use("/api/workouts", workoutRoutes);
-app.use("/api/exercises", exerciseRoutes);
-app.use("/api/plans", planRoutes);
+const adminRoutes = require("./routes/adminRoutes");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
 
+// Apply strict limiter FIRST to specific auth paths, then generous to the rest.
+// Order matters: express-rate-limit is middleware, and the first one to
+// increment + possibly reject wins.
+app.use("/api/auth/register", authStrictLimiter);
+app.use("/api/auth/login", authStrictLimiter);
+app.use("/api/auth/forgot-password", authStrictLimiter);
+app.use("/api/auth/reset-password", authStrictLimiter);
+app.use("/api/auth/resend-verification", authStrictLimiter);
+
+// Generous limiter covers everything else under /api/auth.
+// NOTE: paths above have already been counted by the strict limiter, so this
+// also increments a second counter for them. That's fine — the strict limit
+// will reject first.
+app.use("/api/auth", authGenerousLimiter, authRoutes);
+
+// Feature routes — protected by the general API limiter.
+app.use("/api/workouts", apiLimiter, workoutRoutes);
+app.use("/api/exercises", apiLimiter, exerciseRoutes);
+app.use("/api/plans", apiLimiter, planRoutes);
+app.use("/api/admin", apiLimiter, adminRoutes);
+
+// --- 404 + centralized error handling ---
+app.use(notFound);
+app.use(errorHandler);
+
+// --- Boot ---
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -32,4 +155,7 @@ mongoose
     console.log("✅ Connected to MongoDB");
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err.message);
+    process.exit(1);
+  });

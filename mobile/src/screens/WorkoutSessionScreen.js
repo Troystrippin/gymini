@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,14 +19,17 @@ export default function WorkoutSessionScreen() {
   const { colors } = useTheme();
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [setResults, setSetResults] = useState({});
+
+  // Store the session start time — used when saving the log.
+  const startedAtRef = useRef(new Date().toISOString());
 
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedSeconds((seconds) => seconds + 1);
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
@@ -40,10 +43,10 @@ export default function WorkoutSessionScreen() {
           response.data.exercises.map((exercise) => [
             exercise._id,
             current[exercise._id] ??
-              Array.from({ length: getPlannedSetCount(exercise.sets) }, () => ({
-                reps: "",
-                weight: "",
-              })),
+              Array.from(
+                { length: getPlannedSetCount(exercise.sets) },
+                () => ({ reps: "", weight: "" }),
+              ),
           ]),
         ),
       );
@@ -63,7 +66,7 @@ export default function WorkoutSessionScreen() {
     }, [fetchWorkout]),
   );
 
-  const toggleExercise = async (exerciseId) => {
+  const toggleExercise = (exerciseId) => {
     setWorkout((current) => ({
       ...current,
       exercises: current.exercises.map((exercise) =>
@@ -72,13 +75,6 @@ export default function WorkoutSessionScreen() {
           : exercise,
       ),
     }));
-
-    try {
-      await api.patch(`/workouts/${workout._id}/exercises/${exerciseId}`);
-    } catch (error) {
-      await fetchWorkout();
-      Alert.alert("Update failed", "Could not update this exercise.");
-    }
   };
 
   const updateSetResult = (exerciseId, setIndex, field, value) => {
@@ -90,6 +86,64 @@ export default function WorkoutSessionScreen() {
           : set,
       ),
     }));
+  };
+
+  const finishWorkout = async () => {
+    if (saving) return;
+
+    // Build payload from current state.
+    const exercisesPayload = workout.exercises.map((exercise) => ({
+      exerciseId: exercise.exerciseId || null,
+      name: exercise.name,
+      muscleGroup: exercise.muscle || null,
+      targetSets: exercise.plannedSets || getPlannedSetCount(exercise.sets),
+      targetReps:
+        exercise.plannedReps || Number(getPlannedReps(exercise.sets)) || 0,
+      completed: !!exercise.done,
+      sets: (setResults[exercise._id] || []).map((set) => ({
+        reps: Number(set.reps) || 0,
+        weightKg: Number(set.weight) || 0,
+      })),
+    }));
+
+    const setsLogged = exercisesPayload.reduce(
+      (sum, e) => sum + e.sets.length,
+      0,
+    );
+
+    const doSave = async () => {
+      try {
+        setSaving(true);
+        await api.post("/workouts/sessions", {
+          planId: workout._id,
+          planName: workout.title,
+          startedAt: startedAtRef.current,
+          durationSec: elapsedSeconds,
+          exercises: exercisesPayload,
+        });
+        Alert.alert(
+          "Workout saved",
+          `${completedCount} of ${workout.exercises.length} exercises · ${setsLogged} sets · ${Math.floor(elapsedSeconds / 60)} min`,
+        );
+        navigation.goBack();
+      } catch (error) {
+        Alert.alert(
+          "Save failed",
+          error.response?.data?.message || error.message,
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    Alert.alert(
+      "Finish workout?",
+      `${completedCount} of ${workout.exercises.length} exercises completed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Finish", onPress: doSave },
+      ],
+    );
   };
 
   if (loading || !workout) {
@@ -106,9 +160,7 @@ export default function WorkoutSessionScreen() {
     );
   }
 
-  const completedCount = workout.exercises.filter(
-    (exercise) => exercise.done,
-  ).length;
+  const completedCount = workout.exercises.filter((e) => e.done).length;
   const isComplete = completedCount === workout.exercises.length;
   const duration = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
 
@@ -150,7 +202,7 @@ export default function WorkoutSessionScreen() {
                 styles.exercise,
                 {
                   backgroundColor: exercise.done
-                    ? colors.accentMuted
+                    ? colors.accentMuted || colors.cardBackground
                     : colors.cardBackground,
                   borderColor: exercise.done ? colors.primary : colors.border,
                 },
@@ -241,12 +293,20 @@ export default function WorkoutSessionScreen() {
         </View>
 
         <Pressable
-          onPress={() => navigation.goBack()}
-          style={[styles.finishButton, { backgroundColor: colors.primary }]}
+          onPress={finishWorkout}
+          disabled={saving}
+          style={[
+            styles.finishButton,
+            { backgroundColor: colors.primary, opacity: saving ? 0.6 : 1 },
+          ]}
         >
-          <Text style={styles.finishText}>
-            {isComplete ? "Finish Workout" : "Finish for Now"}
-          </Text>
+          {saving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.finishText}>
+              {isComplete ? "Finish Workout" : "Finish for Now"}
+            </Text>
+          )}
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -274,11 +334,7 @@ const styles = StyleSheet.create({
   durationLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1 },
   durationValue: { fontSize: 30, fontWeight: "800", marginTop: 6 },
   list: { gap: 12, marginTop: 28 },
-  exercise: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-  },
+  exercise: { borderRadius: 14, borderWidth: 1, padding: 14 },
   exerciseHeader: {
     alignItems: "center",
     flexDirection: "row",

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput} from "react-native";
 import { useTheme } from "../theme/theme";
 
 export default function Stepper({ label, value, onChange, min = 1, step = 1 }) {
@@ -23,7 +23,12 @@ export default function Stepper({ label, value, onChange, min = 1, step = 1 }) {
         >
           <Text style={[styles.btnText, { color: colors.accent }]}>−</Text>
         </TouchableOpacity>
-        <Text style={[styles.value, { color: colors.text }]}>{value}</Text>
+        <TextInput
+          style={[styles.value, { color: colors.text }]}
+          value={value.toString()}
+          onChangeText={(text) => onChange(parseInt(text) || 0)}
+          keyboardType="numeric"
+        />
         <TouchableOpacity
           style={styles.btn}
           onPress={() => onChange(value + step)}

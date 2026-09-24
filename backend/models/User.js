@@ -19,6 +19,16 @@ const UserSchema = new mongoose.Schema(
       required: [true, "Please add a password"],
       minlength: 6,
     },
+
+    // --- Role-based access control ---
+    role: {
+      type: String,
+      enum: ["user", "moderator", "admin"],
+      default: "user",
+      required: true,
+      index: true,
+    },
+
     activePlanId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "WorkoutPlan",
@@ -61,6 +71,40 @@ const UserSchema = new mongoose.Schema(
         ],
         default: null,
       },
+    },
+
+    // --- Email verification ---
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationCode: {
+      type: String,
+      default: null,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+    },
+
+    // --- Password reset ---
+    passwordResetCode: {
+      type: String,
+      default: null,
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
+
+    // --- Login lockout ---
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockoutUntil: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true },

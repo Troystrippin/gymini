@@ -14,6 +14,7 @@ import ProgressBar from "../components/ProgressBar";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import { showValidationAlert } from "../utils/validation";
 
 const ACTIVITY_LEVELS = [
   {
@@ -42,6 +43,8 @@ const ACTIVITY_LEVELS = [
   },
 ];
 
+const LABELS = { activityLevel: "Activity Level" };
+
 export default function OnboardingActivity({ navigation, route }) {
   const { colors } = useTheme();
   const { goal, biologicalSex, age, height, weight, workoutDaysPerWeek } =
@@ -50,12 +53,15 @@ export default function OnboardingActivity({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const { completeOnboarding } = useContext(AuthContext);
 
+  const errors = {
+    activityLevel: selected
+      ? null
+      : "Please choose your activity level to continue",
+  };
+
   const handleComplete = async () => {
-    if (!selected)
-      return Alert.alert(
-        "Select an option",
-        "Please choose your activity level.",
-      );
+    if (showValidationAlert("Cannot Complete Setup", errors, LABELS)) return;
+
     setLoading(true);
     try {
       await completeOnboarding({
@@ -118,6 +124,7 @@ export default function OnboardingActivity({ navigation, route }) {
         <Button
           title={loading ? "Saving..." : "Complete Setup"}
           onPress={handleComplete}
+          disabled={loading}
         />
       </View>
     </SafeAreaView>
