@@ -1,6 +1,5 @@
-import React, { useCallback, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,53 +7,50 @@ import {
   TextInput,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MealCard from "../components/MealCard";
 import MealDetailModal from "../components/MealDetailModal";
-import { MEALS, SELECTED_MEALS_KEY } from "../data/mealPlans";
+import { useMealPlan } from "../context/MealPlanContext";
 import { useTheme } from "../theme/theme";
 
 export default function MealsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const [selectedIds, setSelectedIds] = useState([]);
+  const {
+    catalog,
+    recommendations,
+    selectedIds,
+    toggleEntry,
+    offline,
+    loading,
+  } = useMealPlan();
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [activeMeal, setActiveMeal] = useState(null);
 
-  const filteredMeals = MEALS.filter((meal) => {
-    const query = search.trim().toLowerCase();
-    return (
-      !query ||
-      meal.name.toLowerCase().includes(query) ||
-      meal.goal.toLowerCase().includes(query)
-    );
-  }).filter(
-    (meal) =>
-      filter === "All" || meal.type === filter || meal.tags.includes(filter),
-  );
+  const filteredMeals = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return catalog
+      .filter(
+        (meal) =>
+          !q ||
+          meal.name.toLowerCase().includes(q) ||
+          meal.goal.toLowerCase().includes(q),
+      )
+      .filter(
+        (meal) =>
+          filter === "All" ||
+          meal.type === filter ||
+          (meal.tags || []).includes(filter),
+      );
+  }, [catalog, search, filter]);
 
-  useFocusEffect(
-    useCallback(() => {
-      AsyncStorage.getItem(SELECTED_MEALS_KEY).then((storedIds) => {
-        if (storedIds) setSelectedIds(JSON.parse(storedIds));
-      });
-    }, []),
+  const filteredRecs = useMemo(
+    () => recommendations.filter((r) => !selectedIds.includes(r.id)),
+    [recommendations, selectedIds],
   );
-
-  const toggleMeal = async (meal) => {
-    try {
-      const nextIds = selectedIds.includes(meal.id)
-        ? selectedIds.filter((id) => id !== meal.id)
-        : [...selectedIds, meal.id];
-      await AsyncStorage.setItem(SELECTED_MEALS_KEY, JSON.stringify(nextIds));
-      setSelectedIds(nextIds);
-    } catch (error) {
-      Alert.alert("Selection failed", "Could not save your meal plan.");
-    }
-  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -62,6 +58,19 @@ export default function MealsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {offline && (
+          <View
+            style={[
+              styles.banner,
+              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+            ]}
+          >
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              Working offline — changes will sync when you're back.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={[styles.title, { color: colors.text }]}>Meals</Text>
@@ -96,6 +105,24 @@ export default function MealsScreen() {
             Tap a meal below to add or remove it.
           </Text>
         </View>
+
+        {filteredRecs.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Recommended for you
+            </Text>
+            {filteredRecs.map((meal) => (
+              <MealCard
+                key={`rec-${meal.id}`}
+                meal={meal}
+                selected={false}
+                onPress={() => toggleEntry(meal)}
+                onDetailsPress={setActiveMeal}
+                colors={colors}
+              />
+            ))}
+          </>
+        )}
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
           Browse Meals
@@ -151,16 +178,23 @@ export default function MealsScreen() {
             </Pressable>
           ))}
         </ScrollView>
-        {filteredMeals.map((meal) => (
-          <MealCard
-            key={meal.id}
-            meal={meal}
-            selected={selectedIds.includes(meal.id)}
-            onPress={() => toggleMeal(meal)}
-            onDetailsPress={setActiveMeal}
-            colors={colors}
-          />
-        ))}
+
+        {loading && catalog.length === 0 ? (
+          <Text style={[styles.empty, { color: colors.textSecondary }]}>
+            Loading meals…
+          </Text>
+        ) : (
+          filteredMeals.map((meal) => (
+            <MealCard
+              key={meal.id}
+              meal={meal}
+              selected={selectedIds.includes(meal.id)}
+              onPress={() => toggleEntry(meal)}
+              onDetailsPress={setActiveMeal}
+              colors={colors}
+            />
+          ))
+        )}
       </ScrollView>
 
       <MealDetailModal
@@ -168,7 +202,7 @@ export default function MealsScreen() {
         visible={!!activeMeal}
         onClose={() => setActiveMeal(null)}
         isAdded={activeMeal ? selectedIds.includes(activeMeal.id) : false}
-        onToggle={() => activeMeal && toggleMeal(activeMeal)}
+        onToggle={() => activeMeal && toggleEntry(activeMeal)}
         colors={colors}
       />
     </SafeAreaView>
@@ -178,6 +212,13 @@ export default function MealsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
+  banner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   title: { fontSize: 30, fontWeight: "800" },
   planButton: {
     alignSelf: "flex-start",
@@ -219,4 +260,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  empty: { fontSize: 14, marginTop: 20, textAlign: "center" },
 });

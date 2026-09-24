@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React from "react";
 import {
   Alert,
   Image,
@@ -8,14 +8,9 @@ import {
   Text,
   View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  useFocusEffect,
-  useNavigation,
-  useRoute,
-} from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { SELECTED_MEALS_KEY } from "../data/mealPlans";
+import { useMealPlan } from "../context/MealPlanContext";
 import { useTheme } from "../theme/theme";
 
 const MEAL_TYPE_ICONS = {
@@ -31,25 +26,13 @@ export default function MealDetailScreen() {
   const route = useRoute();
   const { meal } = route.params;
 
-  const [selectedIds, setSelectedIds] = useState([]);
+  const { selectedIds, toggleEntry } = useMealPlan();
   const isAdded = selectedIds.includes(meal.id);
-
-  useFocusEffect(
-    useCallback(() => {
-      AsyncStorage.getItem(SELECTED_MEALS_KEY).then((storedIds) => {
-        setSelectedIds(storedIds ? JSON.parse(storedIds) : []);
-      });
-    }, []),
-  );
 
   const toggleMeal = async () => {
     try {
-      const nextIds = isAdded
-        ? selectedIds.filter((id) => id !== meal.id)
-        : [...selectedIds, meal.id];
-      await AsyncStorage.setItem(SELECTED_MEALS_KEY, JSON.stringify(nextIds));
-      setSelectedIds(nextIds);
-    } catch (error) {
+      await toggleEntry(meal);
+    } catch {
       Alert.alert("Update failed", "Could not update your meal plan.");
     }
   };
@@ -80,7 +63,7 @@ export default function MealDetailScreen() {
               style={styles.media}
             >
               <Text style={styles.mediaIcon}>
-                {MEAL_TYPE_ICONS[meal.type] || "🍴"}
+                {MEAL_TYPE_ICONS[meal.type?.toLowerCase()] || "🍴"}
               </Text>
               <Text
                 style={[
@@ -101,7 +84,8 @@ export default function MealDetailScreen() {
               {meal.name}
             </Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              {meal.goal} · {meal.protein} · {meal.calories}
+              {meal.goal ? `${meal.goal} · ` : ""}
+              {meal.protein}g protein · {meal.calories} kcal
             </Text>
 
             <Text style={[styles.description, { color: colors.text }]}>

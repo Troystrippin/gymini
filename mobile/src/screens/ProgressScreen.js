@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useCallback } from "react";
 import {
   Dimensions,
   Pressable,
@@ -9,10 +9,13 @@ import {
   View,
 } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
+import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import ProgressStatCard from "../components/ProgressStatCard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../theme/theme";
+import api from "../api/api";
+import { mealApi } from "../api/mealApi";
 
 import WeightIcon from "../icons/weight-icon";
 import BmiIcon from "../icons/BMI-icon";
@@ -25,10 +28,35 @@ export default function ProgressScreen() {
   const { user } = useContext(AuthContext);
   const { colors, mode } = useTheme();
   const [activeTab, setActiveTab] = useState("weight");
+  const [stats, setStats] = useState(null);
+  const [mealStats, setMealStats] = useState(null);
 
-  // TODO: Replace with real data from API
-  const workoutsDone = 3;
-  const caloriesBurned = 1240;
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const [w, m] = await Promise.all([
+            api.get("/workouts/stats").then((r) => r.data),
+            mealApi.stats().catch(() => null),
+          ]);
+          if (!cancelled) {
+            setStats(w);
+            setMealStats(m);
+          }
+        } catch {
+          /* leave nulls */
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const workoutsDone = stats?.thisMonthSessions ?? stats?.totalSessions ?? 0;
+  const caloriesBurned = stats?.thisMonthCalories ?? 0;
+  const avgIntake = mealStats?.average?.calories ?? 0;
 
   const height = user?.heightCm;
   const weight = user?.weightKg;
@@ -66,7 +94,6 @@ export default function ProgressScreen() {
       : `Gained ${diff.toFixed(1)} kg`;
   })();
 
-  // --- Chart data (TODO: replace with API) ---
   const monthsWeight = [
     "Jan",
     "Feb",
@@ -130,19 +157,15 @@ export default function ProgressScreen() {
   const activeChart = charts[activeTab];
 
   const chartConfig = {
-    // Background of the chart area itself
     backgroundGradientFrom: colors.cardBackground,
     backgroundGradientTo: colors.cardBackground,
     decimalPlaces: activeChart.decimalPlaces,
-    // Line / bar color
     color: (opacity = 1) => activeChart.color.replace("$o", `${opacity}`),
-    // Axis label color (the numbers & month names)
     labelColor: (opacity = 1) =>
       `rgba(${mode === "dark" ? "255,255,255" : "0,0,0"}, ${opacity})`,
-    // Grid line color
     propsForBackgroundLines: {
       stroke: `rgba(${mode === "dark" ? "255,255,255" : "0,0,0"}, 0.1)`,
-      strokeDasharray: "", // solid lines instead of dashed
+      strokeDasharray: "",
     },
   };
 
@@ -163,7 +186,6 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
-        {/* Stats row */}
         <View
           style={[styles.statsRow, { backgroundColor: colors.cardBackground }]}
         >
@@ -199,12 +221,19 @@ export default function ProgressScreen() {
             leftBorderColor="#fe6e00"
             description="This Month"
           />
+          <ProgressStatCard
+            label="AVG INTAKE"
+            value={avgIntake ? `${avgIntake} kcal` : "—"}
+            icon={BurnIcon}
+            colors={colors}
+            leftBorderColor="#4CAF50"
+            description="Last 30 days"
+          />
         </View>
-        {/* Chart card */}
+
         <View
           style={[styles.chartCard, { backgroundColor: colors.cardBackground }]}
         >
-          {/* Tabs */}
           <View style={styles.tabRow}>
             {tabs.map((tab) => (
               <Pressable
@@ -233,7 +262,6 @@ export default function ProgressScreen() {
             ))}
           </View>
 
-          {/* Only the active chart renders */}
           {activeChart.type === "line" ? (
             <LineChart
               data={activeChart.data}
@@ -257,7 +285,7 @@ export default function ProgressScreen() {
             />
           )}
         </View>
-        {/* Activity Log will based on user workoutplpan */}
+
         <View
           style={[
             styles.activityCard,
@@ -273,7 +301,6 @@ export default function ProgressScreen() {
             <View style={{ width: 24, height: 24 }}>
               <WorkoutIcon />
             </View>
-
             <Text
               style={{ color: colors.text, fontSize: 15, fontWeight: "600" }}
             >
@@ -318,9 +345,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
-  tabText: {
-    fontSize: 13,
-  },
+  tabText: { fontSize: 13 },
   chart: { borderRadius: 14 },
   activityCard: {
     flexDirection: "column",

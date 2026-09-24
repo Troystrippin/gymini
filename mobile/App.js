@@ -5,6 +5,7 @@ import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "./src/context/AuthContext";
 import { PlanDraftProvider } from "./src/context/PlanDraftContext";
+import { MealPlanProvider } from "./src/context/MealPlanContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider, useTheme } from "./src/theme/theme";
 
@@ -44,7 +45,9 @@ export default function App() {
         <ThemeProvider>
           <AuthProvider>
             <PlanDraftProvider>
-              <AppContent />
+              <MealPlanProvider>
+                <AppContent />
+              </MealPlanProvider>
             </PlanDraftProvider>
           </AuthProvider>
         </ThemeProvider>

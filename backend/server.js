@@ -137,6 +137,8 @@ const workoutRoutes = require("./routes/workoutRoutes");
 const exerciseRoutes = require("./routes/exerciseRoutes");
 const planRoutes = require("./routes/planRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const mealRoutes = require("./routes/mealRoutes");
+const { ensureSeeded } = require("./controllers/mealController");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
 
@@ -154,6 +156,7 @@ app.use("/api/workouts", apiLimiter, workoutRoutes);
 app.use("/api/exercises", apiLimiter, exerciseRoutes);
 app.use("/api/plans", apiLimiter, planRoutes);
 app.use("/api/admin", apiLimiter, adminRoutes);
+app.use("/api/meals", apiLimiter, mealRoutes);
 
 // --- 404 + centralized error handling ---
 app.use(notFound);
@@ -165,8 +168,11 @@ const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("✅ Connected to MongoDB");
+    await ensureSeeded().catch((e) =>
+      console.error("❌ Meal seed failed:", e.message),
+    );
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {

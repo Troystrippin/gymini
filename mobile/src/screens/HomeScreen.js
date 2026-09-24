@@ -10,15 +10,15 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
+import { useMealPlan } from "../context/MealPlanContext";
 import { useTheme } from "../theme/theme";
 import WorkoutCard from "../components/WorkoutCard";
 import StatCard from "../components/StatCard";
 import api from "../api/api";
-import { MEALS, SELECTED_MEALS_KEY } from "../data/mealPlans";
+import { formatCalories } from "../utils/nutrition";
 
 const MEAL_TYPE_ICONS = {
   breakfast: "🍳",
@@ -33,23 +33,19 @@ export default function HomeScreen() {
   const { user } = useContext(AuthContext);
   const { toggleTheme, mode, colors } = useTheme();
   const navigation = useNavigation();
+  const { entries, totals } = useMealPlan();
+
   const [workout, setWorkout] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMeals, setSelectedMeals] = useState([]);
 
   const firstName = user?.fullName?.split(" ")[0] || "Pare";
 
-  // Refetch every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchTodayWorkout();
       fetchStats();
-      AsyncStorage.getItem(SELECTED_MEALS_KEY).then((storedIds) => {
-        const ids = storedIds ? JSON.parse(storedIds) : [];
-        setSelectedMeals(MEALS.filter((meal) => ids.includes(meal.id)));
-      });
     }, []),
   );
 
@@ -71,26 +67,18 @@ export default function HomeScreen() {
     }
   };
 
-  // ── Phase 2.3: real workout stats (streak, totals) ──
   const fetchStats = async () => {
     try {
       const res = await api.get("/workouts/stats");
       setStats(res.data);
     } catch (err) {
-      // Stats are nice-to-have; don't alert. Show zeros.
       setStats(null);
     }
   };
 
-  const totalCalories = selectedMeals.reduce((sum, meal) => {
-    const num = parseInt(meal.calories, 10);
-    return sum + (Number.isNaN(num) ? 0 : num);
-  }, 0);
-
-  // One meal per type slot (first match if the user picked more than one of a type)
   const mealsByType = MEAL_TYPE_ORDER.map((type) => ({
     type,
-    meal: selectedMeals.find((m) => m.type === type) || null,
+    meal: entries.find((m) => m.type === type) || null,
   }));
 
   if (loading) {
@@ -118,7 +106,6 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.date}>{getTodayString()}</Text>
@@ -137,7 +124,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* STATS — real data from /workouts/stats */}
         <View style={styles.statsRow}>
           <StatCard
             label="SESSIONS"
@@ -157,7 +143,6 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* WORKOUT */}
         {workout && exercises.length > 0 ? (
           <WorkoutCard
             workout={workout}
@@ -182,7 +167,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* MEAL PLAN */}
         <View
           style={[
             styles.mealPreview,
@@ -195,12 +179,12 @@ export default function HomeScreen() {
                 TODAY'S MEAL PLAN
               </Text>
               <Text style={[styles.mealTitle, { color: colors.text }]}>
-                {selectedMeals.length
-                  ? `${selectedMeals.length} of 4 meals set`
+                {entries.length
+                  ? `${entries.length} of 4 meals set`
                   : "Build your meal plan"}
               </Text>
             </View>
-            {selectedMeals.length > 0 && (
+            {entries.length > 0 && (
               <View
                 style={[
                   styles.caloriesPill,
@@ -210,7 +194,7 @@ export default function HomeScreen() {
                 <Text
                   style={[styles.caloriesPillText, { color: colors.primary }]}
                 >
-                  {totalCalories} kcal
+                  {formatCalories(totals.calories)}
                 </Text>
               </View>
             )}
@@ -264,7 +248,7 @@ export default function HomeScreen() {
                   <Text
                     style={[styles.mealRowCalories, { color: colors.primary }]}
                   >
-                    {meal.calories}
+                    {meal.calories} kcal
                   </Text>
                 ) : (
                   <Text style={[styles.mealRowAdd, { color: colors.primary }]}>

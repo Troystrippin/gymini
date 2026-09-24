@@ -8,6 +8,12 @@ const MEAL_TYPE_ICONS = {
   snack: "🍎",
 };
 
+const formatValue = (v) => {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") return v;
+  return "";
+};
+
 export default function MealCard({
   meal,
   selected,
@@ -16,9 +22,18 @@ export default function MealCard({
   colors,
   actionLabel,
 }) {
+  const calLabel =
+    typeof meal.calories === "number"
+      ? `${meal.calories} kcal`
+      : meal.calories;
+  const proteinLabel =
+    typeof meal.protein === "number"
+      ? `${meal.protein}g`
+      : meal.protein;
+
   return (
     <Pressable
-      onPress={() => onDetailsPress(meal)}
+      onPress={() => onDetailsPress && onDetailsPress(meal)}
       style={({ pressed }) => [
         styles.card,
         {
@@ -58,18 +73,19 @@ export default function MealCard({
 
       <View style={styles.info}>
         <Text style={[styles.type, { color: colors.textSecondary }]}>
-          {meal.type.toUpperCase()}
+          {meal.type?.toUpperCase()}
         </Text>
         <Text style={[styles.name, { color: colors.text }]}>{meal.name}</Text>
         <Text style={[styles.goal, { color: colors.textSecondary }]}>
-          {meal.goal} · {meal.protein}
+          {meal.goal ? `${meal.goal} · ` : ""}
+          {proteinLabel}
         </Text>
       </View>
 
       <Pressable
         onPress={(e) => {
           e.stopPropagation();
-          onPress();
+          onPress && onPress();
         }}
         hitSlop={10}
         style={styles.rightColumn}
@@ -78,7 +94,7 @@ export default function MealCard({
           {actionLabel || (selected ? "Added" : "Add")}
         </Text>
         <Text style={[styles.calories, { color: colors.primary }]}>
-          {meal.calories}
+          {calLabel}
         </Text>
       </Pressable>
     </Pressable>
@@ -103,9 +119,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  placeholderIcon: {
-    fontSize: 18,
-  },
+  placeholderIcon: { fontSize: 18 },
   placeholderLabel: {
     fontSize: 7,
     fontWeight: "700",
