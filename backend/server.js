@@ -26,15 +26,16 @@ if (missing.length) {
 
 const app = express();
 
-// --- Security middleware ---
-app.use(helmet());
-app.disable("x-powered-by");
-
-// --- CORS: only allow known origins ---
+// ─────────────────────────────────────────────────────────────
+// CORS — must run BEFORE helmet so its headers aren't stripped.
+// ─────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/^["']|["']$/g, "")) // strip wrapping quotes
   .filter(Boolean);
+
+console.log(`[cors] allowed origins: ${JSON.stringify(allowedOrigins)}`);
+console.log(`[cors] NODE_ENV: ${process.env.NODE_ENV}`);
 
 app.use(
   cors({
@@ -46,11 +47,28 @@ app.use(
         return callback(null, true);
       }
       if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
+      console.warn(`[cors] blocked origin: ${origin}`);
+      return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204,
   }),
 );
+
+// ─────────────────────────────────────────────────────────────
+// Helmet — configured for cross-origin API consumption.
+// Default CORP (`same-origin`) silently blocks cross-origin fetches.
+// ─────────────────────────────────────────────────────────────
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "unsafe-none" },
+    contentSecurityPolicy: false, // API only — no HTML to secure
+  }),
+);
+app.disable("x-powered-by");
 
 // --- Body parser with size limit ---
 app.use(express.json({ limit: "1mb" }));
@@ -70,9 +88,6 @@ app.use(
 );
 
 // Strict limiter — brute-force-sensitive endpoints only.
-// Applied to: register, login, forgot-password, reset-password, resend-verification
-// skipSuccessfulRequests: only FAILED requests count toward the limit,
-// so a legitimate user who logs in correctly is never throttled.
 const authStrictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -82,8 +97,7 @@ const authStrictLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Generous limiter — authenticated user actions (me, profile, change-password,
-// refresh, logout). High enough that normal use never hits it.
+// Generous limiter — authenticated user actions.
 const authGenerousLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -92,8 +106,7 @@ const authGenerousLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// API limiter — protects plan/exercise/workout/admin routes from abuse.
-// Higher than authStrictLimiter because normal app usage involves many reads/writes.
+// API limiter — protects plan/exercise/workout/admin routes.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -121,18 +134,12 @@ const adminRoutes = require("./routes/adminRoutes");
 app.get("/", (req, res) => res.send("GYMini API is running..."));
 
 // Apply strict limiter FIRST to specific auth paths, then generous to the rest.
-// Order matters: express-rate-limit is middleware, and the first one to
-// increment + possibly reject wins.
 app.use("/api/auth/register", authStrictLimiter);
 app.use("/api/auth/login", authStrictLimiter);
 app.use("/api/auth/forgot-password", authStrictLimiter);
 app.use("/api/auth/reset-password", authStrictLimiter);
 app.use("/api/auth/resend-verification", authStrictLimiter);
 
-// Generous limiter covers everything else under /api/auth.
-// NOTE: paths above have already been counted by the strict limiter, so this
-// also increments a second counter for them. That's fine — the strict limit
-// will reject first.
 app.use("/api/auth", authGenerousLimiter, authRoutes);
 
 // Feature routes — protected by the general API limiter.
