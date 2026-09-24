@@ -3,6 +3,22 @@ import api from "./api";
 
 const AuthContext = createContext(null);
 
+const ALLOWED_ROLES = ["admin", "moderator"];
+
+function persistSession(data) {
+  localStorage.setItem("admin_token", data.token);
+  if (data.refreshToken) {
+    localStorage.setItem("admin_refresh_token", data.refreshToken);
+  }
+  localStorage.setItem("admin_user", JSON.stringify(data));
+}
+
+function clearSession() {
+  localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_refresh_token");
+  localStorage.removeItem("admin_user");
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,43 +27,63 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("admin_token");
     const storedUser = localStorage.getItem("admin_user");
 
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-      api
-        .get("/auth/me")
-        .then((res) => {
-          setUser(res.data);
-          localStorage.setItem("admin_user", JSON.stringify(res.data));
-        })
-        .catch(() => {
-          localStorage.removeItem("admin_token");
-          localStorage.removeItem("admin_user");
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
+    if (!token || !storedUser) {
       setLoading(false);
+      return;
     }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(storedUser);
+    } catch {
+      clearSession();
+      setLoading(false);
+      return;
+    }
+
+    setUser(parsed);
+
+    api
+      .get("/auth/me")
+      .then((res) => {
+        if (!ALLOWED_ROLES.includes(res.data.role)) {
+          clearSession();
+          setUser(null);
+          return;
+        }
+        const merged = { ...parsed, ...res.data };
+        setUser(merged);
+        localStorage.setItem("admin_user", JSON.stringify(merged));
+      })
+      .catch(() => {
+        clearSession();
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
 
-    if (!["admin", "moderator"].includes(res.data.role)) {
+    if (!ALLOWED_ROLES.includes(res.data.role)) {
       throw new Error(
         "Access denied. This dashboard is for administrators only.",
       );
     }
 
-    localStorage.setItem("admin_token", res.data.token);
-    localStorage.setItem("admin_user", JSON.stringify(res.data));
+    persistSession(res.data);
     setUser(res.data);
     return res.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("admin_user");
+  const logout = async () => {
+    const refreshToken = localStorage.getItem("admin_refresh_token");
+    try {
+      if (refreshToken) await api.post("/auth/logout", { refreshToken });
+    } catch {
+      // ignore — session is cleared locally regardless
+    }
+    clearSession();
     setUser(null);
   };
 

@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import UserDetail from "./pages/UserDetail";
 
+const ALLOWED_ROLES = ["admin", "moderator"];
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -27,6 +29,9 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (!ALLOWED_ROLES.includes(user.role))
+    return <Navigate to="/login" replace />;
+
   return children;
 }
 

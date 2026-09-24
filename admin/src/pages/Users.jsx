@@ -9,8 +9,15 @@ export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+
+  // Debounce: only hit the API 500ms after the user stops typing.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 500);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const fetchUsers = () => {
     setLoading(true);
@@ -76,8 +83,8 @@ export default function Users() {
         <input
           type="text"
           placeholder="Search by name or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           style={{
             flex: 1,
             minWidth: 240,
