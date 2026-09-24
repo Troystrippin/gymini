@@ -149,7 +149,7 @@ export default function Login() {
             padding: "14px",
             borderRadius: 10,
             background: COLORS.primary,
-            color: COLORS.background,
+            color: COLORS.text,
             fontSize: 15,
             fontWeight: 900,
             opacity: loading ? 0.6 : 1,
