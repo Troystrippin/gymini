@@ -107,7 +107,7 @@ const authGenerousLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// API limiter — protects plan/exercise/workout/admin/meal/analytics routes.
+// API limiter — protects plan/exercise/workout/admin/meal/analytics/goal routes.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -134,6 +134,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const mealRoutes = require("./routes/mealRoutes");
 const weightRoutes = require("./routes/weightRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const goalRoutes = require("./routes/goalRoutes");
 const { ensureSeeded } = require("./controllers/mealController");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
@@ -155,6 +156,7 @@ app.use("/api/admin", apiLimiter, adminRoutes);
 app.use("/api/meals", apiLimiter, mealRoutes);
 app.use("/api/weight", apiLimiter, weightRoutes);
 app.use("/api/analytics", apiLimiter, analyticsRoutes);
+app.use("/api/goals", apiLimiter, goalRoutes);
 
 // --- 404 + centralized error handling ---
 app.use(notFound);
