@@ -5,6 +5,7 @@ import { useTheme } from "../theme/theme";
 import ProfileScreen from "../screens/ProfileScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
+import CreateGoalScreen from "../screens/CreateGoalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,7 @@ export default function ProfileStack() {
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="CreateGoal" component={CreateGoalScreen} />
     </Stack.Navigator>
   );
 }

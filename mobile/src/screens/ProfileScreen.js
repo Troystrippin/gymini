@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import {
   Pressable,
   ScrollView,
@@ -8,15 +8,19 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
 import BodyStatCard from "../components/BodyStatCard";
 import GoalStatCard from "../components/GoalStatCard";
 import FitnessLevelCard from "../components/FitnessLevelCard";
+import GoalProgressCard from "../components/GoalProgressCard";
+import MilestoneGrid from "../components/MilestoneGrid";
 import WeightIcon from "../icons/weight-icon";
 import HeightIcon from "../icons/HeightIcon";
 import AgeIcon from "../icons/age-icon";
 import BmiIcon from "../icons/BMI-icon";
+import { goalsApi } from "../api/goalsApi";
 
 const GOALS = [
   { id: "Lose Weight", label: "Fat Loss", icon: "🔥" },
@@ -26,9 +30,6 @@ const GOALS = [
   { id: "Athletic Performance", label: "Athletic", icon: "⚡" },
 ];
 
-// Derive a display-level label from the stored activityLevel enum.
-// Enum values (from User model): "Sedentary" | "Lightly Active"
-//                               | "Moderately Active" | "Very Active"
 function getFitnessLevel(activityLevel) {
   switch (activityLevel) {
     case "Very Active":
@@ -49,10 +50,32 @@ export default function ProfileScreen({ navigation }) {
   const profileGoal = user?.profile?.goal ?? user?.goal ?? null;
   const details = user?.profile?.details ?? user?.details;
   const [selectedGoal, setSelectedGoal] = useState(profileGoal);
+  const [weightGoal, setWeightGoal] = useState(null);
+  const [milestones, setMilestones] = useState([]);
 
   useEffect(() => {
     setSelectedGoal(profileGoal);
   }, [profileGoal]);
+
+  const fetchGoals = useCallback(async () => {
+    try {
+      const [active, ms] = await Promise.all([
+        goalsApi.active().catch(() => []),
+        goalsApi.milestones().catch(() => []),
+      ]);
+      const w = (active || []).find((g) => g.type === "weight") || null;
+      setWeightGoal(w);
+      setMilestones(ms || []);
+    } catch (err) {
+      console.warn("[profile] goals fetch failed:", err.message);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGoals();
+    }, [fetchGoals]),
+  );
 
   const name = user?.fullName || "Your name";
   const memberSince = user?.createdAt
@@ -91,6 +114,17 @@ export default function ProfileScreen({ navigation }) {
     await completeOnboarding({ goal });
   };
 
+  const handleAbandonGoal = async () => {
+    if (!weightGoal) return;
+    try {
+      await goalsApi.abandon(weightGoal._id);
+      setWeightGoal(null);
+      await fetchGoals();
+    } catch (err) {
+      console.warn("[profile] abandon failed:", err.message);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -120,7 +154,6 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── Phase 2.1: Quick actions ──────────────────────────── */}
         <View style={styles.actionsRow}>
           <Pressable
             onPress={() => navigation.navigate("EditProfile")}
@@ -209,6 +242,19 @@ export default function ProfileScreen({ navigation }) {
           </Pressable>
         )}
 
+        {/* Phase 4.1 — Goal progress + milestones */}
+        <GoalProgressCard
+          goal={weightGoal}
+          onEdit={() =>
+            navigation.navigate("CreateGoal", { goal: weightGoal })
+          }
+          onAbandon={handleAbandonGoal}
+          onCreate={() => navigation.navigate("CreateGoal")}
+          colors={colors}
+        />
+
+        <MilestoneGrid milestones={milestones} colors={colors} />
+
         <GoalStatCard
           goals={GOALS}
           selectedGoal={selectedGoal}
@@ -260,7 +306,6 @@ const styles = StyleSheet.create({
   name: { fontSize: 20, fontWeight: "700", marginBottom: 4 },
   email: { fontSize: 14 },
 
-  // ── Phase 2.1 additions ──
   actionsRow: {
     flexDirection: "row",
     gap: 10,
