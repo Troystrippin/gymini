@@ -19,6 +19,7 @@ import WorkoutCard from "../components/WorkoutCard";
 import StatCard from "../components/StatCard";
 import api from "../api/api";
 import { formatCalories } from "../utils/nutrition";
+import { workoutProgressApi, todayKey } from "../api/workoutProgressApi";
 
 const MEAL_TYPE_ICONS = {
   breakfast: "🍳",
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const [workout, setWorkout] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [stats, setStats] = useState(null);
+  const [completedNames, setCompletedNames] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const firstName = user?.fullName?.split(" ")[0] || "Pare";
@@ -55,10 +57,31 @@ export default function HomeScreen() {
       const res = await api.get("/workouts/today");
       setWorkout(res.data);
       setExercises(res.data.exercises || []);
+
+      try {
+        const progress = await workoutProgressApi.get(
+          res.data._id,
+          todayKey(),
+        );
+        const completedIds = new Set(
+          (progress.completedExerciseIds || []).map(String),
+        );
+        const names = (res.data.exercises || [])
+          .filter((ex) => completedIds.has(String(ex._id)))
+          .map((ex) => ex.name);
+        setCompletedNames(names);
+      } catch (progressErr) {
+        console.warn(
+          "[home] failed to load workout progress:",
+          progressErr.message,
+        );
+        setCompletedNames([]);
+      }
     } catch (err) {
       if (err.response?.status === 404) {
         setWorkout(null);
         setExercises([]);
+        setCompletedNames([]);
       } else {
         Alert.alert("Error", err.response?.data?.message || err.message);
       }
@@ -80,6 +103,11 @@ export default function HomeScreen() {
     type,
     meal: entries.find((m) => m.type === type) || null,
   }));
+
+  // ── Weekly workout progress for the ring on the workout card.
+  const weeklyTarget = user?.details?.workoutDaysPerWeek || 7;
+  const weeklyDone = stats?.thisWeekSessions ?? 0;
+  const weeklyProgress = Math.min(1, weeklyDone / weeklyTarget);
 
   if (loading) {
     return (
@@ -147,7 +175,8 @@ export default function HomeScreen() {
           <WorkoutCard
             workout={workout}
             exercises={exercises}
-            progress={0}
+            progress={weeklyProgress}
+            completedNames={completedNames}
             onPress={() =>
               navigation.navigate("Workouts", { screen: "WorkoutSession" })
             }

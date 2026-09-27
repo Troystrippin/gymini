@@ -6,9 +6,12 @@ export default function WorkoutCard({
   workout,
   exercises,
   progress,
+  completedNames = [],
   onPress,
   colors,
 }) {
+  const completedSet = new Set(completedNames);
+
   return (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -29,7 +32,12 @@ export default function WorkoutCard({
 
       <View style={styles.exerciseList}>
         {exercises.map((exercise) => (
-          <ExerciseRow key={exercise._id} exercise={exercise} colors={colors} />
+          <ExerciseRow
+            key={exercise._id}
+            exercise={exercise}
+            isDone={completedSet.has(exercise.name)}
+            colors={colors}
+          />
         ))}
       </View>
     </TouchableOpacity>
@@ -74,14 +82,16 @@ function ProgressRing({ progress, colors }) {
   );
 }
 
-function ExerciseRow({ exercise, colors }) {
+function ExerciseRow({ exercise, isDone, colors }) {
+  const done = isDone || exercise.done;
+
   return (
     <View
       style={[
         styles.exerciseRow,
         { backgroundColor: colors.background, borderColor: "transparent" },
-        exercise.done && {
-          backgroundColor: colors.accentMuted,
+        done && {
+          backgroundColor: colors.accentMuted || colors.cardBackground,
           borderColor: colors.primary,
         },
       ]}
@@ -90,20 +100,20 @@ function ExerciseRow({ exercise, colors }) {
         style={[
           styles.checkCircle,
           { borderColor: colors.textSecondary },
-          exercise.done && {
+          done && {
             backgroundColor: colors.primary,
             borderColor: colors.primary,
           },
         ]}
       >
-        {exercise.done && <Text style={styles.checkMark}>✓</Text>}
+        {done && <Text style={styles.checkMark}>✓</Text>}
       </View>
       <View style={styles.exerciseInfo}>
         <Text
           style={[
             styles.exerciseName,
-            { color: exercise.done ? colors.textSecondary : colors.text },
-            exercise.done && styles.exerciseNameDone,
+            { color: done ? colors.textSecondary : colors.text },
+            done && styles.exerciseNameDone,
           ]}
         >
           {exercise.name}

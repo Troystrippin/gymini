@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../api/api";
+import { workoutProgressApi, todayKey } from "../api/workoutProgressApi";
 import { useTheme } from "../theme/theme";
 
 export default function WorkoutSessionScreen() {
@@ -23,33 +24,52 @@ export default function WorkoutSessionScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [setResults, setSetResults] = useState({});
 
-  // Store the session start time — used when saving the log.
   const startedAtRef = useRef(new Date().toISOString());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedSeconds((seconds) => seconds + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const saveTimerRef = useRef(null);
 
   const fetchWorkout = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/workouts/today");
-      setWorkout(response.data);
-      setSetResults((current) =>
-        Object.fromEntries(
-          response.data.exercises.map((exercise) => [
-            exercise._id,
-            current[exercise._id] ??
-              Array.from(
-                { length: getPlannedSetCount(exercise.sets) },
-                () => ({ reps: "", weight: "" }),
-              ),
-          ]),
-        ),
-      );
+      const plan = response.data;
+
+      let savedIds = [];
+      let savedSets = {};
+      try {
+        const progress = await workoutProgressApi.get(plan._id, todayKey());
+        savedIds = progress.completedExerciseIds || [];
+        savedSets = progress.setResults || {};
+      } catch (err) {
+        console.warn("[session] failed to load progress:", err.message);
+      }
+
+      const savedIdSet = new Set(savedIds.map(String));
+      setWorkout({
+        ...plan,
+        exercises: plan.exercises.map((ex) => ({
+          ...ex,
+          done: savedIdSet.has(String(ex._id)),
+        })),
+      });
+
+      setSetResults((current) => {
+        const next = { ...current };
+        for (const exercise of plan.exercises) {
+          const saved = savedSets[String(exercise._id)];
+          if (Array.isArray(saved) && saved.length) {
+            next[exercise._id] = saved.map((s) => ({
+              reps: s.reps ? String(s.reps) : "",
+              weight: s.weightKg ? String(s.weightKg) : "",
+            }));
+          } else if (!next[exercise._id]) {
+            next[exercise._id] = Array.from(
+              { length: getPlannedSetCount(exercise.sets) },
+              () => ({ reps: "", weight: "" }),
+            );
+          }
+        }
+        return next;
+      });
     } catch (error) {
       Alert.alert(
         "Workout unavailable",
@@ -66,32 +86,86 @@ export default function WorkoutSessionScreen() {
     }, [fetchWorkout]),
   );
 
+  useEffect(() => {
+    const timer = setInterval(
+      () => setElapsedSeconds((s) => s + 1),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, []);
+
+  const persistProgress = useCallback((nextWorkout, nextSets) => {
+    if (!nextWorkout?._id) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        const completedExerciseIds = nextWorkout.exercises
+          .filter((e) => e.done)
+          .map((e) => String(e._id));
+
+        const setResultsPayload = {};
+        for (const exercise of nextWorkout.exercises) {
+          const rows = nextSets[exercise._id] || [];
+          setResultsPayload[String(exercise._id)] = rows.map((r) => ({
+            reps: Number(r.reps) || 0,
+            weightKg: Number(r.weight) || 0,
+          }));
+        }
+
+        await workoutProgressApi.save({
+          planId: nextWorkout._id,
+          date: todayKey(),
+          completedExerciseIds,
+          setResults: setResultsPayload,
+        });
+      } catch (err) {
+        console.warn("[session] failed to save progress:", err.message);
+      }
+    }, 500);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    },
+    [],
+  );
+
   const toggleExercise = (exerciseId) => {
-    setWorkout((current) => ({
-      ...current,
-      exercises: current.exercises.map((exercise) =>
-        exercise._id === exerciseId
-          ? { ...exercise, done: !exercise.done }
-          : exercise,
-      ),
-    }));
+    setWorkout((current) => {
+      const next = {
+        ...current,
+        exercises: current.exercises.map((exercise) =>
+          exercise._id === exerciseId
+            ? { ...exercise, done: !exercise.done }
+            : exercise,
+        ),
+      };
+      persistProgress(next, setResults);
+      return next;
+    });
   };
 
   const updateSetResult = (exerciseId, setIndex, field, value) => {
-    setSetResults((current) => ({
-      ...current,
-      [exerciseId]: current[exerciseId].map((set, index) =>
-        index === setIndex
-          ? { ...set, [field]: value.replace(/[^0-9.]/g, "") }
-          : set,
-      ),
-    }));
+    setSetResults((current) => {
+      const next = {
+        ...current,
+        [exerciseId]: current[exerciseId].map((set, index) =>
+          index === setIndex
+            ? { ...set, [field]: value.replace(/[^0-9.]/g, "") }
+            : set,
+        ),
+      };
+      persistProgress(workout, next);
+      return next;
+    });
   };
 
   const finishWorkout = async () => {
-    if (saving) return;
+    if (saving || !workout) return;
 
-    // Build payload from current state.
     const exercisesPayload = workout.exercises.map((exercise) => ({
       exerciseId: exercise.exerciseId || null,
       name: exercise.name,
@@ -114,6 +188,7 @@ export default function WorkoutSessionScreen() {
     const doSave = async () => {
       try {
         setSaving(true);
+
         await api.post("/workouts/sessions", {
           planId: workout._id,
           planName: workout.title,
@@ -121,11 +196,30 @@ export default function WorkoutSessionScreen() {
           durationSec: elapsedSeconds,
           exercises: exercisesPayload,
         });
+
+        const completedExerciseIds = workout.exercises
+          .filter((e) => e.done)
+          .map((e) => String(e._id));
+        const setResultsPayload = {};
+        for (const exercise of workout.exercises) {
+          const rows = setResults[exercise._id] || [];
+          setResultsPayload[String(exercise._id)] = rows.map((r) => ({
+            reps: Number(r.reps) || 0,
+            weightKg: Number(r.weight) || 0,
+          }));
+        }
+        await workoutProgressApi.save({
+          planId: workout._id,
+          date: todayKey(),
+          completedExerciseIds,
+          setResults: setResultsPayload,
+        });
+
         Alert.alert(
           "Workout saved",
           `${completedCount} of ${workout.exercises.length} exercises · ${setsLogged} sets · ${Math.floor(elapsedSeconds / 60)} min`,
         );
-        navigation.goBack();
+        navigation.navigate("PlanList");
       } catch (error) {
         Alert.alert(
           "Save failed",
@@ -167,9 +261,9 @@ export default function WorkoutSessionScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.navigate("PlanList")}>
           <Text style={[styles.back, { color: colors.textSecondary }]}>
-            Back
+            ← Back to Plans
           </Text>
         </Pressable>
 

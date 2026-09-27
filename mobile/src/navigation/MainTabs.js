@@ -50,7 +50,16 @@ export default function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Workouts" component={WorkoutStack} />
+      <Tab.Screen
+        name="Workouts"
+        component={WorkoutStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate("Workouts", { screen: "PlanList" });
+          },
+        })}
+      />
       <Tab.Screen name="Meals" component={MealsStack} />
       <Tab.Screen name="Progress" component={ProgressScreen} />
       <Tab.Screen name="Profile" component={ProfileStack} />
