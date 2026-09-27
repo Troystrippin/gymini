@@ -1,5 +1,4 @@
 const WorkoutProgress = require("../models/WorkoutProgress");
-const WorkoutLog = require("../models/WorkoutLog");
 const WorkoutPlan = require("../models/WorkoutPlan");
 
 // ─── Helpers ─────────────────────────────────────────────────────
@@ -143,45 +142,10 @@ exports.saveProgress = async (req, res, next) => {
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
 
-    // When the user fully finishes, write a WorkoutLog so history/stats update.
-    // Guard against duplicate logs on the same day for the same plan.
-    if (allDone && !existing?.finishedAt) {
-      try {
-        const exercisesPerformed = plan.exercises.map((ex) => {
-          const sets = cleanedSets[String(ex._id)] || [];
-          const repsCompleted = sets.reduce((sum, s) => sum + s.reps, 0);
-          return {
-            exerciseId: ex.exerciseId || null,
-            name: ex.name,
-            muscleGroup: ex.muscleGroup || null,
-            targetSets: ex.sets,
-            targetReps: ex.reps,
-            setsCompleted: sets.length,
-            repsCompleted,
-            sets,
-            completed: true,
-          };
-        });
-
-        await WorkoutLog.create({
-          userId: req.user._id,
-          planId: plan._id,
-          planName: plan.name,
-          startedAt: existing?.createdAt || new Date(),
-          dateCompleted: new Date(),
-          durationSec: 0, // we don't track elapsed time server-side; client could send it
-          exercisesPerformed,
-          totalExercises: plan.exercises.length,
-          completedExercises: plan.exercises.length,
-        });
-        console.log(
-          `[workout-progress] logged finished session user=${req.user._id} plan=${plan._id}`,
-        );
-      } catch (logErr) {
-        // Don't fail the request if logging fails — the progress doc is authoritative.
-        console.error("[workout-progress] failed to write log:", logErr.message);
-      }
-    }
+    // NOTE: Do NOT write a WorkoutLog here. The mobile client already
+    // writes one via POST /api/workouts/sessions when the user taps
+    // "Finish". Duplicating it here caused double-logged sessions.
+    // The WorkoutLog model is owned by workoutController.saveSession.
 
     res.json(serializeProgress(doc));
   } catch (err) {

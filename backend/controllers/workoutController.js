@@ -50,8 +50,6 @@ const getTodayWorkout = async (req, res) => {
 // NOTE: This no longer persists onto the plan. `completed` is a session
 // flag. Real persistence happens on POST /api/workouts/sessions.
 const toggleExercise = async (req, res) => {
-  // Kept for backwards-compat with the mobile app.
-  // Returns the toggled value without writing anything to the DB.
   res.json({ _id: req.params.exerciseId, done: true });
 };
 
@@ -77,6 +75,29 @@ const saveSession = async (req, res) => {
         .status(400)
         .json({ message: "planName and exercises are required" });
     }
+
+    // ─── Idempotency: prevent duplicate logs from a double-tap or
+    //     from a concurrent saveProgress write ───────────────────
+    if (planId) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setDate(endOfDay.getDate() + 1);
+
+      const existingToday = await WorkoutLog.findOne({
+        userId: req.user._id,
+        planId,
+        dateCompleted: { $gte: startOfDay, $lt: endOfDay },
+      }).lean();
+
+      if (existingToday) {
+        console.log(
+          `[workout] skipping duplicate session user=${req.user._id} plan=${planId}`,
+        );
+        return res.status(200).json(existingToday);
+      }
+    }
+    // ──────────────────────────────────────────────────────────────
 
     // Normalize + snapshot exercise names so history survives catalog edits.
     const normalized = await Promise.all(
