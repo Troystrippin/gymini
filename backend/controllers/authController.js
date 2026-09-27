@@ -33,7 +33,7 @@ const serializeUser = (user) => ({
   _id: user.id,
   fullName: user.fullName,
   email: user.email,
-  role: user.role || "user", // ← RBAC: surfaced to client
+  role: user.role || "user",
   createdAt: user.createdAt,
   onboardingCompleted: user.onboardingCompleted,
   emailVerified: user.emailVerified,
@@ -79,15 +79,13 @@ const registerUser = async (req, res, next) => {
       fullName,
       email,
       password: hashedPassword,
-      emailVerified: AUTO_VERIFY_NEW_USERS, // ← temp auto-verify
-      // role defaults to "user" via schema
+      emailVerified: AUTO_VERIFY_NEW_USERS,
     });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid user data" });
     }
 
-    // Only generate + send a verification code when auto-verify is off.
     if (!AUTO_VERIFY_NEW_USERS) {
       const code = generate6DigitCode();
       user.emailVerificationCode = hashCode(code);
@@ -120,13 +118,11 @@ const loginUser = async (req, res, next) => {
 
     const user = await User.findOne({ email });
 
-    // Timing-safe: always run bcrypt.compare.
     const passwordMatches = await bcrypt.compare(
       password,
       user ? user.password : DUMMY_HASH,
     );
 
-    // Lockout check first (existing users only).
     if (user && user.lockoutUntil && user.lockoutUntil.getTime() > Date.now()) {
       const minutesLeft = Math.ceil(
         (user.lockoutUntil.getTime() - Date.now()) / 60000,
@@ -292,7 +288,6 @@ const verifyEmail = async (req, res, next) => {
 
 const resendVerification = async (req, res, next) => {
   try {
-    // If auto-verify is on, there is nothing to resend.
     if (AUTO_VERIFY_NEW_USERS) {
       return res.json({
         message: "Email verification is currently disabled.",
@@ -419,8 +414,6 @@ const changePassword = async (req, res, next) => {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
-    // Revoke all sessions, then issue fresh tokens for the current device
-    // so the user stays logged in here but is kicked out elsewhere.
     await revokeAllForUser(user._id);
     const refreshToken = await issueRefreshToken({
       userId: user._id,
@@ -477,6 +470,16 @@ const updateOnboarding = async (req, res, next) => {
     };
 
     user.details = user.details || {};
+
+    // Preserve the first-ever onboarding weight before applying updates.
+    // This is the baseline used for goal + milestone progress.
+    if (
+      user.details.initialWeightKg == null &&
+      incomingDetails.weightKg != null
+    ) {
+      user.details.initialWeightKg = incomingDetails.weightKg;
+    }
+
     Object.entries(incomingDetails).forEach(([field, value]) => {
       if (value !== undefined) {
         user.details[field] = value;

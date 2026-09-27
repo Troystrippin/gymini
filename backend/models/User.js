@@ -60,6 +60,9 @@ const UserSchema = new mongoose.Schema(
       age: { type: Number, min: 13, max: 120, default: null },
       heightCm: { type: Number, min: 50, max: 300, default: null },
       weightKg: { type: Number, min: 20, max: 500, default: null },
+      // Preserves the weight entered during onboarding. Never overwritten
+      // by later weight logs. Used as the baseline for goal + milestone math.
+      initialWeightKg: { type: Number, min: 20, max: 500, default: null },
       workoutDaysPerWeek: { type: Number, min: 0, max: 7, default: null },
       activityLevel: {
         type: String,

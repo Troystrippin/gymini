@@ -16,6 +16,23 @@ const startOfWeek = (date = new Date()) => {
 
 const clamp = (n, min = 0, max = 1) => Math.max(min, Math.min(max, n));
 
+/**
+ * Returns the canonical "starting weight" for a user.
+ * Preference order:
+ *   1. user.details.initialWeightKg  (set at onboarding, never overwritten)
+ *   2. earliest WeightLog            (fallback for legacy users)
+ *   3. user.details.weightKg         (last resort)
+ */
+const getStartWeight = async (user) => {
+  if (user.details?.initialWeightKg != null) {
+    return user.details.initialWeightKg;
+  }
+  const earliest = await WeightLog.findOne({ userId: user._id })
+    .sort({ date: 1 })
+    .lean();
+  return earliest?.weightKg ?? user.details?.weightKg ?? null;
+};
+
 const computeProgress = async (goal, user) => {
   if (!goal) return null;
 
@@ -23,8 +40,7 @@ const computeProgress = async (goal, user) => {
     const latest = await WeightLog.findOne({ userId: user._id })
       .sort({ date: -1 })
       .lean();
-    const current =
-      latest?.weightKg ?? user.details?.weightKg ?? null;
+    const current = latest?.weightKg ?? user.details?.weightKg ?? null;
 
     if (current == null || goal.startValue == null) {
       return {
@@ -40,17 +56,15 @@ const computeProgress = async (goal, user) => {
     const delta = goal.startValue - current; // positive = loss
     const totalNeeded = goal.startValue - goal.target;
 
-    // Avoid divide-by-zero if start == target.
-    const rawProgress =
-      totalNeeded === 0 ? 1 : delta / totalNeeded;
+    const rawProgress = totalNeeded === 0 ? 1 : delta / totalNeeded;
 
     return {
       type: "weight",
       currentValue: current,
       targetValue: goal.target,
       startValue: goal.startValue,
-      delta,               // signed, positive = lost
-      totalNeeded,         // signed, positive = need to lose
+      delta,
+      totalNeeded,
       progress: clamp(rawProgress),
       label:
         Math.abs(delta) < 0.05
@@ -99,13 +113,17 @@ exports.createGoal = async (req, res, next) => {
 
     const user = await User.findById(req.user._id);
 
-    // Snapshot startValue for weight goals.
     let startValue = null;
     if (type === "weight") {
+      // Prefer the onboarding baseline. Fall back to the latest log.
       const latest = await WeightLog.findOne({ userId: user._id })
         .sort({ date: -1 })
         .lean();
-      startValue = latest?.weightKg ?? user.details?.weightKg ?? null;
+      startValue =
+        user.details?.initialWeightKg ??
+        latest?.weightKg ??
+        user.details?.weightKg ??
+        null;
 
       if (startValue == null) {
         return res.status(400).json({
@@ -149,7 +167,6 @@ exports.getActiveGoal = async (req, res, next) => {
       goals.map(async (g) => {
         const progress = await computeProgress(g, user);
 
-        // Auto-complete weight goals when target reached.
         if (
           g.type === "weight" &&
           progress &&
@@ -233,7 +250,7 @@ exports.getMilestones = async (req, res, next) => {
       Goal.countDocuments({ userId: user._id, status: "completed" }),
     ]);
 
-    // Compute longest streak (walk days).
+    // Longest streak — walk unique workout days in order.
     const logs = await WorkoutLog.find({ userId: user._id })
       .select("dateCompleted")
       .lean();
@@ -262,16 +279,11 @@ exports.getMilestones = async (req, res, next) => {
       prev = cur;
     }
 
-    // Weight progress — derive from earliest vs latest WeightLog.
-    // user.details.weightKg is overwritten on every log, so it can't
-    // be used as the "start" value. There is no initialWeightKg field
-    // on the User model — the earliest WeightLog IS the baseline.
-    const [earliestLog, latestLog] = await Promise.all([
-      WeightLog.findOne({ userId: user._id }).sort({ date: 1 }).lean(),
-      WeightLog.findOne({ userId: user._id }).sort({ date: -1 }).lean(),
-    ]);
-    const startWeight =
-      earliestLog?.weightKg ?? user.details?.weightKg ?? null;
+    // Weight baseline: prefer initialWeightKg, fall back to earliest log.
+    const startWeight = await getStartWeight(user);
+    const latestLog = await WeightLog.findOne({ userId: user._id })
+      .sort({ date: -1 })
+      .lean();
     const currentWeight =
       latestLog?.weightKg ?? user.details?.weightKg ?? null;
     const kgLost =
