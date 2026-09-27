@@ -8,13 +8,14 @@ import api from "../api/api";
 
 const PlanDraftContext = createContext(null);
 
-// Collision-safe id for a custom exercise. Date.now() alone can collide
-// if two customs are added within the same millisecond.
+// Collision-safe id for a custom exercise.
 const makeCustomId = () =>
   `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export function PlanDraftProvider({ children }) {
   const [draftExercises, setDraftExercises] = useState([]);
+  const [draftName, setDraftName] = useState("");
+  const [editingPlanId, setEditingPlanId] = useState(null);
   const [savingPlan, setSavingPlan] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
@@ -70,7 +71,6 @@ export function PlanDraftProvider({ children }) {
     );
   }, []);
 
-  // Swap items for drag-to-reorder.
   const reorderExercises = useCallback((from, to) => {
     setDraftExercises((prev) => {
       if (from === to) return prev;
@@ -91,6 +91,8 @@ export function PlanDraftProvider({ children }) {
 
   const clearDraft = useCallback(() => {
     setDraftExercises([]);
+    setDraftName("");
+    setEditingPlanId(null);
     setSaveError(null);
   }, []);
 
@@ -99,6 +101,27 @@ export function PlanDraftProvider({ children }) {
       setDraftExercises(exercises.map((exercise) => ({ ...exercise }))),
     [],
   );
+
+  /**
+   * Load a saved plan into the draft for editing. Sets the name,
+   * exercises, and editingPlanId so Save becomes a PUT, not a POST.
+   */
+  const loadPlanForEdit = useCallback((plan) => {
+    setDraftExercises(
+      (plan.exercises || []).map((ex, idx) => ({
+        exerciseId: ex.exerciseId || `custom-${idx}-${Date.now()}`,
+        name: ex.name,
+        muscleGroup: ex.muscleGroup,
+        description: ex.description || "",
+        sets: ex.sets,
+        reps: ex.reps,
+        isCustom: ex.isCustom,
+      })),
+    );
+    setDraftName(plan.name || "");
+    setEditingPlanId(plan._id);
+    setSaveError(null);
+  }, []);
 
   const savePlan = useCallback(
     async (planName = "My Plan", planId = null) => {
@@ -116,7 +139,6 @@ export function PlanDraftProvider({ children }) {
             name: e.name,
             muscleGroup: e.muscleGroup,
             description: e.description || "",
-            // Force integer bounds to match backend validator.
             sets: Math.max(1, Math.min(50, Math.floor(Number(e.sets)) || 3)),
             reps: Math.max(1, Math.min(200, Math.floor(Number(e.reps)) || 10)),
             isCustom: Boolean(e.isCustom),
@@ -132,7 +154,6 @@ export function PlanDraftProvider({ children }) {
         const data = err.response?.data;
         let msg;
         if (data?.errors && Array.isArray(data.errors)) {
-          // Show the field-level errors from express-validator.
           msg =
             `${data.message || "Validation failed"}:\n\n` +
             data.errors.map((e) => `• ${e.field}: ${e.message}`).join("\n");
@@ -152,6 +173,10 @@ export function PlanDraftProvider({ children }) {
     <PlanDraftContext.Provider
       value={{
         draftExercises,
+        draftName,
+        setDraftName,
+        editingPlanId,
+        setEditingPlanId,
         addExercise,
         addCustomExercise,
         removeExercise,
@@ -160,6 +185,7 @@ export function PlanDraftProvider({ children }) {
         isInDraft,
         clearDraft,
         replaceDraft,
+        loadPlanForEdit,
         savePlan,
         savingPlan,
         saveError,

@@ -51,7 +51,7 @@ export default function BrowseExercisesScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const accentTextColor = "#FFFFFF";
-  const { addExercise, isInDraft, savePlan, savingPlan, draftExercises } =
+  const { addExercise, removeExercise, isInDraft, draftExercises } =
     usePlanDraft();
 
   // Catalog state
@@ -76,16 +76,11 @@ export default function BrowseExercisesScreen() {
   const [cDesc, setCDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Save plan modal
-  const [saveVisible, setSaveVisible] = useState(false);
-  const [planName, setPlanName] = useState("My Plan");
-
   // ── Fetch catalog ────────────────────────────────────────────────
   const fetchExercises = useCallback(async () => {
     try {
       setLoadError(null);
       const res = await api.get("/exercises");
-      // Handle both bare-array and wrapped { exercises: [...] } responses.
       const list = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data?.exercises)
@@ -114,7 +109,12 @@ export default function BrowseExercisesScreen() {
   const filtered = useMemo(() => {
     const list = Array.isArray(exercises) ? exercises : [];
     return list.filter((ex) => {
-      const matchesCategory = category === "All" || ex.muscleGroup === category;
+      const matchesCategory =
+        category === "All"
+          ? true
+          : category === "Custom"
+            ? ex.isCustom
+            : ex.muscleGroup === category;
       const matchesSearch = (ex.name || "")
         .toLowerCase()
         .includes(search.trim().toLowerCase());
@@ -123,9 +123,12 @@ export default function BrowseExercisesScreen() {
   }, [exercises, search, category]);
 
   // ── Actions ──────────────────────────────────────────────────────
-  const handleAdd = (exercise) => {
-    addExercise(exercise);
-    setActiveExercise(null);
+  const toggleAdd = (exercise) => {
+    if (isInDraft(exercise._id)) {
+      removeExercise(exercise._id);
+    } else {
+      addExercise(exercise);
+    }
   };
 
   const handleCreateCustom = async () => {
@@ -166,24 +169,9 @@ export default function BrowseExercisesScreen() {
     }
   };
 
+  // Done simply returns to PlanScreen. The draft lives in context.
   const handleDone = () => {
-    if (draftExercises.length === 0) {
-      navigation.goBack();
-      return;
-    }
-    setPlanName("My Plan");
-    setSaveVisible(true);
-  };
-
-  const handleSavePlan = async () => {
-    try {
-      await savePlan(planName.trim() || "My Plan");
-      setSaveVisible(false);
-      navigation.goBack();
-    } catch (err) {
-      // err.message contains the full detailed validation list now.
-      Alert.alert("Save failed", err.message);
-    }
+    navigation.goBack();
   };
 
   // ── Renderers ────────────────────────────────────────────────────
@@ -195,7 +183,7 @@ export default function BrowseExercisesScreen() {
           styles.card,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
-        onPress={() => setActiveExercise(item)}
+        onPress={() => toggleAdd(item)}
         activeOpacity={0.7}
       >
         <View style={styles.cardInfo}>
@@ -207,15 +195,24 @@ export default function BrowseExercisesScreen() {
             {item.isCustom ? " · Custom" : ""}
           </Text>
         </View>
-        {added && (
-          <View
-            style={[styles.addedBadge, { backgroundColor: colors.accent }]}
+        <View
+          style={[
+            styles.toggleBadge,
+            {
+              backgroundColor: added ? colors.accent : "transparent",
+              borderColor: added ? colors.accent : colors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.toggleBadgeText,
+              { color: added ? accentTextColor : colors.text },
+            ]}
           >
-            <Text style={[styles.addedBadgeText, { color: accentTextColor }]}>
-              Added
-            </Text>
-          </View>
-        )}
+            {added ? "Added" : "Add"}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -341,97 +338,6 @@ export default function BrowseExercisesScreen() {
           }
         />
       )}
-
-      {/* ── Exercise detail modal ──────────────────────────────── */}
-      <Modal
-        visible={!!activeExercise}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActiveExercise(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setActiveExercise(null)}
-          />
-          {activeExercise && (
-            <View
-              style={[
-                styles.modalSheet,
-                { backgroundColor: colors.background },
-              ]}
-            >
-              <View
-                style={[styles.modalHandle, { backgroundColor: colors.border }]}
-              />
-              {activeExercise.mediaUrl ? (
-                <Image
-                  source={{ uri: activeExercise.mediaUrl }}
-                  style={styles.media}
-                />
-              ) : (
-                <LinearGradient
-                  colors={[colors.card, colors.background]}
-                  style={styles.media}
-                >
-                  <Text
-                    style={[
-                      styles.mediaPlaceholderText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {activeExercise.muscleGroup}
-                  </Text>
-                </LinearGradient>
-              )}
-              <View style={styles.modalBody}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {activeExercise.name}
-                </Text>
-                <Text
-                  style={[styles.modalMeta, { color: colors.textSecondary }]}
-                >
-                  {activeExercise.muscleGroup} · {activeExercise.equipment} ·{" "}
-                  {activeExercise.difficulty}
-                </Text>
-                <Text style={[styles.modalDescription, { color: colors.text }]}>
-                  {activeExercise.description || "No description provided."}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.modalAddBtn,
-                    {
-                      backgroundColor: isInDraft(activeExercise._id)
-                        ? colors.card
-                        : colors.accent,
-                      borderWidth: isInDraft(activeExercise._id) ? 1 : 0,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => handleAdd(activeExercise)}
-                  disabled={isInDraft(activeExercise._id)}
-                >
-                  <Text
-                    style={[
-                      styles.modalAddBtnText,
-                      {
-                        color: isInDraft(activeExercise._id)
-                          ? colors.textSecondary
-                          : accentTextColor,
-                      },
-                    ]}
-                  >
-                    {isInDraft(activeExercise._id)
-                      ? "Already Added"
-                      : "Add to Plan"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-      </Modal>
 
       {/* ── Create custom exercise modal ───────────────────────── */}
       <Modal
@@ -630,90 +536,97 @@ export default function BrowseExercisesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── Save plan modal ────────────────────────────────────── */}
+      {/* ── Exercise detail modal ──────────────────────────────── */}
       <Modal
-        visible={saveVisible}
+        visible={!!activeExercise}
         transparent
         animationType="slide"
-        onRequestClose={() => setSaveVisible(false)}
+        onRequestClose={() => setActiveExercise(null)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.modalOverlay}
-        >
+        <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
-            onPress={() => setSaveVisible(false)}
+            onPress={() => setActiveExercise(null)}
           />
-          <View
-            style={[styles.modalSheet, { backgroundColor: colors.background }]}
-          >
+          {activeExercise && (
             <View
-              style={[styles.modalHandle, { backgroundColor: colors.border }]}
-            />
-            <View style={styles.modalBody}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Name Your Plan
-              </Text>
-              <Text
-                style={[
-                  styles.modalMeta,
-                  { color: colors.textSecondary, marginBottom: 16 },
-                ]}
-              >
-                {draftExercises.length} exercise
-                {draftExercises.length === 1 ? "" : "s"}
-              </Text>
-
-              <TextInput
-                value={planName}
-                onChangeText={setPlanName}
-                placeholder="e.g. Push Day"
-                placeholderTextColor={colors.textSecondary}
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
-                  },
-                ]}
-                autoFocus
+              style={[
+                styles.modalSheet,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <View
+                style={[styles.modalHandle, { backgroundColor: colors.border }]}
               />
-
-              <TouchableOpacity
-                style={[
-                  styles.modalAddBtn,
-                  {
-                    backgroundColor: colors.accent,
-                    marginTop: 20,
-                    opacity: savingPlan ? 0.6 : 1,
-                  },
-                ]}
-                onPress={handleSavePlan}
-                disabled={savingPlan}
-              >
-                {savingPlan ? (
-                  <ActivityIndicator color={accentTextColor} />
-                ) : (
+              {activeExercise.mediaUrl ? (
+                <Image
+                  source={{ uri: activeExercise.mediaUrl }}
+                  style={styles.media}
+                />
+              ) : (
+                <LinearGradient
+                  colors={[colors.card, colors.background]}
+                  style={styles.media}
+                >
                   <Text
-                    style={[styles.modalAddBtnText, { color: accentTextColor }]}
+                    style={[
+                      styles.mediaPlaceholderText,
+                      { color: colors.textSecondary },
+                    ]}
                   >
-                    Save Plan
+                    {activeExercise.muscleGroup}
                   </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setSaveVisible(false)}
-                style={{ marginTop: 12, alignItems: "center" }}
-              >
-                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
-              </TouchableOpacity>
+                </LinearGradient>
+              )}
+              <View style={styles.modalBody}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {activeExercise.name}
+                </Text>
+                <Text
+                  style={[styles.modalMeta, { color: colors.textSecondary }]}
+                >
+                  {activeExercise.muscleGroup} · {activeExercise.equipment} ·{" "}
+                  {activeExercise.difficulty}
+                </Text>
+                <Text style={[styles.modalDescription, { color: colors.text }]}>
+                  {activeExercise.description || "No description provided."}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalAddBtn,
+                    {
+                      backgroundColor: isInDraft(activeExercise._id)
+                        ? colors.card
+                        : colors.accent,
+                      borderWidth: isInDraft(activeExercise._id) ? 1 : 0,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={() => {
+                    toggleAdd(activeExercise);
+                    setActiveExercise(null);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalAddBtnText,
+                      {
+                        color: isInDraft(activeExercise._id)
+                          ? colors.textSecondary
+                          : accentTextColor,
+                      },
+                    ]}
+                  >
+                    {isInDraft(activeExercise._id)
+                      ? "Remove from Plan"
+                      : "Add to Plan"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          )}
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -772,10 +685,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  addedBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  addedBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
+  toggleBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  toggleBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   emptyState: { paddingTop: 60, alignItems: "center", paddingHorizontal: 30 },

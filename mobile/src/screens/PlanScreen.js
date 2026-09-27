@@ -38,25 +38,31 @@ export default function PlanScreen() {
   const accentTextColor = "#FFFFFF";
   const navigation = useNavigation();
 
+  // Draft state lives in the context so it survives navigating to
+  // BrowseExercises and back. Do NOT use local useState for these.
   const {
     draftExercises,
+    draftName,
+    setDraftName,
+    editingPlanId,
+    setEditingPlanId,
     removeExercise,
     updateExercise,
     addCustomExercise,
     replaceDraft,
     reorderExercises,
+    loadPlanForEdit,
     savePlan,
     savingPlan,
   } = usePlanDraft();
 
-  const [planName, setPlanName] = useState("");
+  // Screen-local state (does not need to survive navigation)
   const [savedPlans, setSavedPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [activeSavedPlan, setActiveSavedPlan] = useState(null);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
-  const [editingPlanId, setEditingPlanId] = useState(null);
 
-  // Custom exercise modal
+  // Custom exercise modal state
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customGroup, setCustomGroup] = useState("Chest");
@@ -65,7 +71,6 @@ export default function PlanScreen() {
   const [customDescription, setCustomDescription] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Load saved plans on focus
   const fetchSavedPlans = useCallback(async () => {
     try {
       setLoadingPlans(true);
@@ -85,17 +90,25 @@ export default function PlanScreen() {
     }, [fetchSavedPlans]),
   );
 
-  // Save current draft
+  const isEditing = Boolean(editingPlanId);
+  const hasDraftWork =
+    draftExercises.length > 0 || draftName.trim().length > 0;
+
   const handleSavePlan = async () => {
-    const trimmed = planName.trim();
+    const trimmed = draftName.trim();
     if (!trimmed || draftExercises.length === 0) return;
+
+    console.log("[save]", {
+      editingPlanId,
+      draftName: trimmed,
+      count: draftExercises.length,
+    });
+
     try {
       await savePlan(trimmed, editingPlanId);
-      setPlanName("");
-      setEditingPlanId(null);
       await fetchSavedPlans();
       Alert.alert(
-        editingPlanId ? "Plan updated!" : "Saved!",
+        isEditing ? "Plan updated!" : "Saved!",
         `"${trimmed}" is now your active plan.`,
       );
     } catch (err) {
@@ -103,7 +116,12 @@ export default function PlanScreen() {
     }
   };
 
-  // Create custom exercise
+  const handleClearDraft = () => {
+    replaceDraft([]);
+    setDraftName("");
+    setEditingPlanId(null);
+  };
+
   const handleAddCustom = async () => {
     if (!customName.trim()) return;
     try {
@@ -136,22 +154,25 @@ export default function PlanScreen() {
     }
   };
 
+  const doLoadToEdit = () => {
+    loadPlanForEdit(activeSavedPlan);
+    setActiveSavedPlan(null);
+  };
+
   const handleEditSavedPlan = () => {
     if (!activeSavedPlan) return;
-    replaceDraft(
-      activeSavedPlan.exercises.map((ex, idx) => ({
-        exerciseId: ex.exerciseId || `custom-${idx}-${Date.now()}`,
-        name: ex.name,
-        muscleGroup: ex.muscleGroup,
-        description: ex.description || "",
-        sets: ex.sets,
-        reps: ex.reps,
-        isCustom: ex.isCustom,
-      })),
-    );
-    setPlanName(activeSavedPlan.name);
-    setEditingPlanId(activeSavedPlan._id);
-    setActiveSavedPlan(null);
+    if (hasDraftWork) {
+      Alert.alert(
+        "Replace current draft?",
+        "You have unsaved exercises in your current draft. Loading this plan will replace them.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Replace", style: "destructive", onPress: doLoadToEdit },
+        ],
+      );
+    } else {
+      doLoadToEdit();
+    }
   };
 
   const handleSelectPlan = async (plan) => {
@@ -180,6 +201,9 @@ export default function PlanScreen() {
           onPress: async () => {
             try {
               await api.delete(`/plans/${activeSavedPlan._id}`);
+              if (editingPlanId === activeSavedPlan._id) {
+                handleClearDraft();
+              }
               setActiveSavedPlan(null);
               fetchSavedPlans();
             } catch (err) {
@@ -196,7 +220,6 @@ export default function PlanScreen() {
     navigation.navigate("WorkoutSession");
   };
 
-  // ── Draft row renderer (draggable) ─────────────────────────
   const renderDraftRow = ({ item: exercise, drag, isActive }) => (
     <View
       style={[
@@ -259,6 +282,15 @@ export default function PlanScreen() {
     </View>
   );
 
+  const saveLabel = (() => {
+    if (savingPlan) return null;
+    if (!draftName.trim() && draftExercises.length === 0)
+      return "Save Plan (add name + exercises)";
+    if (!draftName.trim()) return "Save Plan (add a name)";
+    if (draftExercises.length === 0) return "Save Plan (add exercises)";
+    return isEditing ? "Update Plan" : "Save Plan";
+  })();
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <NestableScrollContainer
@@ -267,12 +299,39 @@ export default function PlanScreen() {
       >
         <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
 
-        {/* ── Current Draft ── */}
+        {/* ── Editing banner ─────────────────────────────────── */}
+        {isEditing && (
+          <View
+            style={[
+              styles.editingBanner,
+              { backgroundColor: colors.accentMuted },
+            ]}
+          >
+            <Text style={[styles.editingBannerText, { color: colors.primary }]}>
+              Editing: {draftName || "Untitled"}
+            </Text>
+            <Pressable onPress={handleClearDraft} hitSlop={8}>
+              <Text
+                style={[
+                  styles.editingBannerAction,
+                  { color: colors.primary },
+                ]}
+              >
+                Start new
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Current Draft ──────────────────────────────────── */}
         <View style={styles.section}>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+            PLAN NAME
+          </Text>
           <TextInput
-            value={planName}
-            onChangeText={setPlanName}
-            placeholder="Plan name, e.g. Leg Day"
+            value={draftName}
+            onChangeText={setDraftName}
+            placeholder="e.g. Leg Day"
             maxLength={30}
             placeholderTextColor={colors.textSecondary}
             style={[
@@ -286,22 +345,57 @@ export default function PlanScreen() {
           />
 
           <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              My Plan
-            </Text>
-            {draftExercises.length > 1 && (
-              <Text
-                style={[styles.hintText, { color: colors.textSecondary }]}
+            <View style={styles.sectionTitleLeft}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                My Plan
+              </Text>
+              <View
+                style={[
+                  styles.countPill,
+                  { backgroundColor: colors.cardBackground },
+                ]}
               >
+                <Text
+                  style={[
+                    styles.countPillText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  {draftExercises.length}
+                </Text>
+              </View>
+            </View>
+            {draftExercises.length > 1 && (
+              <Text style={[styles.hintText, { color: colors.textSecondary }]}>
                 Long-press ☰ to reorder
               </Text>
             )}
           </View>
 
           {draftExercises.length === 0 ? (
-            <Text style={[styles.empty, { color: colors.textSecondary }]}>
-              Your plan is empty. Add exercises from Browse below.
-            </Text>
+            <View
+              style={[
+                styles.emptyDraft,
+                {
+                  backgroundColor: colors.cardBackground,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text
+                style={[styles.emptyDraftText, { color: colors.textSecondary }]}
+              >
+                No exercises yet.
+              </Text>
+              <Text
+                style={[
+                  styles.emptyDraftHint,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Add from Browse or create a custom exercise below.
+              </Text>
+            </View>
           ) : (
             <NestableDraggableFlatList
               data={draftExercises}
@@ -321,7 +415,7 @@ export default function PlanScreen() {
             <Text
               style={[styles.secondaryButtonText, { color: colors.primary }]}
             >
-              Add from Browse
+              + Add from Browse
             </Text>
           </Pressable>
 
@@ -330,20 +424,20 @@ export default function PlanScreen() {
             style={[styles.secondaryButton, { borderColor: colors.border }]}
           >
             <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-              Add Custom Exercise
+              + Add Custom Exercise
             </Text>
           </Pressable>
 
           <Pressable
             onPress={handleSavePlan}
             disabled={
-              !planName.trim() || draftExercises.length === 0 || savingPlan
+              !draftName.trim() || draftExercises.length === 0 || savingPlan
             }
             style={[
               styles.saveButton,
               {
                 backgroundColor:
-                  planName.trim() && draftExercises.length > 0
+                  draftName.trim() && draftExercises.length > 0
                     ? colors.primary
                     : colors.border,
                 opacity: savingPlan ? 0.6 : 1,
@@ -354,14 +448,14 @@ export default function PlanScreen() {
               <ActivityIndicator color={accentTextColor} />
             ) : (
               <Text style={[styles.saveButtonText, { color: accentTextColor }]}>
-                Save Plan
+                {saveLabel}
               </Text>
             )}
           </Pressable>
         </View>
 
-        {/* ── Saved Plans ── */}
-        <View style={[styles.savedSection, { marginTop: 24 }]}>
+        {/* ── Saved Plans ────────────────────────────────────── */}
+        <View style={[styles.savedSection, { marginTop: 28 }]}>
           <View style={styles.savedHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Saved Plans
@@ -386,41 +480,81 @@ export default function PlanScreen() {
               No saved plans yet.
             </Text>
           ) : (
-            savedPlans.map((savedPlan) => (
-              <Pressable
-                key={savedPlan._id}
-                onPress={() => handleSelectPlan(savedPlan)}
-                style={[
-                  styles.savedPlan,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor:
-                      selectedPlanId === savedPlan._id
+            savedPlans.map((savedPlan) => {
+              const isActive = savedPlan.isActive;
+              const isEditingThis = editingPlanId === savedPlan._id;
+              return (
+                <Pressable
+                  key={savedPlan._id}
+                  onPress={() => handleSelectPlan(savedPlan)}
+                  style={({ pressed }) => [
+                    styles.savedPlan,
+                    {
+                      backgroundColor: colors.cardBackground,
+                      borderColor: isEditingThis
                         ? colors.primary
                         : "transparent",
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[styles.savedPlanName, { color: colors.text }]}>
-                  {savedPlan.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.exerciseMuscle,
-                    { color: colors.textSecondary },
+                      borderWidth: 1,
+                      opacity: pressed ? 0.85 : 1,
+                    },
                   ]}
                 >
-                  {savedPlan.exercises?.length || 0} exercise
-                  {(savedPlan.exercises?.length || 0) === 1 ? "" : "s"}
-                </Text>
-              </Pressable>
-            ))
+                  <View style={styles.savedPlanRow}>
+                    <View style={styles.savedPlanLeft}>
+                      <Text
+                        style={[styles.savedPlanName, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
+                        {savedPlan.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.exerciseMuscle,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {savedPlan.exercises?.length || 0}{" "}
+                        {(savedPlan.exercises?.length || 0) === 1
+                          ? "exercise"
+                          : "exercises"}
+                      </Text>
+                    </View>
+                    <View style={styles.savedPlanRight}>
+                      {isActive && (
+                        <View
+                          style={[
+                            styles.activePill,
+                            { backgroundColor: colors.accentMuted },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.activePillText,
+                              { color: colors.primary },
+                            ]}
+                          >
+                            ACTIVE
+                          </Text>
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.chevron,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        ›
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })
           )}
         </View>
       </NestableScrollContainer>
 
-      {/* ── Saved Plan Detail Modal ── */}
+      {/* ── Saved Plan Detail Modal ────────────────────────── */}
       <Modal
         visible={Boolean(activeSavedPlan)}
         transparent
@@ -444,15 +578,19 @@ export default function PlanScreen() {
                   <Text
                     style={[styles.modalMeta, { color: colors.textSecondary }]}
                   >
-                    {activeSavedPlan.exercises.length} exercise
-                    {activeSavedPlan.exercises.length === 1 ? "" : "s"}
+                    {activeSavedPlan.exercises.length}{" "}
+                    {activeSavedPlan.exercises.length === 1
+                      ? "exercise"
+                      : "exercises"}
                   </Text>
                 </View>
                 <Pressable
                   style={styles.removeButton}
                   onPress={() => setActiveSavedPlan(null)}
                 >
-                  <Text style={[styles.remove, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.remove, { color: colors.textSecondary }]}
+                  >
                     ✕
                   </Text>
                 </Pressable>
@@ -551,7 +689,7 @@ export default function PlanScreen() {
         </View>
       </Modal>
 
-      {/* ── Custom Exercise Modal ── */}
+      {/* ── Custom Exercise Modal ─────────────────────────── */}
       <Modal
         visible={customModalVisible}
         transparent
@@ -738,14 +876,49 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
   title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
+
+  editingBanner: {
+    alignItems: "center",
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  editingBannerText: { fontSize: 13, fontWeight: "800" },
+  editingBannerAction: { fontSize: 13, fontWeight: "800" },
+
   section: { gap: 12 },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
   sectionTitleRow: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 6,
+  },
+  sectionTitleLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   sectionTitle: { fontSize: 20, fontWeight: "800" },
+  countPill: {
+    alignItems: "center",
+    borderRadius: 10,
+    justifyContent: "center",
+    minWidth: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  countPillText: { fontSize: 12, fontWeight: "800" },
   hintText: { fontSize: 12 },
+
   planNameInput: {
     borderRadius: 10,
     borderWidth: 1,
@@ -753,13 +926,19 @@ const styles = StyleSheet.create({
     padding: 13,
   },
   empty: { fontSize: 14, marginVertical: 8 },
-  dragList: { gap: 10 },
-  planCard: {
+  emptyDraft: {
+    alignItems: "center",
     borderRadius: 12,
+    borderStyle: "dashed",
     borderWidth: 1,
-    padding: 14,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
   },
+  emptyDraftText: { fontSize: 14, fontWeight: "700" },
+  emptyDraftHint: { fontSize: 12, marginTop: 4, textAlign: "center" },
+
+  dragList: { gap: 10 },
+  planCard: { borderRadius: 12, borderWidth: 1, gap: 14, padding: 14 },
   planHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
@@ -770,16 +949,14 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     paddingTop: 2,
   },
-  dragHandleText: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
+  dragHandleText: { fontSize: 18, fontWeight: "800" },
   exerciseInfo: { flex: 1, minWidth: 0 },
   exerciseName: { fontSize: 15, fontWeight: "700" },
   exerciseMuscle: { fontSize: 12, marginTop: 4 },
   removeButton: { alignSelf: "flex-start", marginLeft: 8 },
-  remove: { fontSize: 20, fontWeight: "800" },
+  remove: { fontSize: 18, fontWeight: "800" },
   steppers: { flexDirection: "row", gap: 15, justifyContent: "center" },
+
   secondaryButton: {
     alignItems: "center",
     borderRadius: 10,
@@ -789,15 +966,39 @@ const styles = StyleSheet.create({
   secondaryButtonText: { fontSize: 14, fontWeight: "700" },
   saveButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   saveButtonText: { fontSize: 15, fontWeight: "800" },
+
   savedSection: { gap: 10 },
   savedHeader: {
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
   },
   historyLink: { fontSize: 14, fontWeight: "700" },
-  savedPlan: { borderRadius: 10, padding: 14 },
+  savedPlan: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  savedPlanRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  savedPlanLeft: { flex: 1, minWidth: 0 },
   savedPlanName: { fontSize: 16, fontWeight: "800" },
+  savedPlanRight: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
+  },
+  activePill: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activePillText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
+  chevron: { fontSize: 22, fontWeight: "400" },
+
   savedModal: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -810,7 +1011,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   savedExerciseList: { maxHeight: 300 },
-  savedExercise: { borderRadius: 10, padding: 12, marginBottom: 8 },
+  savedExercise: { borderRadius: 10, marginBottom: 8, padding: 12 },
   savedExerciseContent: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -862,11 +1063,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 6,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
   },
   modalActions: {
     flexDirection: "row",
