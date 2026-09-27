@@ -250,7 +250,8 @@ exports.getMilestones = async (req, res, next) => {
     for (const key of sortedDays) {
       const cur = new Date(key);
       if (prev) {
-        const diffMs = Date.UTC(cur.getFullYear(), cur.getMonth(), cur.getDate()) -
+        const diffMs =
+          Date.UTC(cur.getFullYear(), cur.getMonth(), cur.getDate()) -
           Date.UTC(prev.getFullYear(), prev.getMonth(), prev.getDate());
         const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
         run = days === 1 ? run + 1 : 1;
@@ -261,14 +262,18 @@ exports.getMilestones = async (req, res, next) => {
       prev = cur;
     }
 
-    // Weight progress
+    // Weight progress — derive from earliest vs latest WeightLog.
+    // user.details.weightKg is overwritten on every log, so it can't
+    // be used as the "start" value. There is no initialWeightKg field
+    // on the User model — the earliest WeightLog IS the baseline.
+    const [earliestLog, latestLog] = await Promise.all([
+      WeightLog.findOne({ userId: user._id }).sort({ date: 1 }).lean(),
+      WeightLog.findOne({ userId: user._id }).sort({ date: -1 }).lean(),
+    ]);
     const startWeight =
-      user.details?.initialWeightKg ?? user.details?.weightKg ?? null;
-    const latestWeightLog = await WeightLog.findOne({ userId: user._id })
-      .sort({ date: -1 })
-      .lean();
+      earliestLog?.weightKg ?? user.details?.weightKg ?? null;
     const currentWeight =
-      latestWeightLog?.weightKg ?? user.details?.weightKg ?? null;
+      latestLog?.weightKg ?? user.details?.weightKg ?? null;
     const kgLost =
       startWeight != null && currentWeight != null
         ? startWeight - currentWeight
