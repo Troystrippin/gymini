@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  NestableScrollContainer,
+  NestableDraggableFlatList,
+} from "react-native-draggable-flatlist";
 import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import Stepper from "../components/Stepper";
@@ -40,6 +44,7 @@ export default function PlanScreen() {
     updateExercise,
     addCustomExercise,
     replaceDraft,
+    reorderExercises,
     savePlan,
     savingPlan,
   } = usePlanDraft();
@@ -60,7 +65,7 @@ export default function PlanScreen() {
   const [customDescription, setCustomDescription] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // ── Load saved plans on focus ────────────────────────────────────
+  // Load saved plans on focus
   const fetchSavedPlans = useCallback(async () => {
     try {
       setLoadingPlans(true);
@@ -80,7 +85,7 @@ export default function PlanScreen() {
     }, [fetchSavedPlans]),
   );
 
-  // ── Save current draft ───────────────────────────────────────────
+  // Save current draft
   const handleSavePlan = async () => {
     const trimmed = planName.trim();
     if (!trimmed || draftExercises.length === 0) return;
@@ -98,7 +103,7 @@ export default function PlanScreen() {
     }
   };
 
-  // ── Create custom exercise ───────────────────────────────────────
+  // Create custom exercise
   const handleAddCustom = async () => {
     if (!customName.trim()) return;
     try {
@@ -131,7 +136,6 @@ export default function PlanScreen() {
     }
   };
 
-  // ── Saved plan actions ───────────────────────────────────────────
   const handleEditSavedPlan = () => {
     if (!activeSavedPlan) return;
     replaceDraft(
@@ -192,12 +196,78 @@ export default function PlanScreen() {
     navigation.navigate("WorkoutSession");
   };
 
+  // ── Draft row renderer (draggable) ─────────────────────────
+  const renderDraftRow = ({ item: exercise, drag, isActive }) => (
+    <View
+      style={[
+        styles.planCard,
+        {
+          backgroundColor: colors.cardBackground,
+          borderColor: isActive ? colors.primary : colors.border,
+          opacity: isActive ? 0.85 : 1,
+        },
+      ]}
+    >
+      <View style={styles.planHeader}>
+        <Pressable
+          onLongPress={drag}
+          delayLongPress={150}
+          hitSlop={10}
+          style={styles.dragHandle}
+        >
+          <Text style={[styles.dragHandleText, { color: colors.textSecondary }]}>
+            ☰
+          </Text>
+        </Pressable>
+        <View style={styles.exerciseInfo}>
+          <Text style={[styles.exerciseName, { color: colors.text }]}>
+            {exercise.name}
+          </Text>
+          {exercise.muscleGroup ? (
+            <Text
+              style={[styles.exerciseMuscle, { color: colors.textSecondary }]}
+            >
+              {exercise.muscleGroup}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          style={styles.removeButton}
+          onPress={() => removeExercise(exercise.exerciseId)}
+        >
+          <Text style={[styles.remove, { color: colors.textSecondary }]}>
+            ✕
+          </Text>
+        </Pressable>
+      </View>
+      <View style={styles.steppers}>
+        <Stepper
+          label="Sets"
+          value={exercise.sets}
+          onChange={(value) =>
+            updateExercise(exercise.exerciseId, "sets", value)
+          }
+        />
+        <Stepper
+          label="Reps"
+          value={exercise.reps}
+          onChange={(value) =>
+            updateExercise(exercise.exerciseId, "reps", value)
+          }
+        />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <NestableScrollContainer
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
 
-        {/* ── Current Draft ─────────────────────────────────────── */}
+        {/* ── Current Draft ── */}
         <View style={styles.section}>
           <TextInput
             value={planName}
@@ -215,71 +285,33 @@ export default function PlanScreen() {
             ]}
           />
 
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            My Plan
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              My Plan
+            </Text>
+            {draftExercises.length > 1 && (
+              <Text
+                style={[styles.hintText, { color: colors.textSecondary }]}
+              >
+                Long-press ☰ to reorder
+              </Text>
+            )}
+          </View>
 
           {draftExercises.length === 0 ? (
             <Text style={[styles.empty, { color: colors.textSecondary }]}>
               Your plan is empty. Add exercises from Browse below.
             </Text>
           ) : (
-            draftExercises.map((exercise) => (
-              <View
-                key={exercise.exerciseId}
-                style={[
-                  styles.planCard,
-                  {
-                    backgroundColor: colors.cardBackground,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={styles.planHeader}>
-                  <View style={styles.exerciseInfo}>
-                    <Text style={[styles.exerciseName, { color: colors.text }]}>
-                      {exercise.name}
-                    </Text>
-                    {exercise.muscleGroup ? (
-                      <Text
-                        style={[
-                          styles.exerciseMuscle,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        {exercise.muscleGroup}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Pressable
-                    style={styles.removeButton}
-                    onPress={() => removeExercise(exercise.exerciseId)}
-                  >
-                    <Text
-                      style={[styles.remove, { color: colors.textSecondary }]}
-                    >
-                      ×
-                    </Text>
-                  </Pressable>
-                </View>
-                <View style={styles.steppers}>
-                  <Stepper
-                    label="Sets"
-                    value={exercise.sets}
-                    onChange={(value) =>
-                      updateExercise(exercise.exerciseId, "sets", value)
-                    }
-                  />
-                  <Stepper
-                    label="Reps"
-                    value={exercise.reps}
-                    onChange={(value) =>
-                      updateExercise(exercise.exerciseId, "reps", value)
-                    }
-                  />
-                </View>
-              </View>
-            ))
+            <NestableDraggableFlatList
+              data={draftExercises}
+              keyExtractor={(item) => item.exerciseId}
+              onDragEnd={({ from, to }) => reorderExercises(from, to)}
+              renderItem={renderDraftRow}
+              scrollEnabled={false}
+              activationDistance={20}
+              containerStyle={styles.dragList}
+            />
           )}
 
           <Pressable
@@ -328,7 +360,7 @@ export default function PlanScreen() {
           </Pressable>
         </View>
 
-        {/* ── Saved Plans ───────────────────────────────────────── */}
+        {/* ── Saved Plans ── */}
         <View style={[styles.savedSection, { marginTop: 24 }]}>
           <View style={styles.savedHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -386,9 +418,9 @@ export default function PlanScreen() {
             ))
           )}
         </View>
-      </ScrollView>
+      </NestableScrollContainer>
 
-      {/* ── Saved Plan Detail Modal ─────────────────────────────── */}
+      {/* ── Saved Plan Detail Modal ── */}
       <Modal
         visible={Boolean(activeSavedPlan)}
         transparent
@@ -402,10 +434,7 @@ export default function PlanScreen() {
           />
           {activeSavedPlan ? (
             <View
-              style={[
-                styles.savedModal,
-                { backgroundColor: colors.background },
-              ]}
+              style={[styles.savedModal, { backgroundColor: colors.background }]}
             >
               <View style={styles.savedModalHeader}>
                 <View style={styles.exerciseInfo}>
@@ -423,10 +452,8 @@ export default function PlanScreen() {
                   style={styles.removeButton}
                   onPress={() => setActiveSavedPlan(null)}
                 >
-                  <Text
-                    style={[styles.remove, { color: colors.textSecondary }]}
-                  >
-                    ×
+                  <Text style={[styles.remove, { color: colors.textSecondary }]}>
+                    ✕
                   </Text>
                 </Pressable>
               </View>
@@ -465,7 +492,7 @@ export default function PlanScreen() {
                         { color: colors.primary },
                       ]}
                     >
-                      {exercise.sets} sets · {exercise.reps} reps
+                      {exercise.sets} sets × {exercise.reps} reps
                     </Text>
                   </View>
                 ))}
@@ -524,7 +551,7 @@ export default function PlanScreen() {
         </View>
       </Modal>
 
-      {/* ── Custom Exercise Modal ───────────────────────────────── */}
+      {/* ── Custom Exercise Modal ── */}
       <Modal
         visible={customModalVisible}
         transparent
@@ -712,7 +739,13 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 36 },
   title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
   section: { gap: 12 },
+  sectionTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   sectionTitle: { fontSize: 20, fontWeight: "800" },
+  hintText: { fontSize: 12 },
   planNameInput: {
     borderRadius: 10,
     borderWidth: 1,
@@ -720,6 +753,7 @@ const styles = StyleSheet.create({
     padding: 13,
   },
   empty: { fontSize: 14, marginVertical: 8 },
+  dragList: { gap: 10 },
   planCard: {
     borderRadius: 12,
     borderWidth: 1,
@@ -731,11 +765,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  dragHandle: {
+    justifyContent: "center",
+    paddingRight: 10,
+    paddingTop: 2,
+  },
+  dragHandleText: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
   exerciseInfo: { flex: 1, minWidth: 0 },
   exerciseName: { fontSize: 15, fontWeight: "700" },
   exerciseMuscle: { fontSize: 12, marginTop: 4 },
   removeButton: { alignSelf: "flex-start", marginLeft: 8 },
-  remove: { fontSize: 24 },
+  remove: { fontSize: 20, fontWeight: "800" },
   steppers: { flexDirection: "row", gap: 15, justifyContent: "center" },
   secondaryButton: {
     alignItems: "center",
@@ -747,15 +790,12 @@ const styles = StyleSheet.create({
   saveButton: { alignItems: "center", borderRadius: 10, padding: 14 },
   saveButtonText: { fontSize: 15, fontWeight: "800" },
   savedSection: { gap: 10 },
-
-  // ── Phase 2.3: History link ──
   savedHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   historyLink: { fontSize: 14, fontWeight: "700" },
-
   savedPlan: { borderRadius: 10, padding: 14 },
   savedPlanName: { fontSize: 16, fontWeight: "800" },
   savedModal: {
