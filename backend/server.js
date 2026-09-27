@@ -11,13 +11,7 @@ require("dotenv").config();
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 
 // --- Validate required env vars at boot ---
-const REQUIRED_ENV = [
-  "MONGO_URI",
-  "JWT_SECRET",
-  "SMTP_HOST",
-  "SMTP_USER",
-  "SMTP_PASS",
-];
+const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET"];
 const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missing.length) {
   console.error(`❌ Missing required env vars: ${missing.join(", ")}`);
@@ -113,7 +107,7 @@ const authGenerousLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// API limiter — protects plan/exercise/workout/admin routes.
+// API limiter — protects plan/exercise/workout/admin/meal/analytics routes.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -138,6 +132,8 @@ const exerciseRoutes = require("./routes/exerciseRoutes");
 const planRoutes = require("./routes/planRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const mealRoutes = require("./routes/mealRoutes");
+const weightRoutes = require("./routes/weightRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 const { ensureSeeded } = require("./controllers/mealController");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
@@ -157,6 +153,8 @@ app.use("/api/exercises", apiLimiter, exerciseRoutes);
 app.use("/api/plans", apiLimiter, planRoutes);
 app.use("/api/admin", apiLimiter, adminRoutes);
 app.use("/api/meals", apiLimiter, mealRoutes);
+app.use("/api/weight", apiLimiter, weightRoutes);
+app.use("/api/analytics", apiLimiter, analyticsRoutes);
 
 // --- 404 + centralized error handling ---
 app.use(notFound);

@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.9.0"
+    "version": ">= 5.9.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -20,6 +21,15 @@
         "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
       },
       "channel": "preview"
+    },
+    "preview-no-updates": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
+      }
     },
     "production": {
       "env": {

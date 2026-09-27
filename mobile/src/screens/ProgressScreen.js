@@ -1,5 +1,6 @@
 import React, { useContext, useState, useCallback } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
@@ -12,10 +13,13 @@ import { LineChart, BarChart } from "react-native-chart-kit";
 import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import ProgressStatCard from "../components/ProgressStatCard";
+import LogWeightModal from "../components/LogWeightModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../theme/theme";
-import api from "../api/api";
+import { analyticsApi } from "../api/analyticsApi";
+import { weightApi } from "../api/weightApi";
 import { mealApi } from "../api/mealApi";
+import { useMealPlan } from "../context/MealPlanContext";
 
 import WeightIcon from "../icons/weight-icon";
 import BmiIcon from "../icons/BMI-icon";
@@ -25,54 +29,42 @@ import BurnIcon from "../icons/BurnIcon";
 const screenWidth = Dimensions.get("window").width - 68;
 
 export default function ProgressScreen() {
-  const { user } = useContext(AuthContext);
+  const { user, refreshUser } = useContext(AuthContext);
   const { colors, mode } = useTheme();
+  const { totals } = useMealPlan();
+
   const [activeTab, setActiveTab] = useState("weight");
-  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState(null);
   const [mealStats, setMealStats] = useState(null);
+  const [showLogWeight, setShowLogWeight] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [a, m] = await Promise.all([
+        analyticsApi.progress().catch(() => null),
+        mealApi.stats().catch(() => null),
+      ]);
+      setAnalytics(a);
+      setMealStats(m);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const [w, m] = await Promise.all([
-            api.get("/workouts/stats").then((r) => r.data),
-            mealApi.stats().catch(() => null),
-          ]);
-          if (!cancelled) {
-            setStats(w);
-            setMealStats(m);
-          }
-        } catch {
-          /* leave nulls */
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, []),
+      load();
+    }, [load]),
   );
 
-  const workoutsDone = stats?.thisMonthSessions ?? stats?.totalSessions ?? 0;
-  const caloriesBurned = stats?.thisMonthCalories ?? 0;
-  const avgIntake = mealStats?.average?.calories ?? 0;
+  const summary = analytics?.summary || {};
+  const weight = summary.currentWeightKg ?? user?.details?.weightKg ?? null;
+  const bmi = summary.latestBmi ?? null;
+  const bmiRange = summary.bmiCategory || null;
+  const weightChange30d = summary.weightChange30d;
 
-  const height = user?.heightCm;
-  const weight = user?.weightKg;
-  const previousWeight = user?.initialWeightKg;
-  const bmi = weight && height ? weight / (height / 100) ** 2 : null;
-  const bmiRange = !bmi
-    ? null
-    : bmi < 18.5
-      ? "Underweight"
-      : bmi < 25
-        ? "Normal"
-        : bmi < 30
-          ? "Overweight"
-          : bmi < 40
-            ? "Obese"
-            : "Morbidly Obese";
   const colorIndicator = !bmi
     ? "#B0BEC5"
     : bmi < 18.5
@@ -86,65 +78,60 @@ export default function ProgressScreen() {
             : "#7B1FA2";
 
   const weightState = (() => {
-    if (!weight || !previousWeight) return "";
-    const diff = weight - previousWeight;
-    if (Math.abs(diff) < 0.1) return "No changes";
-    return diff < 0
-      ? `Lost ${Math.abs(diff).toFixed(1)} kg`
-      : `Gained ${diff.toFixed(1)} kg`;
+    if (weightChange30d === null || weightChange30d === undefined) return "";
+    if (Math.abs(weightChange30d) < 0.1) return "No changes (30d)";
+    return weightChange30d < 0
+      ? `Lost ${Math.abs(weightChange30d).toFixed(1)} kg (30d)`
+      : `Gained ${weightChange30d.toFixed(1)} kg (30d)`;
   })();
 
-  const monthsWeight = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const weightSeries = analytics?.weightSeries || [];
+  const weightLabels = weightSeries.map((p) => {
+    const [, mm, dd] = p.date.split("-");
+    return `${mm}/${dd}`;
+  });
+  const weightValues = weightSeries.map((p) => p.weightKg);
 
-  const monthWorkBurn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const workoutsByMonth = analytics?.workoutsByMonth || [];
+  const caloriesByMonth = analytics?.caloriesByMonth || [];
+
   const charts = {
     weight: {
-      title: "Weight (kg)",
       data: {
-        labels: monthsWeight,
-        datasets: [
-          {
-            data: [
-              90, 89.5, 89.0, 88.2, 87.0, 86.5, 86.0, 85.3, 84.8, 84.0, 83.8,
-              84.2,
-            ],
-          },
-        ],
+        labels: weightLabels.length ? weightLabels : ["—"],
+        datasets: [{ data: weightValues.length ? weightValues : [0] }],
       },
       type: "line",
       color: "rgba(0, 255, 17, $o)",
       decimalPlaces: 1,
     },
     workouts: {
-      title: "Workouts / Month",
       data: {
-        labels: monthWorkBurn,
-        datasets: [{ data: [4, 3, 5, 2, 6, 4] }],
+        labels: workoutsByMonth.length
+          ? workoutsByMonth.map((b) => b.label)
+          : ["—"],
+        datasets: [
+          {
+            data: workoutsByMonth.length
+              ? workoutsByMonth.map((b) => b.value)
+              : [0],
+          },
+        ],
       },
       type: "bar",
       color: "rgba(130, 151, 205, $o)",
       decimalPlaces: 0,
     },
     calories: {
-      title: "Calories Burned / Month",
       data: {
-        labels: monthWorkBurn,
+        labels: caloriesByMonth.length
+          ? caloriesByMonth.map((b) => b.label)
+          : ["—"],
         datasets: [
           {
-            data: [1100, 950, 1400, 800, 1600, 1200],
+            data: caloriesByMonth.length
+              ? caloriesByMonth.map((b) => b.value)
+              : [0],
           },
         ],
       },
@@ -175,6 +162,16 @@ export default function ProgressScreen() {
     { key: "calories", label: "Calories" },
   ];
 
+  const avgIntake = mealStats?.average?.calories ?? 0;
+  const workoutsThisMonth = summary.workoutsThisMonth ?? 0;
+  const caloriesThisMonth = summary.caloriesThisMonth ?? 0;
+
+  const handleSaveWeight = async (kg) => {
+    await weightApi.log(kg);
+    await refreshUser?.();
+    await load();
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -185,7 +182,16 @@ export default function ProgressScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+          <Pressable
+            onPress={() => setShowLogWeight(true)}
+            style={[styles.logBtn, { backgroundColor: colors.primary }]}
+          >
+            <Text style={styles.logBtnText}>+ Log weight</Text>
+          </Pressable>
+        </View>
+
         <View
           style={[styles.statsRow, { backgroundColor: colors.cardBackground }]}
         >
@@ -207,7 +213,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="WORKOUTS DONE"
-            value={`${workoutsDone}`}
+            value={`${workoutsThisMonth}`}
             icon={WorkoutIcon}
             colors={colors}
             leftBorderColor="#8297CD"
@@ -215,7 +221,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="CALORIES BURNED"
-            value={caloriesBurned ? `${caloriesBurned} kcal` : "0"}
+            value={caloriesThisMonth ? `${caloriesThisMonth} kcal` : "0"}
             icon={BurnIcon}
             colors={colors}
             leftBorderColor="#fe6e00"
@@ -262,7 +268,9 @@ export default function ProgressScreen() {
             ))}
           </View>
 
-          {activeChart.type === "line" ? (
+          {loading ? (
+            <ActivityIndicator color={colors.primary} style={{ height: 200 }} />
+          ) : activeChart.type === "line" ? (
             <LineChart
               data={activeChart.data}
               width={screenWidth}
@@ -293,22 +301,29 @@ export default function ProgressScreen() {
           ]}
         >
           <Text style={[styles.subtitle, { color: colors.text }]}>
-            Activity Log
+            Today's Meals
           </Text>
           <View
             style={[styles.workoutLogCard, { backgroundColor: colors.surface }]}
           >
             <View style={{ width: 24, height: 24 }}>
-              <WorkoutIcon />
+              <BurnIcon />
             </View>
             <Text
               style={{ color: colors.text, fontSize: 15, fontWeight: "600" }}
             >
-              Leg day
+              {totals.calories} kcal planned
             </Text>
           </View>
         </View>
       </ScrollView>
+
+      <LogWeightModal
+        visible={showLogWeight}
+        onClose={() => setShowLogWeight(false)}
+        onSaved={handleSaveWeight}
+        initialValue={weight || ""}
+      />
     </SafeAreaView>
   );
 }
@@ -316,7 +331,19 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
-  title: { fontSize: 30, fontWeight: "800", marginBottom: 28 },
+  headerRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 28,
+  },
+  title: { fontSize: 30, fontWeight: "800" },
+  logBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  logBtnText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
   subtitle: { fontSize: 16, fontWeight: "700", marginBottom: 16 },
   statsRow: {
     borderRadius: 14,
