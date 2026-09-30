@@ -11,7 +11,7 @@ export default function Button({ title, onPress, style, textStyle }) {
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Text style={[styles.text, { color: colors.text }, textStyle]}>
+      <Text style={[styles.text, { color: colors.buttonText }, textStyle]}>
         {title}
       </Text>
     </TouchableOpacity>

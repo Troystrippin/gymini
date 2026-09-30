@@ -6,6 +6,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  KeyboardAvoidingView,
+  Platform,
   TextInput,
   View,
 } from "react-native";
@@ -14,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../api/api";
 import { workoutProgressApi, todayKey } from "../api/workoutProgressApi";
 import { useTheme } from "../theme/theme";
+import { COLORS } from "../theme/colors";
 
 export default function WorkoutSessionScreen() {
   const navigation = useNavigation();
@@ -87,10 +90,7 @@ export default function WorkoutSessionScreen() {
   );
 
   useEffect(() => {
-    const timer = setInterval(
-      () => setElapsedSeconds((s) => s + 1),
-      1000,
-    );
+    const timer = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -259,151 +259,177 @@ export default function WorkoutSessionScreen() {
   const duration = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.navigate("PlanList")}>
-          <Text style={[styles.back, { color: colors.textSecondary }]}>
-            ← Back to Plans
-          </Text>
-        </Pressable>
-
-        <Text style={[styles.title, { color: colors.text }]}>
-          {workout.title}
-        </Text>
-        <Text style={[styles.progress, { color: colors.textSecondary }]}>
-          {completedCount} of {workout.exercises.length} exercises complete
-        </Text>
-
-        <View
-          style={[
-            styles.durationCard,
-            { backgroundColor: colors.cardBackground },
-          ]}
-        >
-          <Text style={[styles.durationLabel, { color: colors.textSecondary }]}>
-            WORKOUT DURATION
-          </Text>
-          <Text style={[styles.durationValue, { color: colors.text }]}>
-            {duration}
-          </Text>
-        </View>
-
-        <View style={styles.list}>
-          {workout.exercises.map((exercise, index) => (
-            <View
-              key={exercise._id}
-              style={[
-                styles.exercise,
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.flex, { backgroundColor: colors.background }]}
+    >
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: colors.background }]}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={[styles.header]}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {workout.title}
+            </Text>
+            <Pressable
+              onPress={() => navigation.navigate("PlanList")}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.backBtn,
                 {
-                  backgroundColor: exercise.done
-                    ? colors.accentMuted || colors.cardBackground
-                    : colors.cardBackground,
-                  borderColor: exercise.done ? colors.primary : colors.border,
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.6 : 1,
                 },
               ]}
             >
-              <Pressable
-                onPress={() => toggleExercise(exercise._id)}
-                style={styles.exerciseHeader}
+              <Text style={[styles.back, { color: colors.buttonText }]}>
+                Return to Plans
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={[styles.progress, { color: colors.textSecondary }]}>
+            {completedCount} of {workout.exercises.length} exercises complete
+          </Text>
+
+          <View
+            style={[
+              styles.durationCard,
+              { backgroundColor: colors.cardBackground },
+            ]}
+          >
+            <Text
+              style={[styles.durationLabel, { color: colors.textSecondary }]}
+            >
+              WORKOUT DURATION
+            </Text>
+            <Text style={[styles.durationValue, { color: colors.text }]}>
+              {duration}
+            </Text>
+          </View>
+
+          <View style={styles.list}>
+            {workout.exercises.map((exercise, index) => (
+              <View
+                key={exercise._id}
+                style={[
+                  styles.exercise,
+                  {
+                    backgroundColor: exercise.done
+                      ? colors.accentMuted || colors.cardBackground
+                      : colors.cardBackground,
+                    borderColor: exercise.done ? colors.primary : colors.border,
+                  },
+                ]}
               >
-                <View
-                  style={[
-                    styles.check,
-                    {
-                      backgroundColor: exercise.done
-                        ? colors.primary
-                        : "transparent",
-                      borderColor: exercise.done
-                        ? colors.primary
-                        : colors.textSecondary,
-                    },
-                  ]}
+                <Pressable
+                  onPress={() => toggleExercise(exercise._id)}
+                  style={styles.exerciseHeader}
                 >
-                  {exercise.done ? (
-                    <Text style={styles.checkMark}>✓</Text>
-                  ) : null}
-                </View>
-                <View style={styles.exerciseInfo}>
-                  <Text style={[styles.exerciseName, { color: colors.text }]}>
-                    {index + 1}. {exercise.name}
-                  </Text>
-                  <Text
+                  <View
                     style={[
-                      styles.exerciseMeta,
-                      { color: colors.textSecondary },
+                      styles.check,
+                      {
+                        backgroundColor: exercise.done
+                          ? colors.primary
+                          : "transparent",
+                        borderColor: exercise.done
+                          ? colors.primary
+                          : colors.textSecondary,
+                      },
                     ]}
                   >
-                    {exercise.muscle || "Full body"} · {exercise.sets}
-                  </Text>
-                </View>
-              </Pressable>
-              <View style={styles.setList}>
-                {(setResults[exercise._id] || []).map((set, setIndex) => (
-                  <View key={setIndex} style={styles.setRow}>
-                    <Text style={[styles.setNumber, { color: colors.text }]}>
-                      Set {setIndex + 1}
-                    </Text>
-                    <TextInput
-                      value={set.reps}
-                      placeholder={getPlannedReps(exercise.sets)}
-                      placeholderTextColor={colors.textSecondary}
-                      onChangeText={(value) =>
-                        updateSetResult(exercise._id, setIndex, "reps", value)
-                      }
-                      keyboardType="number-pad"
-                      style={[
-                        styles.sessionInput,
-                        styles.setInput,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                    />
-                    <TextInput
-                      value={set.weight}
-                      placeholder="kg"
-                      placeholderTextColor={colors.textSecondary}
-                      onChangeText={(value) =>
-                        updateSetResult(exercise._id, setIndex, "weight", value)
-                      }
-                      keyboardType="decimal-pad"
-                      style={[
-                        styles.sessionInput,
-                        styles.setInput,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                    />
+                    {exercise.done ? (
+                      <Text style={styles.checkMark}>✓</Text>
+                    ) : null}
                   </View>
-                ))}
+                  <View style={styles.exerciseInfo}>
+                    <Text style={[styles.exerciseName, { color: colors.text }]}>
+                      {index + 1}. {exercise.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.exerciseMeta,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {exercise.muscle || "Full body"} · {exercise.sets}
+                    </Text>
+                  </View>
+                </Pressable>
+                <View style={styles.setList}>
+                  {(setResults[exercise._id] || []).map((set, setIndex) => (
+                    <View key={setIndex} style={styles.setRow}>
+                      <Text style={[styles.setNumber, { color: colors.text }]}>
+                        Set {setIndex + 1}
+                      </Text>
+                      <TextInput
+                        value={set.reps}
+                        placeholder={getPlannedReps(exercise.sets)}
+                        placeholderTextColor={colors.textSecondary}
+                        onChangeText={(value) =>
+                          updateSetResult(exercise._id, setIndex, "reps", value)
+                        }
+                        keyboardType="number-pad"
+                        style={[
+                          styles.sessionInput,
+                          styles.setInput,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                      />
+                      <TextInput
+                        value={set.weight}
+                        placeholder="kg"
+                        placeholderTextColor={colors.textSecondary}
+                        onChangeText={(value) =>
+                          updateSetResult(
+                            exercise._id,
+                            setIndex,
+                            "weight",
+                            value,
+                          )
+                        }
+                        keyboardType="decimal-pad"
+                        style={[
+                          styles.sessionInput,
+                          styles.setInput,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                      />
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
 
-        <Pressable
-          onPress={finishWorkout}
-          disabled={saving}
-          style={[
-            styles.finishButton,
-            { backgroundColor: colors.primary, opacity: saving ? 0.6 : 1 },
-          ]}
-        >
-          {saving ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.finishText}>
-              {isComplete ? "Finish Workout" : "Finish for Now"}
-            </Text>
-          )}
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          <Pressable
+            onPress={finishWorkout}
+            disabled={saving}
+            style={[
+              styles.finishButton,
+              { backgroundColor: colors.primary, opacity: saving ? 0.6 : 1 },
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.finishText}>
+                {isComplete ? "Finish Workout" : "Finish for Now"}
+              </Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -418,10 +444,22 @@ function getPlannedReps(sets = "") {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
   safe: { flex: 1 },
   loader: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
-  back: { fontSize: 15, fontWeight: "700", marginBottom: 24 },
+  backBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  back: { fontSize: 15, fontWeight: "700" },
   title: { fontSize: 30, fontWeight: "800" },
   progress: { fontSize: 14, marginTop: 6 },
   durationCard: { borderRadius: 14, marginTop: 20, padding: 16 },

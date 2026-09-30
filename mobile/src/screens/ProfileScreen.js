@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState, useCallback } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -125,6 +126,18 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Log out",
+      "Are you sure you want to log out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Log out", style: "destructive", onPress: () => logout() },
+      ],
+      { cancelable: true },
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -188,9 +201,6 @@ export default function ProfileScreen({ navigation }) {
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-          Body Stats
-        </Text>
         <View
           style={[styles.statsRow, { backgroundColor: colors.cardBackground }]}
         >
@@ -236,7 +246,9 @@ export default function ProfileScreen({ navigation }) {
               },
             ]}
           >
-            <Text style={[styles.emptyHintText, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.emptyHintText, { color: colors.textSecondary }]}
+            >
               Some stats are missing. Tap to complete your profile.
             </Text>
           </Pressable>
@@ -245,9 +257,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Phase 4.1 — Goal progress + milestones */}
         <GoalProgressCard
           goal={weightGoal}
-          onEdit={() =>
-            navigation.navigate("CreateGoal", { goal: weightGoal })
-          }
+          onEdit={() => navigation.navigate("CreateGoal", { goal: weightGoal })}
           onAbandon={handleAbandonGoal}
           onCreate={() => navigation.navigate("CreateGoal")}
           colors={colors}
@@ -266,7 +276,7 @@ export default function ProfileScreen({ navigation }) {
 
         <Pressable
           accessibilityRole="button"
-          onPress={logout}
+          onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutButton,
             { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },

@@ -48,10 +48,7 @@ export default function CreateGoalScreen() {
       }
       navigation.goBack();
     } catch (err) {
-      Alert.alert(
-        "Could not save",
-        err.response?.data?.message || err.message,
-      );
+      Alert.alert("Could not save", err.response?.data?.message || err.message);
     } finally {
       setSaving(false);
     }
@@ -59,16 +56,30 @@ export default function CreateGoalScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, { color: colors.textSecondary }]}>
-            ← Back
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {editingGoal ? "Edit Goal" : "Set a Goal"}
           </Text>
-        </Pressable>
-
-        <Text style={[styles.title, { color: colors.text }]}>
-          {editingGoal ? "Edit Goal" : "Set a Goal"}
-        </Text>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.backBtn,
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.backText, { color: colors.buttonText }]}>
+              Return
+            </Text>
+          </Pressable>
+        </View>
 
         {!editingGoal && (
           <>
@@ -168,8 +179,19 @@ export default function CreateGoalScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
-  back: { fontSize: 15, fontWeight: "700", marginBottom: 24 },
-  title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  title: { flex: 1, fontSize: 30, fontWeight: "800", marginRight: 12 },
+  backBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  backText: { fontSize: 14, fontWeight: "800" },
   fieldLabel: {
     fontSize: 11,
     fontWeight: "800",

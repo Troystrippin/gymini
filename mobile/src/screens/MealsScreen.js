@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from "react";
 import {
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,9 +16,20 @@ import MealDetailModal from "../components/MealDetailModal";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useTheme } from "../theme/theme";
 
+const FILTER_OPTIONS = [
+  "All",
+  "Breakfast",
+  "Lunch",
+  "Dinner",
+  "Snack",
+  "High Protein",
+  "Weight Loss",
+];
+
 export default function MealsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const { height: windowHeight } = useWindowDimensions();
   const {
     catalog,
     recommendations,
@@ -29,6 +42,10 @@ export default function MealsScreen() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [activeMeal, setActiveMeal] = useState(null);
+
+  // Height of the scrollable meals box. The page itself stays short no
+  // matter how many meals there are.
+  const mealListHeight = Math.max(320, Math.round(windowHeight * 0.55));
 
   const filteredMeals = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -52,17 +69,44 @@ export default function MealsScreen() {
     [recommendations, selectedIds],
   );
 
+  const renderFilter = ({ item: option }) => (
+    <Pressable
+      onPress={() => setFilter(option)}
+      style={[
+        styles.filter,
+        {
+          backgroundColor:
+            filter === option ? colors.primary : colors.cardBackground,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          color: filter === option ? "#FFFFFF" : colors.text,
+          fontSize: 12,
+          fontWeight: "700",
+        }}
+      >
+        {option}
+      </Text>
+    </Pressable>
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {offline && (
           <View
             style={[
               styles.banner,
-              { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              {
+                backgroundColor: colors.cardBackground,
+                borderColor: colors.border,
+              },
             ]}
           >
             <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
@@ -141,60 +185,45 @@ export default function MealsScreen() {
             },
           ]}
         />
-        <ScrollView
+        <FlatList
           horizontal
+          data={FILTER_OPTIONS}
+          keyExtractor={(option) => option}
+          extraData={[filter, colors]}
+          renderItem={renderFilter}
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.filterRow}
           contentContainerStyle={styles.filters}
-        >
-          {[
-            "All",
-            "Breakfast",
-            "Lunch",
-            "Dinner",
-            "Snack",
-            "High Protein",
-            "Weight Loss",
-          ].map((option) => (
-            <Pressable
-              key={option}
-              onPress={() => setFilter(option)}
-              style={[
-                styles.filter,
-                {
-                  backgroundColor:
-                    filter === option ? colors.primary : colors.cardBackground,
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: filter === option ? "#FFFFFF" : colors.text,
-                  fontSize: 12,
-                  fontWeight: "700",
-                }}
-              >
-                {option}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        />
 
-        {loading && catalog.length === 0 ? (
-          <Text style={[styles.empty, { color: colors.textSecondary }]}>
-            Loading meals…
-          </Text>
-        ) : (
-          filteredMeals.map((meal) => (
-            <MealCard
-              key={meal.id}
-              meal={meal}
-              selected={selectedIds.includes(meal.id)}
-              onPress={() => toggleEntry(meal)}
-              onDetailsPress={setActiveMeal}
-              colors={colors}
-            />
-          ))
-        )}
+        {/* Meals scroll inside this fixed-height box, not the whole page */}
+        <View style={[styles.mealBox, { maxHeight: mealListHeight }]}>
+          <ScrollView
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+          >
+            {filteredMeals.length === 0 ? (
+              <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                {loading && catalog.length === 0
+                  ? "Loading meals…"
+                  : "No meals match your search."}
+              </Text>
+            ) : (
+              filteredMeals.map((meal) => (
+                <MealCard
+                  key={String(meal.id)}
+                  meal={meal}
+                  selected={selectedIds.includes(meal.id)}
+                  onPress={() => toggleEntry(meal)}
+                  onDetailsPress={setActiveMeal}
+                  colors={colors}
+                />
+              ))
+            )}
+          </ScrollView>
+        </View>
       </ScrollView>
 
       <MealDetailModal
@@ -211,7 +240,7 @@ export default function MealsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: 20, paddingBottom: 36 },
+  content: { padding: 20, paddingBottom: 8 },
   banner: {
     borderRadius: 10,
     borderWidth: 1,
@@ -252,6 +281,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  filterRow: { flexGrow: 0, flexShrink: 0, marginBottom: 6 },
   filters: { gap: 8, paddingBottom: 8 },
   filter: {
     alignItems: "center",
@@ -260,5 +290,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  mealBox: { marginTop: 6 },
   empty: { fontSize: 14, marginTop: 20, textAlign: "center" },
 });

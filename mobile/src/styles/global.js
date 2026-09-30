@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 export const lightColors = {
   background: "#F7F7F8",
   text: "#171719",
+  buttonText: "#FFFFFF",
   textSecondary: "#6F7078",
   surface: "#f0eef7",
   card: "#ebe7f5",

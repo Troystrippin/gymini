@@ -44,18 +44,36 @@ export default function MyMealPlanScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, { color: colors.textSecondary }]}>
-            Browse meals
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            My Meal Plan
           </Text>
-        </Pressable>
-        <Text style={[styles.title, { color: colors.text }]}>My Meal Plan</Text>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.backBtn,
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.backText, { color: colors.text }]}>
+              Browse meals
+            </Text>
+          </Pressable>
+        </View>
+
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {entries.length} meals selected for today.
         </Text>
 
         <View
-          style={[styles.macrosCard, { backgroundColor: colors.cardBackground }]}
+          style={[
+            styles.macrosCard,
+            { backgroundColor: colors.cardBackground },
+          ]}
         >
           <View style={styles.macroItem}>
             <Text style={[styles.macroValue, { color: colors.primary }]}>
@@ -138,8 +156,19 @@ export default function MyMealPlanScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  backBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  backText: { fontSize: 14, fontWeight: "800" },
   content: { padding: 20, paddingBottom: 36 },
-  back: { fontSize: 14, fontWeight: "700", marginBottom: 20 },
   title: { fontSize: 30, fontWeight: "800" },
   subtitle: { fontSize: 14, marginTop: 6, marginBottom: 20 },
   macrosCard: {

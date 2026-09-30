@@ -180,6 +180,12 @@ export default function EditProfileScreen({ navigation }) {
           disabled={saving}
           style={{ marginTop: 16 }}
         />
+        <Button
+          title="Cancel"
+          onPress={() => navigation.goBack()}
+          disabled={saving}
+          style={{ marginTop: 16 }}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -187,6 +193,6 @@ export default function EditProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { padding: 24, paddingBottom: 40 },
+  container: { padding: 24 },
   title: { fontSize: 26, fontWeight: "800", marginBottom: 20 },
 });

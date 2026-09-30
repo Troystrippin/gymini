@@ -91,8 +91,7 @@ export default function PlanScreen() {
   );
 
   const isEditing = Boolean(editingPlanId);
-  const hasDraftWork =
-    draftExercises.length > 0 || draftName.trim().length > 0;
+  const hasDraftWork = draftExercises.length > 0 || draftName.trim().length > 0;
 
   const handleSavePlan = async () => {
     const trimmed = draftName.trim();
@@ -231,61 +230,63 @@ export default function PlanScreen() {
         },
       ]}
     >
-      <View style={styles.planHeader}>
-        <Pressable
-          onLongPress={drag}
-          delayLongPress={150}
-          hitSlop={10}
-          style={styles.dragHandle}
-        >
-          <Text style={[styles.dragHandleText, { color: colors.textSecondary }]}>
-            ☰
-          </Text>
-        </Pressable>
-        <View style={styles.exerciseInfo}>
-          <Text style={[styles.exerciseName, { color: colors.text }]}>
-            {exercise.name}
-          </Text>
-          {exercise.muscleGroup ? (
-            <Text
-              style={[styles.exerciseMuscle, { color: colors.textSecondary }]}
-            >
-              {exercise.muscleGroup}
+      <Pressable
+        onLongPress={drag}
+        delayLongPress={150}
+        hitSlop={10}
+        style={styles.dragHandle}
+      >
+        <Text style={[styles.dragHandleText, { color: colors.textSecondary }]}>
+          ☰
+        </Text>
+      </Pressable>
+
+      <View style={styles.planContent}>
+        <View style={styles.planHeader}>
+          <View style={styles.exerciseInfo}>
+            <Text style={[styles.exerciseName, { color: colors.text }]}>
+              {exercise.name}
             </Text>
-          ) : null}
+            {exercise.muscleGroup ? (
+              <Text
+                style={[styles.exerciseMuscle, { color: colors.textSecondary }]}
+              >
+                {exercise.muscleGroup}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            style={styles.removeButton}
+            onPress={() => removeExercise(exercise.exerciseId)}
+          >
+            <Text style={[styles.remove, { color: colors.textSecondary }]}>
+              ✕
+            </Text>
+          </Pressable>
         </View>
-        <Pressable
-          style={styles.removeButton}
-          onPress={() => removeExercise(exercise.exerciseId)}
-        >
-          <Text style={[styles.remove, { color: colors.textSecondary }]}>
-            ✕
-          </Text>
-        </Pressable>
-      </View>
-      <View style={styles.steppers}>
-        <Stepper
-          label="Sets"
-          value={exercise.sets}
-          onChange={(value) =>
-            updateExercise(exercise.exerciseId, "sets", value)
-          }
-        />
-        <Stepper
-          label="Reps"
-          value={exercise.reps}
-          onChange={(value) =>
-            updateExercise(exercise.exerciseId, "reps", value)
-          }
-        />
+        <View style={styles.steppers}>
+          <Stepper
+            label="Sets"
+            value={exercise.sets}
+            onChange={(value) =>
+              updateExercise(exercise.exerciseId, "sets", value)
+            }
+          />
+          <Stepper
+            label="Reps"
+            value={exercise.reps}
+            onChange={(value) =>
+              updateExercise(exercise.exerciseId, "reps", value)
+            }
+          />
+        </View>
       </View>
     </View>
   );
 
   const saveLabel = (() => {
     if (savingPlan) return null;
-    if (!draftName.trim() && draftExercises.length === 0)
-      return "Save Plan (add name + exercises)";
+    if (!draftName.trim() && draftExercises.length === 0) return "Save Plan";
     if (!draftName.trim()) return "Save Plan (add a name)";
     if (draftExercises.length === 0) return "Save Plan (add exercises)";
     return isEditing ? "Update Plan" : "Save Plan";
@@ -312,10 +313,7 @@ export default function PlanScreen() {
             </Text>
             <Pressable onPress={handleClearDraft} hitSlop={8}>
               <Text
-                style={[
-                  styles.editingBannerAction,
-                  { color: colors.primary },
-                ]}
+                style={[styles.editingBannerAction, { color: colors.primary }]}
               >
                 Start new
               </Text>
@@ -388,10 +386,7 @@ export default function PlanScreen() {
                 No exercises yet.
               </Text>
               <Text
-                style={[
-                  styles.emptyDraftHint,
-                  { color: colors.textSecondary },
-                ]}
+                style={[styles.emptyDraftHint, { color: colors.textSecondary }]}
               >
                 Add from Browse or create a custom exercise below.
               </Text>
@@ -568,7 +563,10 @@ export default function PlanScreen() {
           />
           {activeSavedPlan ? (
             <View
-              style={[styles.savedModal, { backgroundColor: colors.background }]}
+              style={[
+                styles.savedModal,
+                { backgroundColor: colors.background },
+              ]}
             >
               <View style={styles.savedModalHeader}>
                 <View style={styles.exerciseInfo}>
@@ -937,17 +935,25 @@ const styles = StyleSheet.create({
   emptyDraftText: { fontSize: 14, fontWeight: "700" },
   emptyDraftHint: { fontSize: 12, marginTop: 4, textAlign: "center" },
 
-  dragList: { gap: 10 },
-  planCard: { borderRadius: 12, borderWidth: 1, gap: 14, padding: 14 },
+  dragList: { marginBottom: -10 },
+  planCard: {
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: 10,
+    padding: 14,
+  },
+  planContent: { flex: 1, gap: 14, minWidth: 0 },
   planHeader: {
     alignItems: "flex-start",
     flexDirection: "row",
-    justifyContent: "space-between",
   },
   dragHandle: {
+    alignItems: "center",
+    alignSelf: "stretch",
     justifyContent: "center",
-    paddingRight: 10,
-    paddingTop: 2,
+    paddingRight: 12,
   },
   dragHandleText: { fontSize: 18, fontWeight: "800" },
   exerciseInfo: { flex: 1, minWidth: 0 },

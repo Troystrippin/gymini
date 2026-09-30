@@ -183,7 +183,7 @@ export default function BrowseExercisesScreen() {
           styles.card,
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
-        onPress={() => toggleAdd(item)}
+        onPress={() => setActiveExercise(item)}
         activeOpacity={0.7}
       >
         <View style={styles.cardInfo}>
@@ -195,7 +195,9 @@ export default function BrowseExercisesScreen() {
             {item.isCustom ? " · Custom" : ""}
           </Text>
         </View>
-        <View
+        <TouchableOpacity
+          onPress={() => toggleAdd(item)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={[
             styles.toggleBadge,
             {
@@ -212,7 +214,57 @@ export default function BrowseExercisesScreen() {
           >
             {added ? "Added" : "Add"}
           </Text>
-        </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderCategoryChip = ({ item: cat }) => {
+    const active = category === cat;
+    return (
+      <TouchableOpacity
+        onPress={() => setCategory(cat)}
+        style={[
+          styles.chip,
+          {
+            backgroundColor: active ? colors.accent : colors.card,
+            borderColor: active ? colors.accent : colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.chipText,
+            { color: active ? accentTextColor : colors.text },
+          ]}
+        >
+          {cat}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderMuscleGroupChip = ({ item: g }) => {
+    const active = cGroup === g;
+    return (
+      <TouchableOpacity
+        onPress={() => setCGroup(g)}
+        style={[
+          styles.chip,
+          {
+            backgroundColor: active ? colors.accent : colors.card,
+            borderColor: active ? colors.accent : colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.chipText,
+            { color: active ? accentTextColor : colors.text },
+          ]}
+        >
+          {g}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -258,38 +310,16 @@ export default function BrowseExercisesScreen() {
         ]}
       />
 
-      <ScrollView
+      <FlatList
         horizontal
+        data={CATEGORIES}
+        keyExtractor={(cat) => cat}
+        extraData={category}
+        renderItem={renderCategoryChip}
         showsHorizontalScrollIndicator={false}
         style={styles.chipRow}
         contentContainerStyle={{ paddingHorizontal: 20 }}
-      >
-        {CATEGORIES.map((cat) => {
-          const active = category === cat;
-          return (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setCategory(cat)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: active ? colors.accent : colors.card,
-                  borderColor: active ? colors.accent : colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: active ? accentTextColor : colors.text },
-                ]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      />
 
       {loading ? (
         <ActivityIndicator
@@ -319,6 +349,7 @@ export default function BrowseExercisesScreen() {
           data={filtered}
           keyExtractor={(item) => item._id}
           renderItem={renderExercise}
+          style={styles.listContainer}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -329,9 +360,7 @@ export default function BrowseExercisesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text
-                style={[styles.emptyText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No exercises match your search.
               </Text>
             </View>
@@ -394,37 +423,16 @@ export default function BrowseExercisesScreen() {
               >
                 Muscle Group
               </Text>
-              <ScrollView
+              <FlatList
                 horizontal
+                data={MUSCLE_GROUPS}
+                keyExtractor={(g) => g}
+                extraData={cGroup}
+                renderItem={renderMuscleGroupChip}
                 showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 14 }}
-              >
-                {MUSCLE_GROUPS.map((g) => {
-                  const active = cGroup === g;
-                  return (
-                    <TouchableOpacity
-                      key={g}
-                      onPress={() => setCGroup(g)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: active ? colors.accent : colors.card,
-                          borderColor: active ? colors.accent : colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          { color: active ? accentTextColor : colors.text },
-                        ]}
-                      >
-                        {g}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+                keyboardShouldPersistTaps="handled"
+                style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }}
+              />
 
               <Text
                 style={[styles.fieldLabel, { color: colors.textSecondary }]}
@@ -657,7 +665,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  chipRow: { flexGrow: 0, marginBottom: 14 },
+  chipRow: { flexGrow: 0, flexShrink: 0, marginBottom: 14 },
   chipRowInline: { flexDirection: "row", flexWrap: "wrap", marginBottom: 14 },
   chip: {
     borderWidth: 1,
@@ -669,6 +677,7 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 13 },
 
+  listContainer: { flex: 1 },
   list: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
