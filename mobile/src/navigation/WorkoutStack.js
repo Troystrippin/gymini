@@ -6,6 +6,7 @@ import PlanScreen from "../screens/PlanScreen";
 import BrowseExercisesScreen from "../screens/BrowseExercisesScreen";
 import WorkoutSessionScreen from "../screens/WorkoutSessionScreen";
 import WorkoutHistoryScreen from "../screens/WorkoutHistoryScreen";
+import FavoritesScreen from "../screens/FavoritesScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +25,7 @@ export default function WorkoutStack() {
       <Stack.Screen name="BrowseExercises" component={BrowseExercisesScreen} />
       <Stack.Screen name="WorkoutSession" component={WorkoutSessionScreen} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
     </Stack.Navigator>
   );
 }

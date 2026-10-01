@@ -1,4 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -21,6 +26,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import api from "../api/api";
+import FavoriteButton from "../components/FavoriteButton";
 
 const CATEGORIES = [
   "All",
@@ -54,20 +60,16 @@ export default function BrowseExercisesScreen() {
   const { addExercise, removeExercise, isInDraft, draftExercises } =
     usePlanDraft();
 
-  // Catalog state
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
-  // Filters
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
 
-  // Detail modal
   const [activeExercise, setActiveExercise] = useState(null);
 
-  // Custom exercise modal
   const [customVisible, setCustomVisible] = useState(false);
   const [cName, setCName] = useState("");
   const [cGroup, setCGroup] = useState("Chest");
@@ -76,7 +78,6 @@ export default function BrowseExercisesScreen() {
   const [cDesc, setCDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // ── Fetch catalog ────────────────────────────────────────────────
   const fetchExercises = useCallback(async () => {
     try {
       setLoadError(null);
@@ -105,7 +106,6 @@ export default function BrowseExercisesScreen() {
     fetchExercises();
   };
 
-  // ── Filtered list ────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const list = Array.isArray(exercises) ? exercises : [];
     return list.filter((ex) => {
@@ -122,7 +122,6 @@ export default function BrowseExercisesScreen() {
     });
   }, [exercises, search, category]);
 
-  // ── Actions ──────────────────────────────────────────────────────
   const toggleAdd = (exercise) => {
     if (isInDraft(exercise._id)) {
       removeExercise(exercise._id);
@@ -159,7 +158,7 @@ export default function BrowseExercisesScreen() {
       if (data?.errors && Array.isArray(data.errors)) {
         msg =
           `${data.message || "Could not create exercise"}:\n\n` +
-          data.errors.map((e) => `• ${e.field}: ${e.message}`).join("\n");
+          data.errors.map((e) => `- ${e.field}: ${e.message}`).join("\n");
       } else {
         msg = data?.message || err.message || "Something went wrong";
       }
@@ -169,12 +168,10 @@ export default function BrowseExercisesScreen() {
     }
   };
 
-  // Done simply returns to PlanScreen. The draft lives in context.
   const handleDone = () => {
     navigation.goBack();
   };
 
-  // ── Renderers ────────────────────────────────────────────────────
   const renderExercise = ({ item }) => {
     const added = isInDraft(item._id);
     return (
@@ -191,10 +188,11 @@ export default function BrowseExercisesScreen() {
             {item.name}
           </Text>
           <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
-            {item.muscleGroup} · {item.equipment}
-            {item.isCustom ? " · Custom" : ""}
+            {item.muscleGroup} - {item.equipment}
+            {item.isCustom ? " - Custom" : ""}
           </Text>
         </View>
+        <FavoriteButton exerciseId={item._id} size={20} />
         <TouchableOpacity
           onPress={() => toggleAdd(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -269,30 +267,65 @@ export default function BrowseExercisesScreen() {
     );
   };
 
+  const renderDifficultyChip = (d) => {
+    const active = cDiff === d;
+    return (
+      <TouchableOpacity
+        key={d}
+        onPress={() => setCDiff(d)}
+        style={[
+          styles.chip,
+          {
+            backgroundColor: active ? colors.accent : colors.card,
+            borderColor: active ? colors.accent : colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.chipText,
+            { color: active ? accentTextColor : colors.text },
+          ]}
+        >
+          {d}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleDone}>
           <Text style={[styles.headerBtn, { color: colors.textSecondary }]}>
-            Done{draftExercises.length > 0 ? ` (${draftExercises.length})` : ""}
+            {draftExercises.length > 0
+              ? `Done (${draftExercises.length})`
+              : "Done"}
           </Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Add Exercises
         </Text>
-        <TouchableOpacity onPress={() => setCustomVisible(true)}>
-          <Text
-            style={[
-              styles.headerBtn,
-              { color: colors.accent, textAlign: "right" },
-            ]}
+        <View style={styles.headerRightGroup}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Favorites")}
+            style={styles.favoritesHeaderBtn}
           >
-            + Custom
-          </Text>
-        </TouchableOpacity>
+            <Text style={styles.favoritesHeaderIcon}>{"\u2605"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCustomVisible(true)}>
+            <Text
+              style={[
+                styles.headerBtn,
+                { color: colors.accent, textAlign: "right" },
+              ]}
+            >
+              + Custom
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TextInput
@@ -318,30 +351,25 @@ export default function BrowseExercisesScreen() {
         renderItem={renderCategoryChip}
         showsHorizontalScrollIndicator={false}
         style={styles.chipRow}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        contentContainerStyle={styles.chipRowContent}
       />
 
       {loading ? (
         <ActivityIndicator
           size="large"
           color={colors.accent}
-          style={{ marginTop: 60 }}
+          style={styles.loader}
         />
       ) : loadError ? (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Couldn't load exercises: {loadError}
+            {`Couldn't load exercises: ${loadError}`}
           </Text>
           <TouchableOpacity
-            style={[
-              styles.retryBtn,
-              { backgroundColor: colors.accent, marginTop: 16 },
-            ]}
+            style={[styles.retryBtn, { backgroundColor: colors.accent }]}
             onPress={fetchExercises}
           >
-            <Text style={{ color: accentTextColor, fontWeight: "600" }}>
-              Retry
-            </Text>
+            <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -360,7 +388,9 @@ export default function BrowseExercisesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.emptyText, { color: colors.textSecondary }]}
+              >
                 No exercises match your search.
               </Text>
             </View>
@@ -368,7 +398,6 @@ export default function BrowseExercisesScreen() {
         />
       )}
 
-      {/* ── Create custom exercise modal ───────────────────────── */}
       <Modal
         visible={customVisible}
         transparent
@@ -431,7 +460,7 @@ export default function BrowseExercisesScreen() {
                 renderItem={renderMuscleGroupChip}
                 showsHorizontalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-                style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }}
+                style={styles.muscleGroupList}
               />
 
               <Text
@@ -460,31 +489,7 @@ export default function BrowseExercisesScreen() {
                 Difficulty
               </Text>
               <View style={styles.chipRowInline}>
-                {DIFFICULTIES.map((d) => {
-                  const active = cDiff === d;
-                  return (
-                    <TouchableOpacity
-                      key={d}
-                      onPress={() => setCDiff(d)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: active ? colors.accent : colors.card,
-                          borderColor: active ? colors.accent : colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          { color: active ? accentTextColor : colors.text },
-                        ]}
-                      >
-                        {d}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {DIFFICULTIES.map(renderDifficultyChip)}
               </View>
 
               <Text
@@ -515,7 +520,6 @@ export default function BrowseExercisesScreen() {
                   styles.modalAddBtn,
                   {
                     backgroundColor: colors.accent,
-                    marginTop: 20,
                     opacity: creating ? 0.6 : 1,
                   },
                 ]}
@@ -526,7 +530,10 @@ export default function BrowseExercisesScreen() {
                   <ActivityIndicator color={accentTextColor} />
                 ) : (
                   <Text
-                    style={[styles.modalAddBtnText, { color: accentTextColor }]}
+                    style={[
+                      styles.modalAddBtnText,
+                      { color: accentTextColor },
+                    ]}
                   >
                     Create & Add to Plan
                   </Text>
@@ -535,7 +542,7 @@ export default function BrowseExercisesScreen() {
 
               <TouchableOpacity
                 onPress={() => setCustomVisible(false)}
-                style={{ marginTop: 12, alignItems: "center" }}
+                style={styles.cancelWrap}
               >
                 <Text style={{ color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
@@ -544,7 +551,6 @@ export default function BrowseExercisesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── Exercise detail modal ──────────────────────────────── */}
       <Modal
         visible={!!activeExercise}
         transparent
@@ -557,7 +563,7 @@ export default function BrowseExercisesScreen() {
             activeOpacity={1}
             onPress={() => setActiveExercise(null)}
           />
-          {activeExercise && (
+          {activeExercise ? (
             <View
               style={[
                 styles.modalSheet,
@@ -565,7 +571,10 @@ export default function BrowseExercisesScreen() {
               ]}
             >
               <View
-                style={[styles.modalHandle, { backgroundColor: colors.border }]}
+                style={[
+                  styles.modalHandle,
+                  { backgroundColor: colors.border },
+                ]}
               />
               {activeExercise.mediaUrl ? (
                 <Image
@@ -588,16 +597,30 @@ export default function BrowseExercisesScreen() {
                 </LinearGradient>
               )}
               <View style={styles.modalBody}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {activeExercise.name}
-                </Text>
+                <View style={styles.modalTitleRow}>
+                  <Text
+                    style={[
+                      styles.modalTitle,
+                      styles.modalTitleFlex,
+                      { color: colors.text },
+                    ]}
+                  >
+                    {activeExercise.name}
+                  </Text>
+                  <FavoriteButton
+                    exerciseId={activeExercise._id}
+                    size={28}
+                  />
+                </View>
                 <Text
                   style={[styles.modalMeta, { color: colors.textSecondary }]}
                 >
-                  {activeExercise.muscleGroup} · {activeExercise.equipment} ·{" "}
+                  {activeExercise.muscleGroup} - {activeExercise.equipment} -{" "}
                   {activeExercise.difficulty}
                 </Text>
-                <Text style={[styles.modalDescription, { color: colors.text }]}>
+                <Text
+                  style={[styles.modalDescription, { color: colors.text }]}
+                >
                   {activeExercise.description || "No description provided."}
                 </Text>
                 <TouchableOpacity
@@ -633,7 +656,7 @@ export default function BrowseExercisesScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          )}
+          ) : null}
         </View>
       </Modal>
     </SafeAreaView>
@@ -654,6 +677,12 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   headerTitle: { fontSize: 17 },
+  headerRightGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  favoritesHeaderBtn: { marginRight: 14 },
+  favoritesHeaderIcon: { fontSize: 18, color: "#f5a623" },
 
   searchInput: {
     marginHorizontal: 20,
@@ -666,7 +695,12 @@ const styles = StyleSheet.create({
   },
 
   chipRow: { flexGrow: 0, flexShrink: 0, marginBottom: 14 },
-  chipRowInline: { flexDirection: "row", flexWrap: "wrap", marginBottom: 14 },
+  chipRowContent: { paddingHorizontal: 20 },
+  chipRowInline: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 14,
+  },
   chip: {
     borderWidth: 1,
     borderRadius: 20,
@@ -699,18 +733,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
+    marginLeft: 8,
   },
   toggleBadgeText: {
     fontSize: 12,
     fontWeight: "700",
   },
 
-  emptyState: { paddingTop: 60, alignItems: "center", paddingHorizontal: 30 },
+  loader: { marginTop: 60 },
+
+  emptyState: {
+    paddingTop: 60,
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
   emptyText: {
     fontSize: 14,
     textAlign: "center",
   },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryBtnText: { color: "#FFFFFF", fontWeight: "600" },
 
   modalOverlay: {
     flex: 1,
@@ -741,10 +788,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   modalBody: { padding: 20 },
-  modalTitle: {
-    fontSize: 20,
+  modalTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
+  modalTitle: {
+    fontSize: 20,
+  },
+  modalTitleFlex: { flex: 1 },
   modalMeta: {
     fontSize: 13,
     marginBottom: 14,
@@ -758,11 +810,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
+    marginTop: 20,
   },
   modalAddBtnText: {
     fontSize: 15,
     fontWeight: "600",
   },
+  cancelWrap: { marginTop: 12, alignItems: "center" },
 
   fieldLabel: {
     fontSize: 12,
@@ -782,5 +836,10 @@ const styles = StyleSheet.create({
   textarea: {
     minHeight: 80,
     textAlignVertical: "top",
+  },
+  muscleGroupList: {
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 14,
   },
 });
