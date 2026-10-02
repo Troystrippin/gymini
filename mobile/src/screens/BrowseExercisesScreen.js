@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -18,15 +13,14 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import api from "../api/api";
 import FavoriteButton from "../components/FavoriteButton";
+import ExerciseDetailModal from "../components/ExerciseDetailModal";
 
 const CATEGORIES = [
   "All",
@@ -551,114 +545,11 @@ export default function BrowseExercisesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
+      <ExerciseDetailModal
         visible={!!activeExercise}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setActiveExercise(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setActiveExercise(null)}
-          />
-          {activeExercise ? (
-            <View
-              style={[
-                styles.modalSheet,
-                { backgroundColor: colors.background },
-              ]}
-            >
-              <View
-                style={[
-                  styles.modalHandle,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-              {activeExercise.mediaUrl ? (
-                <Image
-                  source={{ uri: activeExercise.mediaUrl }}
-                  style={styles.media}
-                />
-              ) : (
-                <LinearGradient
-                  colors={[colors.card, colors.background]}
-                  style={styles.media}
-                >
-                  <Text
-                    style={[
-                      styles.mediaPlaceholderText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {activeExercise.muscleGroup}
-                  </Text>
-                </LinearGradient>
-              )}
-              <View style={styles.modalBody}>
-                <View style={styles.modalTitleRow}>
-                  <Text
-                    style={[
-                      styles.modalTitle,
-                      styles.modalTitleFlex,
-                      { color: colors.text },
-                    ]}
-                  >
-                    {activeExercise.name}
-                  </Text>
-                  <FavoriteButton
-                    exerciseId={activeExercise._id}
-                    size={28}
-                  />
-                </View>
-                <Text
-                  style={[styles.modalMeta, { color: colors.textSecondary }]}
-                >
-                  {activeExercise.muscleGroup} - {activeExercise.equipment} -{" "}
-                  {activeExercise.difficulty}
-                </Text>
-                <Text
-                  style={[styles.modalDescription, { color: colors.text }]}
-                >
-                  {activeExercise.description || "No description provided."}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.modalAddBtn,
-                    {
-                      backgroundColor: isInDraft(activeExercise._id)
-                        ? colors.card
-                        : colors.accent,
-                      borderWidth: isInDraft(activeExercise._id) ? 1 : 0,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => {
-                    toggleAdd(activeExercise);
-                    setActiveExercise(null);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.modalAddBtnText,
-                      {
-                        color: isInDraft(activeExercise._id)
-                          ? colors.textSecondary
-                          : accentTextColor,
-                      },
-                    ]}
-                  >
-                    {isInDraft(activeExercise._id)
-                      ? "Remove from Plan"
-                      : "Add to Plan"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-        </View>
-      </Modal>
+        exercise={activeExercise}
+        onClose={() => setActiveExercise(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -778,33 +669,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 4,
   },
-  media: {
-    width: "100%",
-    height: 180,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mediaPlaceholderText: {
-    fontSize: 14,
-  },
   modalBody: { padding: 20 },
-  modalTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
   modalTitle: {
     fontSize: 20,
-  },
-  modalTitleFlex: { flex: 1 },
-  modalMeta: {
-    fontSize: 13,
-    marginBottom: 14,
-  },
-  modalDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   modalAddBtn: {
     borderRadius: 10,

@@ -12,15 +12,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../theme/theme";
 import { exercisesApi } from "../api/exercises";
+import ExerciseDetailModal from "../components/ExerciseDetailModal";
+import { usePlanDraft } from "../context/PlanDraftContext";
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { isInDraft } = usePlanDraft();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [activeExercise, setActiveExercise] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -54,14 +58,22 @@ export default function FavoritesScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
+      <SafeAreaView
+        style={[styles.safe, { backgroundColor: colors.background }]}
+      >
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={{ flex: 1 }}
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.headerBtn, { color: colors.textSecondary }]}>
@@ -107,31 +119,57 @@ export default function FavoritesScreen() {
               tintColor={colors.primary}
             />
           }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.row,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.rowInfo}>
-                <Text style={[styles.name, { color: colors.text }]}>
-                  {item.exercise.name}
-                </Text>
-                <Text style={[styles.meta, { color: colors.textSecondary }]}>
-                  {item.exercise.muscleGroup} - {item.exercise.difficulty}
-                </Text>
-              </View>
+          renderItem={({ item }) => {
+            const inDraft = isInDraft(item.exercise._id);
+            return (
               <TouchableOpacity
-                onPress={() => onUnfavorite(item.exercise._id)}
-                hitSlop={10}
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setActiveExercise(item.exercise)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.star}>{"\u2605"}</Text>
+                <View style={styles.rowInfo}>
+                  <Text style={[styles.name, { color: colors.text }]}>
+                    {item.exercise.name}
+                  </Text>
+                  <Text
+                    style={[styles.meta, { color: colors.textSecondary }]}
+                  >
+                    {item.exercise.muscleGroup} - {item.exercise.difficulty}
+                  </Text>
+                  {inDraft ? (
+                    <Text
+                      style={[
+                        styles.inDraftBadge,
+                        { color: colors.accent },
+                      ]}
+                    >
+                      In plan
+                    </Text>
+                  ) : null}
+                </View>
+                <TouchableOpacity
+                  onPress={() => onUnfavorite(item.exercise._id)}
+                  hitSlop={10}
+                >
+                  <Text style={styles.star}>{"\u2605"}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </View>
-          )}
+            );
+          }}
         />
       )}
+
+      <ExerciseDetailModal
+        visible={!!activeExercise}
+        exercise={activeExercise}
+        onClose={() => setActiveExercise(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -161,6 +199,12 @@ const styles = StyleSheet.create({
   rowInfo: { flex: 1 },
   name: { fontSize: 15, fontWeight: "700" },
   meta: { fontSize: 12, marginTop: 2 },
+  inDraftBadge: {
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 4,
+    letterSpacing: 0.5,
+  },
   star: { fontSize: 22, color: "#f5a623", paddingHorizontal: 8 },
   center: {
     flex: 1,
