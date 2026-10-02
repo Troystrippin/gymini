@@ -78,12 +78,6 @@ export default function Dashboard() {
           accent={ROLE_COLORS.admin}
         />
         <StatCard
-          label="MODERATORS"
-          value={stats.totalModerators}
-          emoji="⚙️"
-          accent={ROLE_COLORS.moderator}
-        />
-        <StatCard
           label="WORKOUT PLANS"
           value={stats.totalPlans}
           emoji="💪"

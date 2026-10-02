@@ -1,13 +1,21 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import UserDetail from "./pages/UserDetail";
+import Analytics from "./pages/Analytics";
+import Exercises from "./pages/Exercises";
+import ExerciseDetail from "./pages/ExerciseDetail";
 
-const ALLOWED_ROLES = ["admin", "moderator"];
+const ALLOWED_ROLES = ["admin"];
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -53,6 +61,9 @@ export default function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetail />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="exercises" element={<Exercises />} />
+            <Route path="exercises/:id" element={<ExerciseDetail />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

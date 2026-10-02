@@ -13,7 +13,6 @@ export default function Users() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  // Debounce: only hit the API 500ms after the user stops typing.
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 500);
     return () => clearTimeout(t);
@@ -52,7 +51,8 @@ export default function Users() {
   };
 
   const deleteUser = async (userId, name) => {
-    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`))
+      return;
     try {
       await api.delete(`/admin/users/${userId}`);
       fetchUsers();
@@ -111,7 +111,6 @@ export default function Users() {
         >
           <option value="">All roles</option>
           <option value="user">User</option>
-          <option value="moderator">Moderator</option>
           <option value="admin">Admin</option>
         </select>
       </div>
@@ -216,7 +215,9 @@ export default function Users() {
                         style={{
                           padding: "6px 10px",
                           borderRadius: 8,
-                          border: `1px solid ${ROLE_COLORS[u.role] || COLORS.border}`,
+                          border: `1px solid ${
+                            ROLE_COLORS[u.role] || COLORS.border
+                          }`,
                           background: COLORS.background,
                           color: COLORS.text,
                           fontSize: 12,
@@ -225,7 +226,6 @@ export default function Users() {
                         }}
                       >
                         <option value="user">user</option>
-                        <option value="moderator">moderator</option>
                         <option value="admin">admin</option>
                       </select>
                     ) : (

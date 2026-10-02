@@ -146,6 +146,10 @@ export default function BrowseExercisesScreen() {
       setCEquip("Bodyweight");
       setCDiff("Beginner");
       setCDesc("");
+      Alert.alert(
+        "Submitted for review",
+        "Your custom exercise was created and is pending admin approval. It will be visible to other users once approved.",
+      );
     } catch (err) {
       const data = err.response?.data;
       let msg;
@@ -181,10 +185,17 @@ export default function BrowseExercisesScreen() {
           <Text style={[styles.cardName, { color: colors.text }]}>
             {item.name}
           </Text>
-          <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
-            {item.muscleGroup} - {item.equipment}
-            {item.isCustom ? " - Custom" : ""}
-          </Text>
+          <View style={styles.cardMetaRow}>
+            <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
+              {item.muscleGroup} - {item.equipment}
+            </Text>
+            {item.isCustom && item.status === "pending" && (
+              <Text style={styles.pendingPill}>⏳ PENDING</Text>
+            )}
+            {item.isCustom && item.status === "rejected" && (
+              <Text style={styles.rejectedPill}>🚫 REJECTED</Text>
+            )}
+          </View>
         </View>
         <FavoriteButton exerciseId={item._id} size={20} />
         <TouchableOpacity
@@ -509,6 +520,23 @@ export default function BrowseExercisesScreen() {
                 ]}
               />
 
+              <View
+                style={[
+                  styles.infoNote,
+                  { borderColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.infoNoteText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Your custom exercise will be reviewed by an admin before
+                  it's visible to other users.
+                </Text>
+              </View>
+
               <TouchableOpacity
                 style={[
                   styles.modalAddBtn,
@@ -615,9 +643,38 @@ const styles = StyleSheet.create({
   },
   cardInfo: { flex: 1 },
   cardName: { fontSize: 15 },
+  cardMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
   cardMeta: {
     fontSize: 12,
-    marginTop: 2,
+  },
+  pendingPill: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#FB8C00",
+    backgroundColor: "rgba(251,140,0,0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    letterSpacing: 0.5,
+    overflow: "hidden",
+  },
+  rejectedPill: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#E53935",
+    backgroundColor: "rgba(229,57,53,0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    letterSpacing: 0.5,
+    overflow: "hidden",
   },
   toggleBadge: {
     borderWidth: 1,
@@ -709,5 +766,17 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 0,
     marginBottom: 14,
+  },
+  infoNote: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 4,
+    backgroundColor: "rgba(251,140,0,0.08)",
+  },
+  infoNoteText: {
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

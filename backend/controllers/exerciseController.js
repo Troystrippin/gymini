@@ -1,10 +1,9 @@
 const Exercise = require("../models/Exercise");
 
-// ─────────────────────────────────────────────────────────────
-// POST /api/exercises
-// Body: { name, muscleGroup, equipment?, difficulty?, description?, mediaUrl? }
-// Auth: required
-// ─────────────────────────────────────────────────────────────
+const escapeRegex = (s) =>
+  String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// POST /api/exercises — creates a custom exercise (pending review)
 const createExercise = async (req, res, next) => {
   try {
     const {
@@ -16,7 +15,6 @@ const createExercise = async (req, res, next) => {
       mediaUrl,
     } = req.body;
 
-    // Prevent duplicate custom exercises from the same user
     const existing = await Exercise.findOne({
       name: name.trim(),
       muscleGroup,
@@ -24,7 +22,8 @@ const createExercise = async (req, res, next) => {
     });
     if (existing) {
       return res.status(409).json({
-        message: "You already created an exercise with that name and muscle group",
+        message:
+          "You already created an exercise with that name and muscle group",
         exercise: existing,
       });
     }
@@ -38,11 +37,11 @@ const createExercise = async (req, res, next) => {
       mediaUrl: mediaUrl || null,
       isCustom: true,
       createdBy: req.user._id,
+      status: "pending",
     });
 
     res.status(201).json(exercise);
   } catch (err) {
-    // Mongoose duplicate-key / validation errors
     if (err.name === "ValidationError") {
       return res.status(400).json({
         message: "Invalid exercise data",
@@ -56,12 +55,7 @@ const createExercise = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
 // GET /api/exercises
-// Query: { muscleGroup?, difficulty?, search?, limit?, skip? }
-// Auth: not required (catalog is public for browsing)
-// Returns: BARE ARRAY of exercises
-// ─────────────────────────────────────────────────────────────
 const getExercises = async (req, res, next) => {
   try {
     const {
@@ -72,15 +66,25 @@ const getExercises = async (req, res, next) => {
       skip = 0,
     } = req.query;
 
-    const filter = {};
-    if (muscleGroup) filter.muscleGroup = muscleGroup;
-    if (difficulty) filter.difficulty = difficulty;
-    if (search) filter.name = { $regex: search, $options: "i" };
+    const or = [
+      { isCustom: false, status: "approved" },
+      { isCustom: true, status: "approved" },
+    ];
+    if (req.user) {
+      or.push({ isCustom: true, createdBy: req.user._id });
+    }
 
-    const exercises = await Exercise.find(filter)
+    const and = [{ $or: or }];
+    if (muscleGroup) and.push({ muscleGroup });
+    if (difficulty) and.push({ difficulty });
+    if (search) {
+      and.push({ name: { $regex: escapeRegex(search), $options: "i" } });
+    }
+
+    const exercises = await Exercise.find({ $and: and })
       .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit)
+      .skip(Math.max(0, Number(skip) || 0))
+      .limit(Math.min(100, Math.max(1, Number(limit) || 100)))
       .lean();
 
     res.json(exercises);
@@ -89,26 +93,29 @@ const getExercises = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
 // GET /api/exercises/:id
-// Auth: not required
-// ─────────────────────────────────────────────────────────────
 const getExerciseById = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id).lean();
     if (!exercise) {
       return res.status(404).json({ message: "Exercise not found" });
     }
+
+    if (
+      exercise.isCustom &&
+      exercise.status !== "approved" &&
+      String(exercise.createdBy) !== String(req.user?._id || "")
+    ) {
+      return res.status(404).json({ message: "Exercise not found" });
+    }
+
     res.json(exercise);
   } catch (err) {
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// PUT /api/exercises/:id  (optional — edit custom exercise)
-// Auth: required, must be creator
-// ─────────────────────────────────────────────────────────────
+// PUT /api/exercises/:id
 const updateExercise = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id);
@@ -135,10 +142,14 @@ const updateExercise = async (req, res, next) => {
       "mediaUrl",
     ];
     allowed.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        exercise[field] = req.body[field];
-      }
+      if (req.body[field] !== undefined) exercise[field] = req.body[field];
     });
+
+    // Any edit re-opens moderation
+    exercise.status = "pending";
+    exercise.rejectionReason = null;
+    exercise.moderatedBy = null;
+    exercise.moderatedAt = null;
 
     const updated = await exercise.save();
     res.json(updated);
@@ -156,10 +167,7 @@ const updateExercise = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// DELETE /api/exercises/:id  (optional — delete custom exercise)
-// Auth: required, must be creator
-// ─────────────────────────────────────────────────────────────
+// DELETE /api/exercises/:id
 const deleteExercise = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id);
@@ -176,7 +184,6 @@ const deleteExercise = async (req, res, next) => {
         .status(403)
         .json({ message: "Not authorized to delete this exercise" });
     }
-
     await exercise.deleteOne();
     res.json({ message: "Exercise deleted" });
   } catch (err) {

@@ -52,6 +52,12 @@ export default function Sidebar() {
         <NavLink to="/users" style={linkStyle}>
           👥 Users
         </NavLink>
+        <NavLink to="/analytics" style={linkStyle}>
+          📈 Analytics
+        </NavLink>
+        <NavLink to="/exercises" style={linkStyle}>
+          💪 Exercises
+        </NavLink>
       </nav>
 
       <div

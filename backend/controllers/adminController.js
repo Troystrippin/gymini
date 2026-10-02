@@ -8,29 +8,21 @@ const MealLog = require("../models/MealLog");
 const Goal = require("../models/Goal");
 const FavoriteExercise = require("../models/FavoriteExercise");
 const RefreshToken = require("../models/RefreshToken");
+const Exercise = require("../models/Exercise");
 
-// ─────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────
 const MAX_PAGE_LIMIT = 100;
 const MAX_SKIP = 10000;
-const ALLOWED_ROLES = ["user", "moderator", "admin"];
+const ALLOWED_ROLES = ["user", "admin"];
 
-// Escape user-supplied regex input so it can't inject metacharacters
-// or trigger catastrophic backtracking on the users collection.
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (s) =>
+  String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// Fields that must never leave the API — auth internals, recovery codes,
-// and lockout state.
 const SENSITIVE_USER_FIELDS =
   "-password -emailVerificationCode -emailVerificationExpires " +
   "-passwordResetCode -passwordResetExpires " +
   "-failedLoginAttempts -lockoutUntil";
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/admin/users
-// Moderator + Admin. Paginated, filtered, role-scoped projection.
-// ─────────────────────────────────────────────────────────────
+// ─── GET /api/admin/users ────────────────────────────────────
 const listUsers = async (req, res, next) => {
   try {
     const {
@@ -40,7 +32,6 @@ const listUsers = async (req, res, next) => {
       page: rawPage = 1,
     } = req.query;
 
-    // Clamp pagination — prevents full-collection scans / PII dumps.
     const limit = Math.min(
       MAX_PAGE_LIMIT,
       Math.max(1, Number(rawLimit) || 50),
@@ -60,16 +51,9 @@ const listUsers = async (req, res, next) => {
       ];
     }
 
-    // Role-scoped projection: moderators get only the minimum needed
-    // to identify a user; admins get the full profile minus secrets.
-    const isAdmin = req.user.role === "admin";
-    const projection = isAdmin
-      ? SENSITIVE_USER_FIELDS
-      : "_id fullName email role createdAt emailVerified";
-
     const [users, total] = await Promise.all([
       User.find(filter)
-        .select(projection)
+        .select(SENSITIVE_USER_FIELDS)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -88,10 +72,7 @@ const listUsers = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/admin/users/:id
-// Admin only. Strips auth internals from the response.
-// ─────────────────────────────────────────────────────────────
+// ─── GET /api/admin/users/:id ────────────────────────────────
 const getUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
@@ -110,36 +91,26 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// PUT /api/admin/users/:id/role
-// Admin only. Body: { role: "user" | "moderator" | "admin" }
-//
-// NOTE: Bumping tokenVersion here is a placeholder — wire it up once
-// you add `tokenVersion` to the User schema (see Phase 1 patch list).
-// ─────────────────────────────────────────────────────────────
+// ─── PUT /api/admin/users/:id/role ───────────────────────────
 const updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
 
     if (!ALLOWED_ROLES.includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
+      return res.status(400).json({ message: "Role must be user or admin" });
     }
 
-    // Prevent self-demotion (avoid locking yourself out).
     if (String(req.params.id) === String(req.user._id) && role !== "admin") {
-      return res.status(400).json({
-        message: "You cannot demote yourself. Ask another admin.",
-      });
+      return res
+        .status(400)
+        .json({ message: "You cannot demote yourself." });
     }
 
-    const update = { role };
-    // Uncomment when tokenVersion is added to the User schema:
-    // update.$inc = { tokenVersion: 1 };
-
-    const user = await User.findByIdAndUpdate(req.params.id, update, {
-      new: true,
-      runValidators: true,
-    }).select(SENSITIVE_USER_FIELDS);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true },
+    ).select(SENSITIVE_USER_FIELDS);
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -147,28 +118,13 @@ const updateUserRole = async (req, res, next) => {
       `[admin] ${req.user.email} changed role of ${user.email} → ${role}`,
     );
 
-    // TODO (Phase 1 / R): write to AuditLog collection here.
-    // await AuditLog.create({
-    //   actorId: req.user._id,
-    //   actorRole: req.user.role,
-    //   action: "user.role.update",
-    //   targetType: "User",
-    //   targetId: user._id,
-    //   after: { role },
-    //   ip: req.ip,
-    //   userAgent: req.headers["user-agent"],
-    // });
-
     res.json({ message: "Role updated", user });
   } catch (err) {
     next(err);
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// DELETE /api/admin/users/:id
-// Admin only. Full cascade across every user-owned collection.
-// ─────────────────────────────────────────────────────────────
+// ─── DELETE /api/admin/users/:id ─────────────────────────────
 const deleteUser = async (req, res, next) => {
   try {
     if (String(req.params.id) === String(req.user._id)) {
@@ -180,24 +136,17 @@ const deleteUser = async (req, res, next) => {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ── Cascade ───────────────────────────────────────────────
-    // Runs in parallel. Each collection scoped by userId (or `user`
-    // where the model uses that field name). If any delete fails,
-    // Promise.all rejects and the error handler returns 500 — the
-    // user doc is already gone, so a retry is safe.
     const results = await Promise.all([
       WorkoutPlan.deleteMany({ userId: user._id }),
       WorkoutLog.deleteMany({ userId: user._id }),
       WorkoutProgress.deleteMany({ userId: user._id }),
       WeightLog.deleteMany({ userId: user._id }),
-      MealPlan.deleteMany({ user: user._id }), // NOTE: field is `user`, not `userId`
+      MealPlan.deleteMany({ user: user._id }),
       MealLog.deleteMany({ userId: user._id }),
       Goal.deleteMany({ userId: user._id }),
       FavoriteExercise.deleteMany({ userId: user._id }),
       RefreshToken.deleteMany({ userId: user._id }),
-      // Custom exercises created by this user. Their refs inside
-      // other users' plans are snapshotted by name, so deletion is safe.
-      require("../models/Exercise").deleteMany({ createdBy: user._id }),
+      Exercise.deleteMany({ createdBy: user._id }),
     ]);
 
     const summary = {
@@ -218,8 +167,6 @@ const deleteUser = async (req, res, next) => {
       summary,
     );
 
-    // TODO (Phase 1 / R): write to AuditLog collection here too.
-
     res.json({
       message: "User deleted",
       userId: user._id,
@@ -230,24 +177,18 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/admin/stats
-// Moderator + Admin. Aggregate counters for the dashboard.
-// ─────────────────────────────────────────────────────────────
+// ─── GET /api/admin/stats ────────────────────────────────────
 const getStats = async (req, res, next) => {
   try {
-    const [totalUsers, totalAdmins, totalModerators, totalPlans] =
-      await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({ role: "admin" }),
-        User.countDocuments({ role: "moderator" }),
-        WorkoutPlan.countDocuments(),
-      ]);
+    const [totalUsers, totalAdmins, totalPlans] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: "admin" }),
+      WorkoutPlan.countDocuments(),
+    ]);
 
     res.json({
       totalUsers,
       totalAdmins,
-      totalModerators,
       totalPlans,
     });
   } catch (err) {

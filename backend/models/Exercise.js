@@ -34,6 +34,22 @@ const ExerciseSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+
+    // -- Moderation ----
+    status: {
+      type: String,
+      enum: ["approved", "pending", "rejected"],
+      default: "pending",
+      index: true,
+    },
+
+    rejectionReason: { type: String, default: null },
+    moderatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    moderatedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
