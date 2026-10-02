@@ -2,6 +2,10 @@
 const errorHandler = (err, req, res, next) => {
   console.error("[error]", err);
 
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ message: "Image must be 5 MB or smaller" });
+  }
+
   // Mongoose validation error → 400
   if (err.name === "ValidationError") {
     return res.status(400).json({

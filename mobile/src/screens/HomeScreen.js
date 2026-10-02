@@ -59,10 +59,7 @@ export default function HomeScreen() {
       setExercises(res.data.exercises || []);
 
       try {
-        const progress = await workoutProgressApi.get(
-          res.data._id,
-          todayKey(),
-        );
+        const progress = await workoutProgressApi.get(res.data._id, todayKey());
         const completedIds = new Set(
           (progress.completedExerciseIds || []).map(String),
         );

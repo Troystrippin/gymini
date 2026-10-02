@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { uploadImage, deleteImage } = require("../lib/cloudinary");
 const bcrypt = require("bcryptjs");
 const {
   signAccessToken,
@@ -32,6 +33,7 @@ const REQUIRED_ONBOARDING_FIELDS = [
 const serializeUser = (user) => ({
   _id: user.id,
   fullName: user.fullName,
+  avatarUrl: user.avatarUrl || "",
   email: user.email,
   role: user.role || "user",
   createdAt: user.createdAt,
@@ -141,14 +143,10 @@ const loginUser = async (req, res, next) => {
         const lockoutMinutes = Number(process.env.LOGIN_LOCKOUT_MINUTES) || 15;
 
         if (user.failedLoginAttempts >= maxAttempts) {
-          user.lockoutUntil = new Date(
-            Date.now() + lockoutMinutes * 60 * 1000,
-          );
+          user.lockoutUntil = new Date(Date.now() + lockoutMinutes * 60 * 1000);
           user.failedLoginAttempts = 0;
           await user.save();
-          console.log(
-            `[login] locked user=${user._id} for ${lockoutMinutes}m`,
-          );
+          console.log(`[login] locked user=${user._id} for ${lockoutMinutes}m`);
           return res.status(423).json({
             message: `Too many failed attempts. Account locked for ${lockoutMinutes} minutes.`,
             lockoutUntil: user.lockoutUntil,
@@ -449,6 +447,37 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+const updateProfileAvatar = async (req, res, next) => {
+  let uploaded;
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Image file is required" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    uploaded = await uploadImage(req.file.buffer, "gymini/avatars");
+    const previousPublicId = user.avatarPublicId;
+    user.avatarUrl = uploaded.secure_url;
+    user.avatarPublicId = uploaded.public_id;
+    const updatedUser = await user.save();
+
+    if (previousPublicId) {
+      deleteImage(previousPublicId).catch((error) =>
+        console.error("[cloudinary] old avatar cleanup failed:", error.message),
+      );
+    }
+
+    res.json(serializeUser(updatedUser));
+  } catch (error) {
+    if (uploaded?.public_id) {
+      await deleteImage(uploaded.public_id).catch(() => {});
+    }
+    next(error);
+  }
+};
+
 // ---------- Existing onboarding (tightened) ----------
 
 const updateOnboarding = async (req, res, next) => {
@@ -519,6 +548,7 @@ module.exports = {
   logoutAllDevices,
   updateOnboarding,
   updateProfile,
+  updateProfileAvatar,
   changePassword,
   getMe,
   verifyEmail,

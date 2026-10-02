@@ -15,6 +15,7 @@ const {
 } = require("../controllers/favoriteController");
 
 const { protect } = require("../middleware/authMiddleware");
+const imageUpload = require("../middleware/imageUpload");
 const { handleValidation } = require("../middleware/validate");
 const {
   exerciseIdParam,
@@ -38,6 +39,7 @@ router.get("/", listExercisesRules, handleValidation, getExercises);
 router.post(
   "/",
   protect,
+  imageUpload,
   createExerciseRules,
   handleValidation,
   createExercise,

@@ -3,19 +3,29 @@ import api from "../api";
 import { COLORS, ROLE_COLORS } from "../theme";
 import StatCard from "../components/StatCard";
 import { Sparkline, BarChart } from "../components/Sparkline";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = async () => {
+    try {
+      const response = await api.get("/admin/analytics");
+      setData(response.data);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api
-      .get("/admin/analytics")
-      .then((res) => setData(res.data))
-      .catch((err) => setError(err.response?.data?.message || err.message))
-      .finally(() => setLoading(false));
+    load();
   }, []);
+  useAdminPolling(load);
 
   if (loading) {
     return (
@@ -336,9 +346,7 @@ function LeaderboardCard({ title, icon, rows }) {
               alignItems: "center",
               padding: "8px 0",
               borderBottom:
-                i < rows.length - 1
-                  ? `1px solid ${COLORS.border}`
-                  : "none",
+                i < rows.length - 1 ? `1px solid ${COLORS.border}` : "none",
             }}
           >
             <div

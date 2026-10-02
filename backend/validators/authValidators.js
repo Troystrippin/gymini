@@ -78,12 +78,7 @@ const onboardingRules = [
     .toInt(),
   body("details.activityLevel")
     .optional()
-    .isIn([
-      "Sedentary",
-      "Lightly Active",
-      "Moderately Active",
-      "Very Active",
-    ]),
+    .isIn(["Sedentary", "Lightly Active", "Moderately Active", "Very Active"]),
 
   // Legacy flat fields (kept for transition)
   body("biologicalSex").optional().isIn(["Male", "Female"]),
@@ -93,12 +88,7 @@ const onboardingRules = [
   body("workoutDaysPerWeek").optional().isInt({ min: 0, max: 7 }).toInt(),
   body("activityLevel")
     .optional()
-    .isIn([
-      "Sedentary",
-      "Lightly Active",
-      "Moderately Active",
-      "Very Active",
-    ]),
+    .isIn(["Sedentary", "Lightly Active", "Moderately Active", "Very Active"]),
 ];
 
 const verifyEmailRules = [

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import StatCard from "../components/StatCard";
 import { COLORS, ROLE_COLORS } from "../theme";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -10,17 +11,26 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = async () => {
+    try {
+      const [statsRes, usersRes] = await Promise.all([
+        api.get("/admin/stats"),
+        api.get("/admin/users?limit=5"),
+      ]);
+      setStats(statsRes.data);
+      setRecentUsers(usersRes.data.users || []);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([api.get("/admin/stats"), api.get("/admin/users?limit=5")])
-      .then(([statsRes, usersRes]) => {
-        setStats(statsRes.data);
-        setRecentUsers(usersRes.data.users || []);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || err.message);
-      })
-      .finally(() => setLoading(false));
+    load();
   }, []);
+  useAdminPolling(load);
 
   if (loading) {
     return (
@@ -160,8 +170,7 @@ export default function Dashboard() {
                         fontWeight: 800,
                         padding: "3px 10px",
                         borderRadius: 10,
-                        background:
-                          ROLE_COLORS[u.role] || COLORS.textSecondary,
+                        background: ROLE_COLORS[u.role] || COLORS.textSecondary,
                         color: "#FFF",
                         letterSpacing: 0.5,
                         textTransform: "uppercase",

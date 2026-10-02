@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 const Exercise = require("../models/Exercise");
 const WorkoutPlan = require("../models/WorkoutPlan");
 const FavoriteExercise = require("../models/FavoriteExercise");
+const { uploadImage, deleteImage } = require("../lib/cloudinary");
 
 const MAX_LIMIT = 100;
 const MAX_SKIP = 10000;
-const escapeRegex = (s) =>
-  String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // GET /api/admin/exercises
 const listExercises = async (req, res, next) => {
@@ -174,6 +174,7 @@ const rejectExercise = async (req, res, next) => {
 
 // PUT /api/admin/exercises/:id
 const updateExercise = async (req, res, next) => {
+  let uploadedImage;
   try {
     const { id } = req.params;
 
@@ -193,23 +194,44 @@ const updateExercise = async (req, res, next) => {
     allowed.forEach((field) => {
       if (req.body[field] !== undefined) update[field] = req.body[field];
     });
+    if (req.file) {
+      uploadedImage = await uploadImage(req.file.buffer, "gymini/exercises");
+      update.mediaUrl = uploadedImage.secure_url;
+      update.mediaPublicId = uploadedImage.public_id;
+    }
 
     if (Object.keys(update).length === 0) {
       return res.status(400).json({ message: "No valid fields to update" });
     }
 
+    const previousImage = req.file
+      ? await Exercise.findById(id).select("mediaPublicId").lean()
+      : null;
     const exercise = await Exercise.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
     });
 
     if (!exercise) {
+      if (uploadedImage?.public_id) await deleteImage(uploadedImage.public_id);
       return res.status(404).json({ message: "Exercise not found" });
+    }
+
+    if (previousImage?.mediaPublicId) {
+      deleteImage(previousImage.mediaPublicId).catch((error) =>
+        console.error(
+          "[cloudinary] old exercise image cleanup failed:",
+          error.message,
+        ),
+      );
     }
 
     console.log(`[admin] ${req.user.email} updated exercise=${exercise._id}`);
     res.json({ message: "Exercise updated", exercise });
   } catch (err) {
+    if (uploadedImage?.public_id) {
+      await deleteImage(uploadedImage.public_id).catch(() => {});
+    }
     if (err.name === "ValidationError") {
       return res.status(400).json({
         message: "Invalid exercise data",
@@ -243,6 +265,8 @@ const deleteExercise = async (req, res, next) => {
           "Built-in exercise deletion requires ?confirm=true. Cannot be undone.",
       });
     }
+
+    await deleteImage(exercise.mediaPublicId);
 
     await Promise.all([
       Exercise.deleteOne({ _id: id }),

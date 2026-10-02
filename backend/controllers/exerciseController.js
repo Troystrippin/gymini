@@ -1,19 +1,14 @@
 const Exercise = require("../models/Exercise");
+const { uploadImage, deleteImage } = require("../lib/cloudinary");
 
-const escapeRegex = (s) =>
-  String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // POST /api/exercises — creates a custom exercise (pending review)
 const createExercise = async (req, res, next) => {
+  let uploadedImage;
   try {
-    const {
-      name,
-      muscleGroup,
-      equipment,
-      difficulty,
-      description,
-      mediaUrl,
-    } = req.body;
+    const { name, muscleGroup, equipment, difficulty, description, mediaUrl } =
+      req.body;
 
     const existing = await Exercise.findOne({
       name: name.trim(),
@@ -28,13 +23,18 @@ const createExercise = async (req, res, next) => {
       });
     }
 
+    if (req.file) {
+      uploadedImage = await uploadImage(req.file.buffer, "gymini/exercises");
+    }
+
     const exercise = await Exercise.create({
       name: name.trim(),
       muscleGroup,
       equipment: equipment?.trim() || "Bodyweight",
       difficulty: difficulty || "Beginner",
       description: description?.trim() || "",
-      mediaUrl: mediaUrl || null,
+      mediaUrl: uploadedImage?.secure_url || mediaUrl || null,
+      mediaPublicId: uploadedImage?.public_id || null,
       isCustom: true,
       createdBy: req.user._id,
       status: "pending",
@@ -42,6 +42,9 @@ const createExercise = async (req, res, next) => {
 
     res.status(201).json(exercise);
   } catch (err) {
+    if (uploadedImage?.public_id) {
+      await deleteImage(uploadedImage.public_id).catch(() => {});
+    }
     if (err.name === "ValidationError") {
       return res.status(400).json({
         message: "Invalid exercise data",
@@ -184,6 +187,7 @@ const deleteExercise = async (req, res, next) => {
         .status(403)
         .json({ message: "Not authorized to delete this exercise" });
     }
+    await deleteImage(exercise.mediaPublicId);
     await exercise.deleteOne();
     res.json({ message: "Exercise deleted" });
   } catch (err) {

@@ -99,12 +99,8 @@ const getAnalytics = async (req, res, next) => {
       ]),
     ]);
 
-    const newUsersMap = new Map(
-      newUsersRaw.map((r) => [r._id, r.count]),
-    );
-    const activeUsersMap = new Map(
-      activeUsersRaw.map((r) => [r._id, r.count]),
-    );
+    const newUsersMap = new Map(newUsersRaw.map((r) => [r._id, r.count]));
+    const activeUsersMap = new Map(activeUsersRaw.map((r) => [r._id, r.count]));
 
     const days = lastNDays(30);
     const newUsersByDay = days.map((d) => ({
@@ -134,41 +130,36 @@ const getAnalytics = async (req, res, next) => {
     ]);
 
     const avgWorkoutsPerUser =
-      totalUsers > 0
-        ? Math.round((totalWorkouts / totalUsers) * 10) / 10
-        : 0;
+      totalUsers > 0 ? Math.round((totalWorkouts / totalUsers) * 10) / 10 : 0;
 
     // ── Leaderboards ──────────────────────────────────────────
-    const [
-      topFavoritesRaw,
-      topPlanExercisesRaw,
-      topUsersRaw,
-    ] = await Promise.all([
-      // Most favorited exercises
-      FavoriteExercise.aggregate([
-        { $group: { _id: "$exerciseId", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-      // Most-used exercises across all workout plans
-      WorkoutPlan.aggregate([
-        { $unwind: "$exercises" },
-        {
-          $group: {
-            _id: "$exercises.name",
-            count: { $sum: 1 },
+    const [topFavoritesRaw, topPlanExercisesRaw, topUsersRaw] =
+      await Promise.all([
+        // Most favorited exercises
+        FavoriteExercise.aggregate([
+          { $group: { _id: "$exerciseId", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+        // Most-used exercises across all workout plans
+        WorkoutPlan.aggregate([
+          { $unwind: "$exercises" },
+          {
+            $group: {
+              _id: "$exercises.name",
+              count: { $sum: 1 },
+            },
           },
-        },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-      // Most active users (by workout count)
-      WorkoutLog.aggregate([
-        { $group: { _id: "$userId", count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-    ]);
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+        // Most active users (by workout count)
+        WorkoutLog.aggregate([
+          { $group: { _id: "$userId", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+      ]);
 
     // Hydrate favorite exercises with names
     const favoriteIds = topFavoritesRaw.map((f) => f._id);

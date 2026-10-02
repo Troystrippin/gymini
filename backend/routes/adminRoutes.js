@@ -22,6 +22,12 @@ const {
 } = require("../controllers/adminExerciseController");
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
+const imageUpload = require("../middleware/imageUpload");
+const {
+  listMeals,
+  updateMealImage,
+  deleteMeal,
+} = require("../controllers/adminMealController");
 
 const { body, param } = require("express-validator");
 const { handleValidation } = require("../middleware/validate");
@@ -58,13 +64,13 @@ router.put(
 );
 router.delete("/users/:id", userIdParam, handleValidation, deleteUser);
 
+// Shared meal catalog
+router.get("/meals", listMeals);
+router.put("/meals/:id/image", imageUpload, updateMealImage);
+router.delete("/meals/:id", deleteMeal);
+
 // Exercises
-router.get(
-  "/exercises",
-  listExercisesRules,
-  handleValidation,
-  listExercises,
-);
+router.get("/exercises", listExercisesRules, handleValidation, listExercises);
 router.get("/exercises/stats", getExerciseStats);
 router.get(
   "/exercises/:id",
@@ -86,6 +92,7 @@ router.patch(
 );
 router.put(
   "/exercises/:id",
+  imageUpload,
   updateExerciseRules,
   handleValidation,
   updateAdminExercise,

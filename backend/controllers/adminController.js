@@ -9,13 +9,13 @@ const Goal = require("../models/Goal");
 const FavoriteExercise = require("../models/FavoriteExercise");
 const RefreshToken = require("../models/RefreshToken");
 const Exercise = require("../models/Exercise");
+const { deleteImage } = require("../lib/cloudinary");
 
 const MAX_PAGE_LIMIT = 100;
 const MAX_SKIP = 10000;
 const ALLOWED_ROLES = ["user", "admin"];
 
-const escapeRegex = (s) =>
-  String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const SENSITIVE_USER_FIELDS =
   "-password -emailVerificationCode -emailVerificationExpires " +
@@ -25,17 +25,9 @@ const SENSITIVE_USER_FIELDS =
 // ─── GET /api/admin/users ────────────────────────────────────
 const listUsers = async (req, res, next) => {
   try {
-    const {
-      role,
-      search,
-      limit: rawLimit = 50,
-      page: rawPage = 1,
-    } = req.query;
+    const { role, search, limit: rawLimit = 50, page: rawPage = 1 } = req.query;
 
-    const limit = Math.min(
-      MAX_PAGE_LIMIT,
-      Math.max(1, Number(rawLimit) || 50),
-    );
+    const limit = Math.min(MAX_PAGE_LIMIT, Math.max(1, Number(rawLimit) || 50));
     const page = Math.max(1, Number(rawPage) || 1);
     const skip = Math.min(MAX_SKIP, (page - 1) * limit);
 
@@ -101,9 +93,7 @@ const updateUserRole = async (req, res, next) => {
     }
 
     if (String(req.params.id) === String(req.user._id) && role !== "admin") {
-      return res
-        .status(400)
-        .json({ message: "You cannot demote yourself." });
+      return res.status(400).json({ message: "You cannot demote yourself." });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -133,8 +123,17 @@ const deleteUser = async (req, res, next) => {
         .json({ message: "You cannot delete your own account." });
     }
 
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    const customExercises = await Exercise.find({ createdBy: user._id })
+      .select("mediaPublicId")
+      .lean();
+    await Promise.all([
+      deleteImage(user.avatarPublicId),
+      ...customExercises.map((exercise) => deleteImage(exercise.mediaPublicId)),
+    ]);
+    await user.deleteOne();
 
     const results = await Promise.all([
       WorkoutPlan.deleteMany({ userId: user._id }),

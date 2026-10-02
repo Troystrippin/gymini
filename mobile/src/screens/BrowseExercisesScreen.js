@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
+  Image,
   View,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../theme/theme";
@@ -70,6 +72,7 @@ export default function BrowseExercisesScreen() {
   const [cEquip, setCEquip] = useState("Bodyweight");
   const [cDiff, setCDiff] = useState("Beginner");
   const [cDesc, setCDesc] = useState("");
+  const [cImage, setCImage] = useState(null);
   const [creating, setCreating] = useState(false);
 
   const fetchExercises = useCallback(async () => {
@@ -124,6 +127,23 @@ export default function BrowseExercisesScreen() {
     }
   };
 
+  const chooseExerciseImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Photo access needed",
+        "Allow photo access to add an exercise image.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.85,
+    });
+    if (!result.canceled) setCImage(result.assets[0]);
+  };
+
   const handleCreateCustom = async () => {
     if (!cName.trim()) {
       Alert.alert("Missing name", "Please enter an exercise name.");
@@ -131,12 +151,21 @@ export default function BrowseExercisesScreen() {
     }
     try {
       setCreating(true);
-      const res = await api.post("/exercises", {
-        name: cName.trim(),
-        muscleGroup: cGroup,
-        equipment: cEquip.trim() || "Bodyweight",
-        difficulty: cDiff,
-        description: cDesc.trim(),
+      const formData = new FormData();
+      formData.append("name", cName.trim());
+      formData.append("muscleGroup", cGroup);
+      formData.append("equipment", cEquip.trim() || "Bodyweight");
+      formData.append("difficulty", cDiff);
+      formData.append("description", cDesc.trim());
+      if (cImage) {
+        formData.append("image", {
+          uri: cImage.uri,
+          name: cImage.fileName || "exercise.jpg",
+          type: cImage.mimeType || "image/jpeg",
+        });
+      }
+      const res = await api.post("/exercises", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setExercises((prev) => [res.data, ...prev]);
       addExercise(res.data);
@@ -146,6 +175,7 @@ export default function BrowseExercisesScreen() {
       setCEquip("Bodyweight");
       setCDiff("Beginner");
       setCDesc("");
+      setCImage(null);
       Alert.alert(
         "Submitted for review",
         "Your custom exercise was created and is pending admin approval. It will be visible to other users once approved.",
@@ -393,9 +423,7 @@ export default function BrowseExercisesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text
-                style={[styles.emptyText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No exercises match your search.
               </Text>
             </View>
@@ -520,20 +548,45 @@ export default function BrowseExercisesScreen() {
                 ]}
               />
 
-              <View
+              <Text
+                style={[styles.fieldLabel, { color: colors.textSecondary }]}
+              >
+                Exercise image (optional)
+              </Text>
+              <TouchableOpacity
+                onPress={chooseExerciseImage}
                 style={[
-                  styles.infoNote,
-                  { borderColor: colors.border },
+                  styles.input,
+                  { borderColor: colors.border, backgroundColor: colors.card },
                 ]}
               >
+                {cImage ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: cImage.uri }}
+                      style={{ width: 48, height: 48, borderRadius: 6 }}
+                    />
+                    <Text style={{ color: colors.text }}>Change image</Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.textSecondary }}>
+                    Choose image
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={[styles.infoNote, { borderColor: colors.border }]}>
                 <Text
-                  style={[
-                    styles.infoNoteText,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.infoNoteText, { color: colors.textSecondary }]}
                 >
-                  Your custom exercise will be reviewed by an admin before
-                  it's visible to other users.
+                  Your custom exercise will be reviewed by an admin before it's
+                  visible to other users.
                 </Text>
               </View>
 
@@ -552,10 +605,7 @@ export default function BrowseExercisesScreen() {
                   <ActivityIndicator color={accentTextColor} />
                 ) : (
                   <Text
-                    style={[
-                      styles.modalAddBtnText,
-                      { color: accentTextColor },
-                    ]}
+                    style={[styles.modalAddBtnText, { color: accentTextColor }]}
                   >
                     Create & Add to Plan
                   </Text>

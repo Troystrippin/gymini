@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import { COLORS } from "../theme";
 import StatCard from "../components/StatCard";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 const STATUS_COLORS = {
   approved: "#43A047",
@@ -60,14 +61,13 @@ export default function Exercises() {
   }, [searchInput]);
 
   const fetchStats = () => {
-    api
+    return api
       .get("/admin/exercises/stats")
       .then((r) => setStats(r.data))
       .catch(() => {});
   };
 
   const fetchExercises = () => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter) params.set("status", statusFilter);
@@ -76,7 +76,7 @@ export default function Exercises() {
     params.set("page", page);
     params.set("limit", 30);
 
-    api
+    return api
       .get(`/admin/exercises?${params.toString()}`)
       .then((res) => {
         setExercises(res.data.exercises || []);
@@ -99,6 +99,8 @@ export default function Exercises() {
     fetchExercises();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statusFilter, typeFilter, muscleFilter, page]);
+
+  useAdminPolling(() => Promise.all([fetchStats(), fetchExercises()]));
 
   const totalPages = Math.max(1, Math.ceil(total / 30));
 

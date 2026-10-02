@@ -1,8 +1,11 @@
 import React, { useContext, useState } from "react";
 import {
+  Image,
+  View,
   StyleSheet,
   Text,
   Alert,
+  TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +13,8 @@ import {
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import { AuthContext } from "../context/AuthContext";
+import api from "../api/api";
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../theme/theme";
 import {
   validateFullName,
@@ -54,6 +59,7 @@ export default function EditProfileScreen({ navigation }) {
     workoutDaysPerWeek: false,
   });
   const [saving, setSaving] = useState(false);
+  const [avatarAsset, setAvatarAsset] = useState(null);
 
   const errors = {
     fullName: validateFullName(fullName),
@@ -65,6 +71,24 @@ export default function EditProfileScreen({ navigation }) {
 
   const handleBlur = (field) =>
     setTouched((prev) => ({ ...prev, [field]: true }));
+
+  const chooseAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Photo access needed",
+        "Allow photo access to choose an avatar.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled) setAvatarAsset(result.assets[0]);
+  };
 
   const handleSave = async () => {
     setTouched({
@@ -101,6 +125,18 @@ export default function EditProfileScreen({ navigation }) {
         await completeOnboarding(onboardingPayload);
       }
 
+      if (avatarAsset) {
+        const formData = new FormData();
+        formData.append("image", {
+          uri: avatarAsset.uri,
+          name: avatarAsset.fileName || "avatar.jpg",
+          type: avatarAsset.mimeType || "image/jpeg",
+        });
+        await api.put("/auth/profile/avatar", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
       await refreshUser();
 
       Alert.alert("Saved", "Profile updated.");
@@ -122,6 +158,30 @@ export default function EditProfileScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.title, { color: colors.text }]}>Edit Profile</Text>
+
+        <TouchableOpacity
+          onPress={chooseAvatar}
+          style={styles.avatarPicker}
+          accessibilityRole="button"
+        >
+          {avatarAsset?.uri || user?.avatarUrl ? (
+            <Image
+              source={{ uri: avatarAsset?.uri || user.avatarUrl }}
+              style={styles.avatarPreview}
+            />
+          ) : (
+            <View
+              style={[styles.avatarPreview, { backgroundColor: colors.card }]}
+            >
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                Photo
+              </Text>
+            </View>
+          )}
+          <Text style={{ color: colors.accent, fontWeight: "700" }}>
+            {avatarAsset ? "Change profile photo" : "Choose profile photo"}
+          </Text>
+        </TouchableOpacity>
 
         <InputField
           label="Full Name"
@@ -195,4 +255,17 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: 24 },
   title: { fontSize: 26, fontWeight: "800", marginBottom: 20 },
+  avatarPicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 24,
+  },
+  avatarPreview: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

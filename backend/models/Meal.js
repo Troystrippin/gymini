@@ -21,6 +21,7 @@ const mealSchema = new mongoose.Schema(
     carbs: { type: Number, required: true, min: 0, default: 0 },
     fats: { type: Number, required: true, min: 0, default: 0 },
     image: { type: String, default: "" },
+    imagePublicId: { type: String, default: null },
     description: { type: String, default: "" },
     active: { type: Boolean, default: true }, // for Phase 4 moderation
   },

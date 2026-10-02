@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../api";
 import { COLORS } from "../theme";
 import { StatusBadge } from "./Exercises";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 const MUSCLE_GROUPS = [
   "Chest",
@@ -33,21 +34,24 @@ export default function ExerciseDetail() {
 
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [editImage, setEditImage] = useState(null);
 
   const load = () => {
-    setLoading(true);
-    api
+    return api
       .get(`/admin/exercises/${id}`)
       .then((res) => {
         setData(res.data);
-        setEditForm({
-          name: res.data.exercise.name,
-          muscleGroup: res.data.exercise.muscleGroup,
-          equipment: res.data.exercise.equipment || "",
-          difficulty: res.data.exercise.difficulty || "Beginner",
-          description: res.data.exercise.description || "",
-          mediaUrl: res.data.exercise.mediaUrl || "",
-        });
+        if (!showEdit) {
+          setEditForm({
+            name: res.data.exercise.name,
+            muscleGroup: res.data.exercise.muscleGroup,
+            equipment: res.data.exercise.equipment || "",
+            difficulty: res.data.exercise.difficulty || "Beginner",
+            description: res.data.exercise.description || "",
+            mediaUrl: res.data.exercise.mediaUrl || "",
+          });
+          setEditImage(null);
+        }
       })
       .catch((err) => setError(err.response?.data?.message || err.message))
       .finally(() => setLoading(false));
@@ -57,6 +61,7 @@ export default function ExerciseDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+  useAdminPolling(load);
 
   const approve = async () => {
     setBusy(true);
@@ -92,8 +97,19 @@ export default function ExerciseDetail() {
     setBusy(true);
     setActionError("");
     try {
-      await api.put(`/admin/exercises/${id}`, editForm);
+      let payload = editForm;
+      let config;
+      if (editImage) {
+        payload = new FormData();
+        Object.entries(editForm).forEach(([key, value]) =>
+          payload.append(key, value ?? ""),
+        );
+        payload.append("image", editImage);
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      }
+      await api.put(`/admin/exercises/${id}`, payload, config);
       setShowEdit(false);
+      setEditImage(null);
       load();
     } catch (err) {
       setActionError(err.response?.data?.message || err.message);
@@ -130,7 +146,9 @@ export default function ExerciseDetail() {
   };
 
   if (loading) {
-    return <div style={{ color: COLORS.textSecondary }}>Loading exercise...</div>;
+    return (
+      <div style={{ color: COLORS.textSecondary }}>Loading exercise...</div>
+    );
   }
 
   if (error) {
@@ -179,7 +197,8 @@ export default function ExerciseDetail() {
             {exercise.name}
           </h1>
           <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-            {exercise.muscleGroup} · {exercise.equipment} · {exercise.difficulty}
+            {exercise.muscleGroup} · {exercise.equipment} ·{" "}
+            {exercise.difficulty}
           </p>
           <div style={{ marginTop: 10 }}>
             <StatusBadge status={exercise.status} />
@@ -309,6 +328,26 @@ export default function ExerciseDetail() {
               style={{ ...inputStyle, minHeight: 80 }}
             />
           </Field>
+          <Field label="Exercise image">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              onChange={(event) =>
+                setEditImage(event.target.files?.[0] || null)
+              }
+            />
+            {exercise.mediaUrl && (
+              <div
+                style={{
+                  color: COLORS.textSecondary,
+                  fontSize: 12,
+                  marginTop: 6,
+                }}
+              >
+                Current image is set. Choosing a new file replaces it.
+              </div>
+            )}
+          </Field>
           <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <button onClick={submitEdit} disabled={busy} style={btnPrimary}>
               Save Changes
@@ -352,11 +391,7 @@ export default function ExerciseDetail() {
             style={{ ...inputStyle, minHeight: 80, marginBottom: 14 }}
           />
           <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={submitReject}
-              disabled={busy}
-              style={btnDanger}
-            >
+            <button onClick={submitReject} disabled={busy} style={btnDanger}>
               Confirm Reject
             </button>
             <button
@@ -381,7 +416,10 @@ export default function ExerciseDetail() {
           marginBottom: 24,
         }}
       >
-        <InfoCard label="TYPE" value={exercise.isCustom ? "Custom" : "Built-in"} />
+        <InfoCard
+          label="TYPE"
+          value={exercise.isCustom ? "Custom" : "Built-in"}
+        />
         <InfoCard label="CREATOR" value={exercise.createdBy?.fullName || "—"} />
         <InfoCard label="FAVORITED BY" value={stats.favoriteCount} />
         <InfoCard label="USED IN PLANS" value={stats.planUsageCount} />

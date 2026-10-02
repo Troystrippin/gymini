@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import { COLORS, ROLE_COLORS } from "../theme";
 import { useAuth } from "../AuthContext";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -19,12 +20,11 @@ export default function Users() {
   }, [searchInput]);
 
   const fetchUsers = () => {
-    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (roleFilter) params.set("role", roleFilter);
 
-    api
+    return api
       .get(`/admin/users?${params.toString()}`)
       .then((res) => {
         setUsers(res.data.users || []);
@@ -40,6 +40,7 @@ export default function Users() {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, roleFilter]);
+  useAdminPolling(fetchUsers);
 
   const changeRole = async (userId, newRole) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { COLORS } from "../theme";
@@ -10,20 +10,46 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lockoutUntil, setLockoutUntil] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!lockoutUntil) return undefined;
+    const timer = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+      if (currentTime >= lockoutUntil) setLockoutUntil(null);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockoutUntil]);
+
+  const secondsRemaining = lockoutUntil
+    ? Math.max(0, Math.ceil((lockoutUntil - now) / 1000))
+    : 0;
+  const lockoutLabel = `${Math.floor(secondsRemaining / 60)}:${String(
+    secondsRemaining % 60,
+  ).padStart(2, "0")}`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setLockoutUntil(null);
     setLoading(true);
     try {
       await login(email, password);
       navigate("/dashboard");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Login failed. Please try again.",
-      );
+      const serverLockout = Date.parse(err.response?.data?.lockoutUntil || "");
+      if (Number.isFinite(serverLockout) && serverLockout > Date.now()) {
+        setNow(Date.now());
+        setLockoutUntil(serverLockout);
+      } else {
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Login failed. Please try again.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -63,7 +89,7 @@ export default function Login() {
           ◆◆ GYMINI
         </div>
 
-        {error && (
+        {(error || secondsRemaining > 0) && (
           <div
             style={{
               background: "rgba(229, 57, 53, 0.15)",
@@ -77,7 +103,9 @@ export default function Login() {
               textAlign: "center",
             }}
           >
-            {error}
+            {secondsRemaining > 0
+              ? `Account locked. Try again in ${lockoutLabel}.`
+              : error}
           </div>
         )}
 
@@ -143,7 +171,7 @@ export default function Login() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || secondsRemaining > 0}
           style={{
             width: "100%",
             padding: "14px",
@@ -152,11 +180,15 @@ export default function Login() {
             color: COLORS.text,
             fontSize: 15,
             fontWeight: 900,
-            opacity: loading ? 0.6 : 1,
-            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading || secondsRemaining > 0 ? 0.6 : 1,
+            cursor: loading || secondsRemaining > 0 ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Signing in..." : "Sign In"}
+          {loading
+            ? "Signing in..."
+            : secondsRemaining > 0
+              ? `Try again in ${lockoutLabel}`
+              : "Sign In"}
         </button>
       </form>
     </div>

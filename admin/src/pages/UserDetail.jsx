@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api";
 import { COLORS, ROLE_COLORS } from "../theme";
+import useAdminPolling from "../hooks/useAdminPolling";
 
 export default function UserDetail() {
   const { id } = useParams();
@@ -9,13 +10,22 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = async () => {
+    try {
+      const response = await api.get(`/admin/users/${id}`);
+      setData(response.data);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api
-      .get(`/admin/users/${id}`)
-      .then((res) => setData(res.data))
-      .catch((err) => setError(err.response?.data?.message || err.message))
-      .finally(() => setLoading(false));
+    load();
   }, [id]);
+  useAdminPolling(load);
 
   if (loading) {
     return <div style={{ color: COLORS.textSecondary }}>Loading user...</div>;
@@ -80,7 +90,7 @@ export default function UserDetail() {
             .split(" ")
             .filter(Boolean)
             .slice(0, 2)
-            .map((n) => n[0])
+            .map((name) => name[0])
             .join("")
             .toUpperCase()}
         </div>
@@ -188,7 +198,9 @@ export default function UserDetail() {
                     {key}
                   </td>
                   <td style={{ padding: "12px 8px", fontSize: 14 }}>
-                    {value === null || value === undefined ? "—" : String(value)}
+                    {value === null || value === undefined
+                      ? "—"
+                      : String(value)}
                   </td>
                 </tr>
               ))}

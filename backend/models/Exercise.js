@@ -22,6 +22,7 @@ const ExerciseSchema = new mongoose.Schema(
     equipment: { type: String, default: "Bodyweight", trim: true },
     description: { type: String, default: "" },
     mediaUrl: { type: String, default: null },
+    mediaPublicId: { type: String, default: null },
     difficulty: {
       type: String,
       enum: ["Beginner", "Intermediate", "Advanced"],

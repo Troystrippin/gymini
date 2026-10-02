@@ -8,6 +8,7 @@ const {
   logoutAllDevices,
   updateOnboarding,
   updateProfile,
+  updateProfileAvatar,
   changePassword,
   getMe,
   verifyEmail,
@@ -16,6 +17,7 @@ const {
   resetPassword,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
+const imageUpload = require("../middleware/imageUpload");
 const { handleValidation } = require("../middleware/validate");
 const {
   registerRules,
@@ -76,6 +78,7 @@ router.put(
   handleValidation,
   updateProfile,
 );
+router.put("/profile/avatar", protect, imageUpload, updateProfileAvatar);
 router.put(
   "/change-password",
   protect,

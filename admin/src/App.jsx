@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -14,6 +9,7 @@ import UserDetail from "./pages/UserDetail";
 import Analytics from "./pages/Analytics";
 import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
+import Meals from "./pages/Meals";
 
 const ALLOWED_ROLES = ["admin"];
 
@@ -64,6 +60,7 @@ export default function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="exercises" element={<Exercises />} />
             <Route path="exercises/:id" element={<ExerciseDetail />} />
+            <Route path="meals" element={<Meals />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

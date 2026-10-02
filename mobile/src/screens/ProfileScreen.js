@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState, useCallback } from "react";
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StatusBar,
@@ -157,7 +158,14 @@ export default function ProfileScreen({ navigation }) {
           ]}
         >
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>{initials || "?"}</Text>
+            {user?.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initials || "?"}</Text>
+            )}
           </View>
           <View style={styles.identity}>
             <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
@@ -312,6 +320,7 @@ const styles = StyleSheet.create({
     width: 68,
   },
   avatarText: { color: "#FFFFFF", fontSize: 24, fontWeight: "800" },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 32 },
   identity: { flex: 1, marginLeft: 16 },
   name: { fontSize: 20, fontWeight: "700", marginBottom: 4 },
   email: { fontSize: 14 },
