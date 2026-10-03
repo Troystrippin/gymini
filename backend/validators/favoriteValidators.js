@@ -1,4 +1,4 @@
-const { param, query } = require("express-validator");
+const { body, param, query } = require("express-validator");
 
 const favoriteExerciseIdParam = [
   param("id").isMongoId().withMessage("Invalid exercise id"),
@@ -17,7 +17,15 @@ const listFavoritesRules = [
     .toInt(),
 ];
 
+const favoriteStatusRules = [
+  body("exerciseIds")
+    .isArray({ min: 1, max: 100 })
+    .withMessage("exerciseIds must contain between 1 and 100 exercise ids"),
+  body("exerciseIds.*").isMongoId().withMessage("Invalid exercise id"),
+];
+
 module.exports = {
+  favoriteStatusRules,
   favoriteExerciseIdParam,
   listFavoritesRules,
 };

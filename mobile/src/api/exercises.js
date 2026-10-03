@@ -34,6 +34,11 @@ export const exercisesApi = {
   favoriteStatus: (exerciseId) =>
     api.get(`/exercises/${exerciseId}/favorite`).then((r) => r.data),
 
+  favoriteStatuses: (exerciseIds) =>
+    api
+      .post("/exercises/favorites/status", { exerciseIds })
+      .then((r) => r.data),
+
   listFavorites: (page = 1, limit = 20) => {
     const params = {};
     const p = Number(page);

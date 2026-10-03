@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import api from "../api/api";
+import { exercisesApi } from "../api/exercises";
 import FavoriteButton from "../components/FavoriteButton";
 import ExerciseDetailModal from "../components/ExerciseDetailModal";
 
@@ -57,6 +58,7 @@ export default function BrowseExercisesScreen() {
     usePlanDraft();
 
   const [exercises, setExercises] = useState([]);
+  const [favoritedExerciseIds, setFavoritedExerciseIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -85,6 +87,25 @@ export default function BrowseExercisesScreen() {
           ? res.data.exercises
           : [];
       setExercises(list);
+      if (list.length === 0) {
+        setFavoritedExerciseIds(new Set());
+        return;
+      }
+      try {
+        const favoriteData = await exercisesApi.favoriteStatuses(
+          list.map((exercise) => exercise._id).filter(Boolean),
+        );
+        setFavoritedExerciseIds(
+          new Set(favoriteData.favoritedExerciseIds || []),
+        );
+      } catch (favoriteError) {
+        console.warn(
+          "[favorite] batch status failed",
+          favoriteError?.response?.status,
+          favoriteError?.response?.data || favoriteError?.message,
+        );
+        setFavoritedExerciseIds(new Set());
+      }
     } catch (err) {
       setLoadError(err.response?.data?.message || err.message);
       setExercises([]);
@@ -125,6 +146,15 @@ export default function BrowseExercisesScreen() {
     } else {
       addExercise(exercise);
     }
+  };
+
+  const updateFavoriteStatus = (exerciseId, favorited) => {
+    setFavoritedExerciseIds((current) => {
+      const updated = new Set(current);
+      if (favorited) updated.add(exerciseId);
+      else updated.delete(exerciseId);
+      return updated;
+    });
   };
 
   const chooseExerciseImage = async () => {
@@ -227,7 +257,14 @@ export default function BrowseExercisesScreen() {
             )}
           </View>
         </View>
-        <FavoriteButton exerciseId={item._id} size={20} />
+        <FavoriteButton
+          exerciseId={item._id}
+          size={20}
+          initialFavorited={favoritedExerciseIds.has(item._id)}
+          onFavoriteChange={(favorited) =>
+            updateFavoriteStatus(item._id, favorited)
+          }
+        />
         <TouchableOpacity
           onPress={() => toggleAdd(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -627,6 +664,11 @@ export default function BrowseExercisesScreen() {
         visible={!!activeExercise}
         exercise={activeExercise}
         onClose={() => setActiveExercise(null)}
+        favorited={favoritedExerciseIds.has(activeExercise?._id)}
+        onFavoriteChange={(favorited) =>
+          activeExercise &&
+          updateFavoriteStatus(activeExercise._id, favorited)
+        }
       />
     </SafeAreaView>
   );

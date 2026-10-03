@@ -12,6 +12,7 @@ const {
   unfavoriteExercise,
   listFavorites,
   getFavoriteStatus,
+  getFavoriteStatuses,
 } = require("../controllers/favoriteController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -23,6 +24,7 @@ const {
   listExercisesRules,
 } = require("../validators/exerciseValidators");
 const {
+  favoriteStatusRules,
   favoriteExerciseIdParam,
   listFavoritesRules,
 } = require("../validators/favoriteValidators");
@@ -52,6 +54,14 @@ router.get(
   listFavoritesRules,
   handleValidation,
   listFavorites,
+);
+
+router.post(
+  "/favorites/status",
+  protect,
+  favoriteStatusRules,
+  handleValidation,
+  getFavoriteStatuses,
 );
 
 router.post(

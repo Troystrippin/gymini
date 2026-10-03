@@ -185,10 +185,31 @@ const getFavoriteStatus = async (req, res, next) => {
   }
 };
 
+// POST /api/exercises/favorites/status
+const getFavoriteStatuses = async (req, res, next) => {
+  try {
+    const favorites = await FavoriteExercise.find({
+      userId: req.user._id,
+      exerciseId: { $in: req.body.exerciseIds },
+    })
+      .select("exerciseId")
+      .lean();
+
+    res.json({
+      favoritedExerciseIds: favorites.map((favorite) =>
+        String(favorite.exerciseId),
+      ),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   favoriteExercise,
   unfavoriteExercise,
   listFavorites,
   getFavoriteStatus,
+  getFavoriteStatuses,
   MAX_FAVORITES_PER_USER,
 };

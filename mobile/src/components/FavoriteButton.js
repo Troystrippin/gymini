@@ -6,12 +6,17 @@ export default function FavoriteButton({
   exerciseId,
   size = 24,
   color = "#f5a623",
+  initialFavorited,
+  onFavoriteChange,
 }) {
-  const [favorited, setFavorited] = useState(false);
+  const [favorited, setFavorited] = useState(Boolean(initialFavorited));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!exerciseId) return;
+    if (!exerciseId || initialFavorited !== undefined) {
+      setFavorited(Boolean(initialFavorited));
+      return;
+    }
     let cancelled = false;
     exercisesApi
       .favoriteStatus(exerciseId)
@@ -28,7 +33,7 @@ export default function FavoriteButton({
     return () => {
       cancelled = true;
     };
-  }, [exerciseId]);
+  }, [exerciseId, initialFavorited]);
 
   const toggle = async () => {
     if (busy || !exerciseId) return;
@@ -41,6 +46,7 @@ export default function FavoriteButton({
       } else {
         await exercisesApi.unfavorite(exerciseId);
       }
+      onFavoriteChange?.(next);
     } catch (err) {
       console.warn(
         "[favorite] toggle failed",
