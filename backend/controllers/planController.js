@@ -30,6 +30,23 @@ const savePlan = async (req, res, next) => {
         try {
           const found = await Exercise.findById(raw.exerciseId);
           if (found) {
+            // Block pending / rejected custom exercises from being saved.
+            if (
+              found.isCustom &&
+              (found.status === "pending" || found.status === "rejected")
+            ) {
+              return res.status(400).json({
+                message: `Exercise "${found.name}" is ${
+                  found.status === "pending"
+                    ? "pending admin approval"
+                    : "rejected"
+                } and cannot be added to a plan yet.`,
+                code: "EXERCISE_NOT_APPROVED",
+                exerciseId: found._id,
+                status: found.status,
+              });
+            }
+
             catalogRef = found._id;
             muscleGroup = muscleGroup || found.muscleGroup;
             description = description || found.description;
@@ -83,8 +100,7 @@ const savePlan = async (req, res, next) => {
       return res.status(404).json({ message: "Plan not found" });
     }
 
-    // Auto-activate ONLY on create. Editing an old plan shouldn't hijack
-    // the user's currently active plan.
+    // Auto-activate ONLY on create.
     if (!isEdit) {
       await User.findByIdAndUpdate(req.user._id, {
         activePlanId: plan._id,

@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Alert,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,8 +39,6 @@ export default function PlanScreen() {
   const accentTextColor = "#FFFFFF";
   const navigation = useNavigation();
 
-  // Draft state lives in the context so it survives navigating to
-  // BrowseExercises and back. Do NOT use local useState for these.
   const {
     draftExercises,
     draftName,
@@ -48,21 +47,26 @@ export default function PlanScreen() {
     setEditingPlanId,
     removeExercise,
     updateExercise,
-    addCustomExercise,
+    addExercise,
     replaceDraft,
     reorderExercises,
     loadPlanForEdit,
     savePlan,
     savingPlan,
+    unapprovedExercises,
+    hasUnapprovedExercises,
+    refreshDraftStatuses,
+    refreshingStatuses,
+    rejectedNotices,
+    clearRejectedNotices,
   } = usePlanDraft();
 
-  // Screen-local state (does not need to survive navigation)
   const [savedPlans, setSavedPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [activeSavedPlan, setActiveSavedPlan] = useState(null);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Custom exercise modal state
   const [customModalVisible, setCustomModalVisible] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customGroup, setCustomGroup] = useState("Chest");
@@ -90,6 +94,29 @@ export default function PlanScreen() {
     }, [fetchSavedPlans]),
   );
 
+  // Rejected-notice alert
+  useEffect(() => {
+    if (rejectedNotices.length > 0) {
+      const lines = rejectedNotices
+        .map((r) => `• ${r.name}${r.reason ? ` — ${r.reason}` : ""}`)
+        .join("\n");
+      Alert.alert(
+        "Exercise rejected",
+        `The following exercise(s) were rejected and removed from your plan:\n\n${lines}`,
+        [{ text: "OK", onPress: clearRejectedNotices }],
+      );
+    }
+  }, [rejectedNotices, clearRejectedNotices]);
+
+  const onPullRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchSavedPlans(), refreshDraftStatuses()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchSavedPlans, refreshDraftStatuses]);
+
   const isEditing = Boolean(editingPlanId);
   const hasDraftWork = draftExercises.length > 0 || draftName.trim().length > 0;
 
@@ -97,11 +124,14 @@ export default function PlanScreen() {
     const trimmed = draftName.trim();
     if (!trimmed || draftExercises.length === 0) return;
 
-    console.log("[save]", {
-      editingPlanId,
-      draftName: trimmed,
-      count: draftExercises.length,
-    });
+    if (hasUnapprovedExercises) {
+      const names = unapprovedExercises.map((e) => e.name).join(", ");
+      Alert.alert(
+        "Pending approval",
+        `Cannot save while these exercises are awaiting approval: ${names}.`,
+      );
+      return;
+    }
 
     try {
       await savePlan(trimmed, editingPlanId);
@@ -132,17 +162,17 @@ export default function PlanScreen() {
         difficulty: customDiff,
         description: customDescription.trim(),
       });
-      addCustomExercise(
-        res.data.name,
-        res.data.description || "",
-        res.data.muscleGroup,
-      );
+      addExercise(res.data);
       setCustomName("");
       setCustomGroup("Chest");
       setCustomEquip("Bodyweight");
       setCustomDiff("Beginner");
       setCustomDescription("");
       setCustomModalVisible(false);
+      Alert.alert(
+        "Submitted for review",
+        "Your custom exercise is pending admin approval and can't be saved to a plan until approved.",
+      );
     } catch (err) {
       Alert.alert(
         "Could not create",
@@ -219,76 +249,94 @@ export default function PlanScreen() {
     navigation.navigate("WorkoutSession");
   };
 
-  const renderDraftRow = ({ item: exercise, drag, isActive }) => (
-    <View
-      style={[
-        styles.planCard,
-        {
-          backgroundColor: colors.cardBackground,
-          borderColor: isActive ? colors.primary : colors.border,
-          opacity: isActive ? 0.85 : 1,
-        },
-      ]}
-    >
-      <Pressable
-        onLongPress={drag}
-        delayLongPress={150}
-        hitSlop={10}
-        style={styles.dragHandle}
+  const renderDraftRow = ({ item: exercise, drag, isActive }) => {
+    const isPending = exercise.status === "pending";
+    const isRejected = exercise.status === "rejected";
+    return (
+      <View
+        style={[
+          styles.planCard,
+          {
+            backgroundColor: colors.cardBackground,
+            borderColor: isActive ? colors.primary : colors.border,
+            opacity: isActive ? 0.85 : 1,
+          },
+        ]}
       >
-        <Text style={[styles.dragHandleText, { color: colors.textSecondary }]}>
-          ☰
-        </Text>
-      </Pressable>
-
-      <View style={styles.planContent}>
-        <View style={styles.planHeader}>
-          <View style={styles.exerciseInfo}>
-            <Text style={[styles.exerciseName, { color: colors.text }]}>
-              {exercise.name}
-            </Text>
-            {exercise.muscleGroup ? (
-              <Text
-                style={[styles.exerciseMuscle, { color: colors.textSecondary }]}
-              >
-                {exercise.muscleGroup}
-              </Text>
-            ) : null}
-          </View>
-          <Pressable
-            style={styles.removeButton}
-            onPress={() => removeExercise(exercise.exerciseId)}
+        <Pressable
+          onLongPress={drag}
+          delayLongPress={150}
+          hitSlop={10}
+          style={styles.dragHandle}
+        >
+          <Text
+            style={[styles.dragHandleText, { color: colors.textSecondary }]}
           >
-            <Text style={[styles.remove, { color: colors.textSecondary }]}>
-              ✕
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.steppers}>
-          <Stepper
-            label="Sets"
-            value={exercise.sets}
-            onChange={(value) =>
-              updateExercise(exercise.exerciseId, "sets", value)
-            }
-          />
-          <Stepper
-            label="Reps"
-            value={exercise.reps}
-            onChange={(value) =>
-              updateExercise(exercise.exerciseId, "reps", value)
-            }
-          />
+            ☰
+          </Text>
+        </Pressable>
+
+        <View style={styles.planContent}>
+          <View style={styles.planHeader}>
+            <View style={styles.exerciseInfo}>
+              <Text style={[styles.exerciseName, { color: colors.text }]}>
+                {exercise.name}
+              </Text>
+              <View style={styles.metaRow}>
+                {exercise.muscleGroup ? (
+                  <Text
+                    style={[
+                      styles.exerciseMuscle,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {exercise.muscleGroup}
+                  </Text>
+                ) : null}
+                {isPending && (
+                  <Text style={styles.pendingPill}>⏳ PENDING</Text>
+                )}
+                {isRejected && (
+                  <Text style={styles.rejectedPill}>🚫 REJECTED</Text>
+                )}
+              </View>
+            </View>
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => removeExercise(exercise.exerciseId)}
+            >
+              <Text style={[styles.remove, { color: colors.textSecondary }]}>
+                ✕
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.steppers}>
+            <Stepper
+              label="Sets"
+              value={exercise.sets}
+              onChange={(value) =>
+                updateExercise(exercise.exerciseId, "sets", value)
+              }
+            />
+            <Stepper
+              label="Reps"
+              value={exercise.reps}
+              onChange={(value) =>
+                updateExercise(exercise.exerciseId, "reps", value)
+              }
+            />
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const saveLabel = (() => {
     if (savingPlan) return null;
     if (!draftName.trim() && draftExercises.length === 0) return "Save Plan";
     if (!draftName.trim()) return "Save Plan (add a name)";
     if (draftExercises.length === 0) return "Save Plan (add exercises)";
+    if (hasUnapprovedExercises) return "Save Plan (awaiting approval)";
     return isEditing ? "Update Plan" : "Save Plan";
   })();
 
@@ -297,10 +345,16 @@ export default function PlanScreen() {
       <NestableScrollContainer
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onPullRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
 
-        {/* ── Editing banner ─────────────────────────────────── */}
         {isEditing && (
           <View
             style={[
@@ -321,7 +375,6 @@ export default function PlanScreen() {
           </View>
         )}
 
-        {/* ── Current Draft ──────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
             PLAN NAME
@@ -363,11 +416,28 @@ export default function PlanScreen() {
                 </Text>
               </View>
             </View>
-            {draftExercises.length > 1 && (
+            {hasUnapprovedExercises ? (
+              <Pressable
+                onPress={refreshDraftStatuses}
+                disabled={refreshingStatuses}
+                hitSlop={8}
+                style={styles.refreshBtn}
+              >
+                {refreshingStatuses ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text
+                    style={[styles.refreshBtnText, { color: colors.primary }]}
+                  >
+                    ↻ Check approval
+                  </Text>
+                )}
+              </Pressable>
+            ) : draftExercises.length > 1 ? (
               <Text style={[styles.hintText, { color: colors.textSecondary }]}>
                 Long-press ☰ to reorder
               </Text>
-            )}
+            ) : null}
           </View>
 
           {draftExercises.length === 0 ? (
@@ -403,6 +473,31 @@ export default function PlanScreen() {
             />
           )}
 
+          {hasUnapprovedExercises && (
+            <View
+              style={[styles.warningBanner, { borderColor: colors.border }]}
+            >
+              <Text style={styles.warningTitle}>⏳ Pending approval</Text>
+              <Text
+                style={[styles.warningText, { color: colors.textSecondary }]}
+              >
+                These exercises can't be saved to a plan until an admin
+                approves them:
+              </Text>
+              {unapprovedExercises.map((e) => (
+                <Text
+                  key={e.exerciseId}
+                  style={[styles.warningItem, { color: colors.text }]}
+                >
+                  • {e.name}{" "}
+                  <Text style={{ color: colors.textSecondary }}>
+                    ({e.status})
+                  </Text>
+                </Text>
+              ))}
+            </View>
+          )}
+
           <Pressable
             onPress={() => navigation.navigate("BrowseExercises")}
             style={[styles.secondaryButton, { borderColor: colors.primary }]}
@@ -426,13 +521,18 @@ export default function PlanScreen() {
           <Pressable
             onPress={handleSavePlan}
             disabled={
-              !draftName.trim() || draftExercises.length === 0 || savingPlan
+              !draftName.trim() ||
+              draftExercises.length === 0 ||
+              savingPlan ||
+              hasUnapprovedExercises
             }
             style={[
               styles.saveButton,
               {
                 backgroundColor:
-                  draftName.trim() && draftExercises.length > 0
+                  draftName.trim() &&
+                  draftExercises.length > 0 &&
+                  !hasUnapprovedExercises
                     ? colors.primary
                     : colors.border,
                 opacity: savingPlan ? 0.6 : 1,
@@ -449,7 +549,6 @@ export default function PlanScreen() {
           </Pressable>
         </View>
 
-        {/* ── Saved Plans ────────────────────────────────────── */}
         <View style={[styles.savedSection, { marginTop: 28 }]}>
           <View style={styles.savedHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -549,7 +648,6 @@ export default function PlanScreen() {
         </View>
       </NestableScrollContainer>
 
-      {/* ── Saved Plan Detail Modal ────────────────────────── */}
       <Modal
         visible={Boolean(activeSavedPlan)}
         transparent
@@ -687,7 +785,6 @@ export default function PlanScreen() {
         </View>
       </Modal>
 
-      {/* ── Custom Exercise Modal ─────────────────────────── */}
       <Modal
         visible={customModalVisible}
         transparent
@@ -916,6 +1013,8 @@ const styles = StyleSheet.create({
   },
   countPillText: { fontSize: 12, fontWeight: "800" },
   hintText: { fontSize: 12 },
+  refreshBtn: { paddingHorizontal: 4, paddingVertical: 4 },
+  refreshBtnText: { fontSize: 13, fontWeight: "700" },
 
   planNameInput: {
     borderRadius: 10,
@@ -934,6 +1033,53 @@ const styles = StyleSheet.create({
   },
   emptyDraftText: { fontSize: 14, fontWeight: "700" },
   emptyDraftHint: { fontSize: 12, marginTop: 4, textAlign: "center" },
+
+  warningBanner: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "rgba(251,140,0,0.08)",
+    gap: 4,
+  },
+  warningTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#FB8C00",
+    marginBottom: 2,
+  },
+  warningText: { fontSize: 12, lineHeight: 16, marginBottom: 4 },
+  warningItem: { fontSize: 13, fontWeight: "600" },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 4,
+    gap: 6,
+  },
+  pendingPill: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#FB8C00",
+    backgroundColor: "rgba(251,140,0,0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    letterSpacing: 0.5,
+    overflow: "hidden",
+  },
+  rejectedPill: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#E53935",
+    backgroundColor: "rgba(229,57,53,0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    letterSpacing: 0.5,
+    overflow: "hidden",
+  },
 
   dragList: { marginBottom: -10 },
   planCard: {

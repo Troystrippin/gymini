@@ -3,12 +3,13 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useMemo,
+  useRef,
 } from "react";
 import api from "../api/api";
 
 const PlanDraftContext = createContext(null);
 
-// Collision-safe id for a custom exercise.
 const makeCustomId = () =>
   `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -18,6 +19,13 @@ export function PlanDraftProvider({ children }) {
   const [editingPlanId, setEditingPlanId] = useState(null);
   const [savingPlan, setSavingPlan] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [refreshingStatuses, setRefreshingStatuses] = useState(false);
+  const [rejectedNotices, setRejectedNotices] = useState([]);
+
+  // Mirror draftExercises in a ref so refreshDraftStatuses can read the
+  // latest value without depending on the array identity.
+  const draftRef = useRef(draftExercises);
+  draftRef.current = draftExercises;
 
   const addExercise = useCallback((exercise) => {
     setDraftExercises((prev) => {
@@ -31,7 +39,8 @@ export function PlanDraftProvider({ children }) {
           description: exercise.description || "",
           sets: 3,
           reps: 10,
-          isCustom: false,
+          isCustom: Boolean(exercise.isCustom),
+          status: exercise.status || "approved",
         },
       ];
     });
@@ -51,6 +60,7 @@ export function PlanDraftProvider({ children }) {
           sets: 3,
           reps: 10,
           isCustom: true,
+          status: "pending",
         },
       ]);
     },
@@ -102,10 +112,6 @@ export function PlanDraftProvider({ children }) {
     [],
   );
 
-  /**
-   * Load a saved plan into the draft for editing. Sets the name,
-   * exercises, and editingPlanId so Save becomes a PUT, not a POST.
-   */
   const loadPlanForEdit = useCallback((plan) => {
     setDraftExercises(
       (plan.exercises || []).map((ex, idx) => ({
@@ -116,6 +122,7 @@ export function PlanDraftProvider({ children }) {
         sets: ex.sets,
         reps: ex.reps,
         isCustom: ex.isCustom,
+        status: ex.status || "approved",
       })),
     );
     setDraftName(plan.name || "");
@@ -123,11 +130,100 @@ export function PlanDraftProvider({ children }) {
     setSaveError(null);
   }, []);
 
+  const unapprovedExercises = useMemo(
+    () =>
+      draftExercises.filter(
+        (e) => e.status === "pending" || e.status === "rejected",
+      ),
+    [draftExercises],
+  );
+
+  const hasUnapprovedExercises = unapprovedExercises.length > 0;
+
+  // Stable callback — reads current draft via ref, so its identity never
+  // changes. Also removes rejected exercises from the draft and queues a
+  // notification so the UI can inform the user.
+  const refreshDraftStatuses = useCallback(async () => {
+    const current = draftRef.current || [];
+    const candidates = current.filter(
+      (e) =>
+        e.exerciseId &&
+        !String(e.exerciseId).startsWith("custom-") &&
+        (e.status === "pending" || e.status === "rejected"),
+    );
+    if (candidates.length === 0) return;
+
+    setRefreshingStatuses(true);
+    try {
+      const results = await Promise.all(
+        candidates.map((e) =>
+          api
+            .get(`/exercises/${e.exerciseId}`)
+            .then(
+              (res) => ({
+                id: e.exerciseId,
+                status: res.data.status,
+                reason: res.data.rejectionReason || null,
+              }),
+              () => null,
+            ),
+        ),
+      );
+
+      const rejectedIds = new Set(
+        results
+          .filter((r) => r && r.status === "rejected")
+          .map((r) => r.id),
+      );
+
+      const rejectedItems = current
+        .filter((e) => rejectedIds.has(e.exerciseId))
+        .map((e) => {
+          const r = results.find((x) => x && x.id === e.exerciseId);
+          return { name: e.name, reason: r?.reason || null };
+        });
+
+      setDraftExercises((prev) => {
+        let next = prev.filter((ex) => !rejectedIds.has(ex.exerciseId));
+        next = next.map((ex) => {
+          const match = results.find(
+            (r) => r && r.id === ex.exerciseId && r.status !== ex.status,
+          );
+          return match ? { ...ex, status: match.status } : ex;
+        });
+        return next;
+      });
+
+      if (rejectedItems.length > 0) {
+        setRejectedNotices(rejectedItems);
+      }
+    } catch (err) {
+      console.warn("[draft] refresh statuses failed:", err.message);
+    } finally {
+      setRefreshingStatuses(false);
+    }
+  }, []);
+
+  const clearRejectedNotices = useCallback(() => {
+    setRejectedNotices([]);
+  }, []);
+
   const savePlan = useCallback(
     async (planName = "My Plan", planId = null) => {
       if (draftExercises.length === 0) {
         throw new Error("Add at least one exercise before saving.");
       }
+
+      const unapproved = draftExercises.filter(
+        (e) => e.status === "pending" || e.status === "rejected",
+      );
+      if (unapproved.length > 0) {
+        const names = unapproved.map((e) => e.name).join(", ");
+        const msg = `Cannot save plan while these exercises are awaiting approval: ${names}. Remove them or wait for approval.`;
+        setSaveError(msg);
+        throw new Error(msg);
+      }
+
       try {
         setSavingPlan(true);
         setSaveError(null);
@@ -189,6 +285,12 @@ export function PlanDraftProvider({ children }) {
         savePlan,
         savingPlan,
         saveError,
+        unapprovedExercises,
+        hasUnapprovedExercises,
+        refreshDraftStatuses,
+        refreshingStatuses,
+        rejectedNotices,
+        clearRejectedNotices,
       }}
     >
       {children}
