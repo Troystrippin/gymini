@@ -9,6 +9,7 @@ import UserDetail from "./pages/UserDetail";
 import Analytics from "./pages/Analytics";
 import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
+import ActivityLogs from "./pages/ActivityLogs";
 import Meals from "./pages/Meals";
 
 const ALLOWED_ROLES = ["admin"];
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="exercises" element={<Exercises />} />
             <Route path="exercises/:id" element={<ExerciseDetail />} />
+            <Route path="activity-logs" element={<ActivityLogs />} />
             <Route path="meals" element={<Meals />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

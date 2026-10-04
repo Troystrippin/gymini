@@ -23,6 +23,8 @@ const MUSCLE_GROUPS = [
   "Other",
 ];
 
+const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
+
 export function StatusBadge({ status }) {
   return (
     <span
@@ -54,6 +56,19 @@ export default function Exercises() {
   const [typeFilter, setTypeFilter] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
   const [page, setPage] = useState(1);
+
+  // Create built-in modal state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    muscleGroup: "Chest",
+    equipment: "Bodyweight",
+    difficulty: "Beginner",
+    description: "",
+  });
+  const [createImage, setCreateImage] = useState(null);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -102,17 +117,75 @@ export default function Exercises() {
 
   useAdminPolling(() => Promise.all([fetchStats(), fetchExercises()]));
 
+  const openCreate = () => {
+    setCreateForm({
+      name: "",
+      muscleGroup: "Chest",
+      equipment: "Bodyweight",
+      difficulty: "Beginner",
+      description: "",
+    });
+    setCreateImage(null);
+    setCreateError("");
+    setShowCreate(true);
+  };
+
+  const submitCreate = async () => {
+    if (!createForm.name.trim()) {
+      setCreateError("Exercise name is required");
+      return;
+    }
+    setCreating(true);
+    setCreateError("");
+    try {
+      let payload;
+      let config;
+      if (createImage) {
+        payload = new FormData();
+        Object.entries(createForm).forEach(([k, v]) =>
+          payload.append(k, v ?? ""),
+        );
+        payload.append("image", createImage);
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      } else {
+        payload = createForm;
+      }
+      await api.post("/admin/exercises", payload, config);
+      setShowCreate(false);
+      setCreateImage(null);
+      fetchStats();
+      fetchExercises();
+    } catch (err) {
+      setCreateError(err.response?.data?.message || err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / 30));
 
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
-          Exercises
-        </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-          Moderate custom exercises and manage the catalog
-        </p>
+      <div
+        style={{
+          marginBottom: 28,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
+            Exercises
+          </h1>
+          <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+            Moderate custom exercises and manage the catalog
+          </p>
+        </div>
+        <button onClick={openCreate} style={btnPrimary}>
+          + Add Built-in Exercise
+        </button>
       </div>
 
       {stats && (
@@ -341,6 +414,176 @@ export default function Exercises() {
           </button>
         </div>
       )}
+
+      {/* ── Create Built-in Exercise Modal ── */}
+      {showCreate && (
+        <div
+          style={modalOverlay}
+          onClick={() => !creating && setShowCreate(false)}
+        >
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4 }}>
+              Add Built-in Exercise
+            </h2>
+            <p
+              style={{
+                color: COLORS.textSecondary,
+                fontSize: 13,
+                marginBottom: 20,
+              }}
+            >
+              This exercise will be added to the shared catalog and available to
+              all users immediately.
+            </p>
+
+            {createError && (
+              <div
+                style={{
+                  background: "rgba(229, 57, 53, 0.15)",
+                  border: "1px solid rgba(229, 57, 53, 0.4)",
+                  color: COLORS.danger,
+                  padding: 12,
+                  borderRadius: 10,
+                  marginBottom: 16,
+                  fontSize: 13,
+                }}
+              >
+                {createError}
+              </div>
+            )}
+
+            <Field label="Name">
+              <input
+                value={createForm.name}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, name: e.target.value })
+                }
+                placeholder="e.g. Barbell Back Squat"
+                style={inputStyle}
+                autoFocus
+              />
+            </Field>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+              }}
+            >
+              <Field label="Muscle Group">
+                <select
+                  value={createForm.muscleGroup}
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      muscleGroup: e.target.value,
+                    })
+                  }
+                  style={inputStyle}
+                >
+                  {MUSCLE_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Equipment">
+                <input
+                  value={createForm.equipment}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, equipment: e.target.value })
+                  }
+                  placeholder="e.g. Barbell"
+                  style={inputStyle}
+                />
+              </Field>
+            </div>
+
+            <Field label="Difficulty">
+              <select
+                value={createForm.difficulty}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, difficulty: e.target.value })
+                }
+                style={inputStyle}
+              >
+                {DIFFICULTIES.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Description">
+              <textarea
+                value={createForm.description}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, description: e.target.value })
+                }
+                placeholder="How to perform this exercise..."
+                rows={4}
+                style={{ ...inputStyle, minHeight: 90 }}
+              />
+            </Field>
+
+            <Field label="Image (optional)">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={(e) => setCreateImage(e.target.files?.[0] || null)}
+              />
+            </Field>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end",
+                marginTop: 20,
+              }}
+            >
+              <button
+                onClick={() => setShowCreate(false)}
+                disabled={creating}
+                style={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitCreate}
+                disabled={creating}
+                style={{ ...btnPrimary, opacity: creating ? 0.6 : 1 }}
+              >
+                {creating ? "Creating..." : "Create Exercise"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: 1,
+          color: COLORS.textSecondary,
+          marginBottom: 6,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      {children}
     </div>
   );
 }
@@ -387,3 +630,59 @@ const pagerBtn = (disabled) => ({
   opacity: disabled ? 0.4 : 1,
   cursor: disabled ? "not-allowed" : "pointer",
 });
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: `1px solid ${COLORS.border}`,
+  background: COLORS.background,
+  color: COLORS.text,
+  fontSize: 14,
+};
+
+const btnPrimary = {
+  padding: "11px 20px",
+  borderRadius: 10,
+  background: COLORS.primary,
+  color: COLORS.text,
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const btnSecondary = {
+  padding: "11px 20px",
+  borderRadius: 10,
+  background: "transparent",
+  border: `1px solid ${COLORS.border}`,
+  color: COLORS.text,
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const modalOverlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1000,
+  padding: 20,
+};
+
+const modalCard = {
+  background: COLORS.cardBackground,
+  borderRadius: 16,
+  padding: 28,
+  maxWidth: 540,
+  width: "100%",
+  maxHeight: "90vh",
+  overflowY: "auto",
+  border: `1px solid ${COLORS.border}`,
+};

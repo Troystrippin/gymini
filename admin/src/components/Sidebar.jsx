@@ -58,6 +58,9 @@ export default function Sidebar() {
         <NavLink to="/exercises" style={linkStyle}>
           💪 Exercises
         </NavLink>
+        <NavLink to="/activity-logs" style={linkStyle}>
+          📋 Activity Logs
+        </NavLink>
         <NavLink to="/meals" style={linkStyle}>
           🍽 Meals
         </NavLink>

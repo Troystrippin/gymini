@@ -3,6 +3,7 @@ const Exercise = require("../models/Exercise");
 const WorkoutPlan = require("../models/WorkoutPlan");
 const FavoriteExercise = require("../models/FavoriteExercise");
 const { uploadImage, deleteImage } = require("../lib/cloudinary");
+const { logAdminAction } = require("../utils/auditLog");
 
 const MAX_LIMIT = 100;
 const MAX_SKIP = 10000;
@@ -104,6 +105,80 @@ const getExerciseById = async (req, res, next) => {
   }
 };
 
+// POST /api/admin/exercises — admin creates a built-in exercise
+const createExercise = async (req, res, next) => {
+  let uploadedImage;
+  try {
+    const { name, muscleGroup, equipment, difficulty, description, mediaUrl } =
+      req.body;
+
+    // Prevent duplicate built-in exercises with same name + muscle.
+    const existing = await Exercise.findOne({
+      name: name.trim(),
+      muscleGroup,
+      isCustom: false,
+    }).lean();
+    if (existing) {
+      return res.status(409).json({
+        message:
+          "A built-in exercise with that name and muscle group already exists",
+        exercise: existing,
+      });
+    }
+
+    if (req.file) {
+      uploadedImage = await uploadImage(req.file.buffer, "gymini/exercises");
+    }
+
+    const exercise = await Exercise.create({
+      name: name.trim(),
+      muscleGroup,
+      equipment: equipment?.trim() || "Bodyweight",
+      difficulty: difficulty || "Beginner",
+      description: description?.trim() || "",
+      mediaUrl: uploadedImage?.secure_url || mediaUrl || null,
+      mediaPublicId: uploadedImage?.public_id || null,
+      isCustom: false,
+      status: "approved",
+      createdBy: null,
+      moderatedBy: req.user._id,
+      moderatedAt: new Date(),
+    });
+
+    console.log(
+      `[admin] ${req.user.email} created built-in exercise=${exercise._id} "${exercise.name}"`,
+    );
+
+    await logAdminAction(req, {
+      action: "exercise.create",
+      targetType: "exercise",
+      targetId: exercise._id,
+      targetLabel: exercise.name,
+      metadata: {
+        muscleGroup: exercise.muscleGroup,
+        difficulty: exercise.difficulty,
+        hasImage: Boolean(exercise.mediaUrl),
+      },
+    });
+
+    res.status(201).json({ message: "Built-in exercise created", exercise });
+  } catch (err) {
+    if (uploadedImage?.public_id) {
+      await deleteImage(uploadedImage.public_id).catch(() => {});
+    }
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        message: "Invalid exercise data",
+        errors: Object.values(err.errors).map((e) => ({
+          field: e.path,
+          message: e.message,
+        })),
+      });
+    }
+    next(err);
+  }
+};
+
 // PATCH /api/admin/exercises/:id/approve
 const approveExercise = async (req, res, next) => {
   try {
@@ -131,6 +206,14 @@ const approveExercise = async (req, res, next) => {
     console.log(
       `[admin] ${req.user.email} approved exercise=${exercise._id} "${exercise.name}"`,
     );
+
+    await logAdminAction(req, {
+      action: "exercise.approve",
+      targetType: "exercise",
+      targetId: exercise._id,
+      targetLabel: exercise.name,
+    });
+
     res.json({ message: "Exercise approved", exercise });
   } catch (err) {
     next(err);
@@ -166,6 +249,15 @@ const rejectExercise = async (req, res, next) => {
     console.log(
       `[admin] ${req.user.email} rejected exercise=${exercise._id} reason="${reason}"`,
     );
+
+    await logAdminAction(req, {
+      action: "exercise.reject",
+      targetType: "exercise",
+      targetId: exercise._id,
+      targetLabel: exercise.name,
+      metadata: { reason: reason || null },
+    });
+
     res.json({ message: "Exercise rejected", exercise });
   } catch (err) {
     next(err);
@@ -227,6 +319,18 @@ const updateExercise = async (req, res, next) => {
     }
 
     console.log(`[admin] ${req.user.email} updated exercise=${exercise._id}`);
+
+    await logAdminAction(req, {
+      action: "exercise.update",
+      targetType: "exercise",
+      targetId: exercise._id,
+      targetLabel: exercise.name,
+      metadata: {
+        fieldsUpdated: Object.keys(update),
+        imageReplaced: Boolean(req.file),
+      },
+    });
+
     res.json({ message: "Exercise updated", exercise });
   } catch (err) {
     if (uploadedImage?.public_id) {
@@ -281,6 +385,15 @@ const deleteExercise = async (req, res, next) => {
     console.log(
       `[admin] ${req.user.email} deleted exercise=${id} "${exercise.name}" isCustom=${exercise.isCustom}`,
     );
+
+    await logAdminAction(req, {
+      action: "exercise.delete",
+      targetType: "exercise",
+      targetId: exercise._id,
+      targetLabel: exercise.name,
+      metadata: { isCustom: exercise.isCustom },
+    });
+
     res.json({ message: "Exercise deleted", exerciseId: id });
   } catch (err) {
     next(err);
@@ -291,6 +404,7 @@ module.exports = {
   listExercises,
   getExerciseStats,
   getExerciseById,
+  createExercise,
   approveExercise,
   rejectExercise,
   updateExercise,

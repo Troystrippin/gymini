@@ -1,5 +1,6 @@
 const Meal = require("../models/Meal");
 const { uploadImage, deleteImage } = require("../lib/cloudinary");
+const { logAdminAction } = require("../utils/auditLog");
 
 const listMeals = async (req, res, next) => {
   try {
@@ -35,6 +36,14 @@ const updateMealImage = async (req, res, next) => {
       );
     }
 
+    await logAdminAction(req, {
+      action: "meal.image_update",
+      targetType: "meal",
+      targetId: meal._id,
+      targetLabel: meal.name,
+      metadata: { replacedExisting: Boolean(previousPublicId) },
+    });
+
     res.json({ meal: updatedMeal });
   } catch (error) {
     if (uploaded?.public_id) {
@@ -51,6 +60,14 @@ const deleteMeal = async (req, res, next) => {
 
     await deleteImage(meal.imagePublicId);
     await meal.deleteOne();
+
+    await logAdminAction(req, {
+      action: "meal.delete",
+      targetType: "meal",
+      targetId: meal._id,
+      targetLabel: meal.name,
+    });
+
     res.json({ message: "Meal deleted", mealId: meal.id });
   } catch (error) {
     next(error);

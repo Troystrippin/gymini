@@ -1,5 +1,19 @@
 const { param, query, body } = require("express-validator");
 
+const MUSCLE_GROUPS = [
+  "Chest",
+  "Back",
+  "Shoulders",
+  "Arms",
+  "Legs",
+  "Core",
+  "Full Body",
+  "Cardio",
+  "Other",
+];
+
+const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
+
 const exerciseIdParam = [
   param("id").isMongoId().withMessage("Invalid exercise id"),
 ];
@@ -45,24 +59,55 @@ const updateExerciseRules = [
     .withMessage("name must be 1-100 characters"),
   body("muscleGroup")
     .optional()
-    .isIn([
-      "Chest",
-      "Back",
-      "Shoulders",
-      "Arms",
-      "Legs",
-      "Core",
-      "Full Body",
-      "Cardio",
-      "Other",
-    ])
+    .isIn(MUSCLE_GROUPS)
     .withMessage("Invalid muscle group"),
   body("equipment").optional().isString().trim().isLength({ max: 50 }),
   body("difficulty")
     .optional()
-    .isIn(["Beginner", "Intermediate", "Advanced"])
+    .isIn(DIFFICULTIES)
     .withMessage("Invalid difficulty"),
   body("description").optional().isString().isLength({ max: 2000 }),
+  body("mediaUrl")
+    .optional({ checkFalsy: true, nullable: true })
+    .isString()
+    .isLength({ max: 500 }),
+];
+
+// NEW — for admin creating built-in exercises
+const createBuiltInExerciseRules = [
+  body("name")
+    .exists({ checkFalsy: true })
+    .withMessage("Exercise name is required")
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 80 })
+    .withMessage("Exercise name must be 2–80 characters"),
+
+  body("muscleGroup")
+    .exists({ checkFalsy: true })
+    .withMessage("Muscle group is required")
+    .isIn(MUSCLE_GROUPS)
+    .withMessage("Invalid muscle group"),
+
+  body("equipment")
+    .optional({ checkFalsy: true, nullable: true })
+    .isString()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("Equipment name too long (max 50 chars)"),
+
+  body("difficulty")
+    .optional({ checkFalsy: true, nullable: true })
+    .isIn(DIFFICULTIES)
+    .withMessage("Invalid difficulty"),
+
+  body("description")
+    .optional({ checkFalsy: true, nullable: true })
+    .isString()
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("Description too long (max 2000 chars)"),
+
   body("mediaUrl")
     .optional({ checkFalsy: true, nullable: true })
     .isString()
@@ -74,4 +119,5 @@ module.exports = {
   listExercisesRules,
   rejectExerciseRules,
   updateExerciseRules,
+  createBuiltInExerciseRules,
 };

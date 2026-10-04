@@ -10,11 +10,16 @@ const {
 } = require("../controllers/adminController");
 
 const { getAnalytics } = require("../controllers/adminAnalyticsController");
+const {
+  listLogs,
+  getLogFilters,
+} = require("../controllers/adminLogController");
 
 const {
   listExercises,
   getExerciseStats,
   getExerciseById: getAdminExerciseById,
+  createExercise: createAdminExercise,
   approveExercise,
   rejectExercise,
   updateExercise: updateAdminExercise,
@@ -37,6 +42,7 @@ const {
   listExercisesRules,
   rejectExerciseRules,
   updateExerciseRules,
+  createBuiltInExerciseRules,
 } = require("../validators/adminExerciseValidators");
 
 const userIdParam = [param("id").isMongoId().withMessage("Invalid user id")];
@@ -64,6 +70,10 @@ router.put(
 );
 router.delete("/users/:id", userIdParam, handleValidation, deleteUser);
 
+// Activity logs
+router.get("/logs", listLogs);
+router.get("/logs/filters", getLogFilters);
+
 // Shared meal catalog
 router.get("/meals", listMeals);
 router.put("/meals/:id/image", imageUpload, updateMealImage);
@@ -72,6 +82,16 @@ router.delete("/meals/:id", deleteMeal);
 // Exercises
 router.get("/exercises", listExercisesRules, handleValidation, listExercises);
 router.get("/exercises/stats", getExerciseStats);
+
+// Create built-in exercise — MUST come before "/:id" routes
+router.post(
+  "/exercises",
+  imageUpload,
+  createBuiltInExerciseRules,
+  handleValidation,
+  createAdminExercise,
+);
+
 router.get(
   "/exercises/:id",
   exerciseIdParam,

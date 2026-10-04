@@ -141,8 +141,8 @@ export function PlanDraftProvider({ children }) {
   const hasUnapprovedExercises = unapprovedExercises.length > 0;
 
   // Stable callback — reads current draft via ref, so its identity never
-  // changes. Also removes rejected exercises from the draft and queues a
-  // notification so the UI can inform the user.
+  // changes. Also removes rejected/invisible exercises from the draft and
+  // queues a notification so the UI can inform the user.
   const refreshDraftStatuses = useCallback(async () => {
     const current = draftRef.current || [];
     const candidates = current.filter(
@@ -164,30 +164,60 @@ export function PlanDraftProvider({ children }) {
                 id: e.exerciseId,
                 status: res.data.status,
                 reason: res.data.rejectionReason || null,
+                gone: false,
               }),
-              () => null,
+              (err) => {
+                // 404 = the exercise is no longer visible to this user.
+                // That means it was rejected, deleted, or belongs to
+                // someone else. Treat it as "gone" and remove from draft.
+                if (err.response?.status === 404) {
+                  return {
+                    id: e.exerciseId,
+                    status: "rejected",
+                    reason: "This exercise is no longer available to you.",
+                    gone: true,
+                  };
+                }
+                // Any other error (network, 5xx) → leave it alone.
+                return null;
+              },
             ),
         ),
       );
 
+      const goneIds = new Set(
+        results.filter((r) => r && r.gone).map((r) => r.id),
+      );
+
       const rejectedIds = new Set(
         results
-          .filter((r) => r && r.status === "rejected")
+          .filter((r) => r && r.status === "rejected" && !r.gone)
           .map((r) => r.id),
       );
 
+      // Collect notices for anything being removed (gone or rejected).
       const rejectedItems = current
-        .filter((e) => rejectedIds.has(e.exerciseId))
+        .filter(
+          (e) => goneIds.has(e.exerciseId) || rejectedIds.has(e.exerciseId),
+        )
         .map((e) => {
           const r = results.find((x) => x && x.id === e.exerciseId);
           return { name: e.name, reason: r?.reason || null };
         });
 
+      // Remove gone + rejected items; update statuses for the rest.
       setDraftExercises((prev) => {
-        let next = prev.filter((ex) => !rejectedIds.has(ex.exerciseId));
+        let next = prev.filter(
+          (ex) =>
+            !goneIds.has(ex.exerciseId) && !rejectedIds.has(ex.exerciseId),
+        );
         next = next.map((ex) => {
           const match = results.find(
-            (r) => r && r.id === ex.exerciseId && r.status !== ex.status,
+            (r) =>
+              r &&
+              r.id === ex.exerciseId &&
+              !r.gone &&
+              r.status !== ex.status,
           );
           return match ? { ...ex, status: match.status } : ex;
         });

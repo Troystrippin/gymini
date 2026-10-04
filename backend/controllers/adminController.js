@@ -10,6 +10,7 @@ const FavoriteExercise = require("../models/FavoriteExercise");
 const RefreshToken = require("../models/RefreshToken");
 const Exercise = require("../models/Exercise");
 const { deleteImage } = require("../lib/cloudinary");
+const { logAdminAction } = require("../utils/auditLog");
 
 const MAX_PAGE_LIMIT = 100;
 const MAX_SKIP = 10000;
@@ -96,6 +97,10 @@ const updateUserRole = async (req, res, next) => {
       return res.status(400).json({ message: "You cannot demote yourself." });
     }
 
+    const existing = await User.findById(req.params.id).select("role");
+    if (!existing) return res.status(404).json({ message: "User not found" });
+    const previousRole = existing.role;
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { role },
@@ -107,6 +112,14 @@ const updateUserRole = async (req, res, next) => {
     console.log(
       `[admin] ${req.user.email} changed role of ${user.email} → ${role}`,
     );
+
+    await logAdminAction(req, {
+      action: "user.role_change",
+      targetType: "user",
+      targetId: user._id,
+      targetLabel: user.email,
+      metadata: { from: previousRole, to: role },
+    });
 
     res.json({ message: "Role updated", user });
   } catch (err) {
@@ -165,6 +178,14 @@ const deleteUser = async (req, res, next) => {
       `[admin] ${req.user.email} deleted user ${user.email}`,
       summary,
     );
+
+    await logAdminAction(req, {
+      action: "user.delete",
+      targetType: "user",
+      targetId: user._id,
+      targetLabel: user.email,
+      metadata: { cascade: summary },
+    });
 
     res.json({
       message: "User deleted",
