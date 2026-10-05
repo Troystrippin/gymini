@@ -59,7 +59,7 @@ export default function MyMealPlanScreen() {
               },
             ]}
           >
-            <Text style={[styles.backText, { color: colors.text }]}>
+            <Text style={[styles.backText, { color: colors.buttonText }]}>
               Browse meals
             </Text>
           </Pressable>

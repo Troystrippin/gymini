@@ -290,8 +290,10 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             style={styles.browseButton}
           >
-            <Text style={[styles.browseButtonText, { color: colors.primary }]}>
-              Browse all meals →
+            <Text
+              style={[styles.browseButtonText, { color: colors.buttonText }]}
+            >
+              Browse all meals
             </Text>
           </TouchableOpacity>
         </View>
@@ -376,7 +378,7 @@ const styles = StyleSheet.create({
   emptyState: { padding: 40, alignItems: "center" },
   emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
   emptySubtext: { fontSize: 13 },
-  mealPreview: { borderRadius: 18, marginTop: 20, padding: 18 },
+  mealPreview: { borderRadius: 18, marginTop: 20, padding: 18, elevation: 2 },
   mealHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -412,7 +414,13 @@ const styles = StyleSheet.create({
   mealRowName: { fontSize: 14, fontWeight: "700", marginTop: 2 },
   mealRowCalories: { fontSize: 12, fontWeight: "800", marginLeft: 8 },
   mealRowAdd: { fontSize: 12, fontWeight: "800", marginLeft: 8 },
-  browseButton: { alignItems: "center", marginTop: 14 },
+  browseButton: {
+    alignItems: "center",
+    marginTop: 14,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
   browseButtonText: { fontSize: 13, fontWeight: "800" },
   coachCard: {
     flexDirection: "row",

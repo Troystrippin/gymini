@@ -22,6 +22,7 @@ export const darkColors = {
   background: "#0D0D0D",
   text: "#FFFFFF",
   textSecondary: "#A2A2A8",
+  buttonText: "#FFFFFF",
   surface: "#141414",
   card: "#1A1A1A",
   cardBackground: "#1A1A1A",

@@ -522,16 +522,7 @@ export default function BrowseExercisesScreen() {
               >
                 Muscle Group
               </Text>
-              <FlatList
-                horizontal
-                data={MUSCLE_GROUPS}
-                keyExtractor={(g) => g}
-                extraData={cGroup}
-                renderItem={renderMuscleGroupChip}
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                style={styles.muscleGroupList}
-              />
+              <FlatList />
 
               <Text
                 style={[styles.fieldLabel, { color: colors.textSecondary }]}
@@ -666,8 +657,7 @@ export default function BrowseExercisesScreen() {
         onClose={() => setActiveExercise(null)}
         favorited={favoritedExerciseIds.has(activeExercise?._id)}
         onFavoriteChange={(favorited) =>
-          activeExercise &&
-          updateFavoriteStatus(activeExercise._id, favorited)
+          activeExercise && updateFavoriteStatus(activeExercise._id, favorited)
         }
       />
     </SafeAreaView>
