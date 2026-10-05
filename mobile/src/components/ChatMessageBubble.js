@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../theme/theme";
+import { COLORS } from "../theme/colors";
 
 export default function ChatMessageBubble({ text, isSender }) {
   const { colors } = useTheme();
@@ -46,5 +47,8 @@ const styles = StyleSheet.create({
   },
   receiverBubble: {
     borderBottomLeftRadius: 0,
+    borderWidth: 1,
+    borderStyle: "dotted",
+    borderColor: COLORS.border,
   },
 });
