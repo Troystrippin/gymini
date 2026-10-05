@@ -12,6 +12,7 @@ import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import OnboardingGoal from "../screens/OnboardingGoal";
 import OnboardingDetails from "../screens/OnboardingDetails";
 import OnboardingActivity from "../screens/OnboardingActivity";
+import ChatScreen from "../screens/ChatScreen";
 import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
@@ -62,7 +63,10 @@ const AppNavigator = () => {
           />
         </>
       ) : (
-        <Stack.Screen name="Main" component={MainTabs} />
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

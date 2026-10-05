@@ -297,6 +297,24 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ height: 40 }} />
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("Chat")}
+          style={[styles.coachCard, { backgroundColor: colors.cardBackground }]}
+        >
+          <Text style={[styles.coachEmoji]}>🤖</Text>
+          <View style={styles.coachText}>
+            <Text style={[styles.coachTitle, { color: colors.text }]}>
+              AI Coach
+            </Text>
+            <Text
+              style={[styles.coachSubtitle, { color: colors.textSecondary }]}
+            >
+              Get help with workouts and meals
+            </Text>
+          </View>
+          <Text style={[styles.coachArrow, { color: colors.primary }]}>→</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -396,4 +414,31 @@ const styles = StyleSheet.create({
   mealRowAdd: { fontSize: 12, fontWeight: "800", marginLeft: 8 },
   browseButton: { alignItems: "center", marginTop: 14 },
   browseButtonText: { fontSize: 13, fontWeight: "800" },
+  coachCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    marginTop: 16,
+    padding: 18,
+    elevation: 2,
+  },
+  coachEmoji: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  coachText: {
+    flex: 1,
+  },
+  coachTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  coachSubtitle: {
+    fontSize: 13,
+  },
+  coachArrow: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
 });
