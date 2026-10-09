@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Button from "../components/Button";
@@ -32,6 +33,7 @@ export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [touched, setTouched] = useState({
     fullName: false,
     email: false,
@@ -50,10 +52,16 @@ export default function RegisterScreen({ navigation }) {
     setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleRegister = async () => {
-    // Reveal all inline errors too
     setTouched({ fullName: true, email: true, password: true });
 
-    // Show popup if any field is invalid
+    if (!acceptedTerms) {
+      Alert.alert(
+        "Accept Terms",
+        "Please accept the Terms of Service to create your account.",
+      );
+      return;
+    }
+
     const hasErrors = showValidationAlert(
       "Registration Failed",
       errors,
@@ -65,8 +73,6 @@ export default function RegisterScreen({ navigation }) {
       setSubmitting(true);
       await register(fullName.trim(), email.trim().toLowerCase(), password);
     } catch (err) {
-      // Server-side error → still show as a popup
-      const { Alert } = require("react-native");
       Alert.alert(
         "Registration Failed",
         err.response?.data?.message || err.message || "Something went wrong",
@@ -156,10 +162,31 @@ export default function RegisterScreen({ navigation }) {
           touched={touched.password}
         />
 
+        <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => setAcceptedTerms(!acceptedTerms)}
+          activeOpacity={0.9}
+        >
+          <View
+            style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}
+          >
+            {acceptedTerms && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.termsText}>
+            I agree to the{" "}
+            <Text
+              style={styles.linkText}
+              onPress={() => navigation.navigate("Terms")}
+            >
+              Terms of Service
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
         <Button
           title={submitting ? "Creating..." : "Create Account"}
           onPress={handleRegister}
-          disabled={submitting}
+          disabled={submitting || !acceptedTerms}
           style={{ marginTop: 16 }}
         />
 
@@ -225,6 +252,38 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: COLORS.primary },
   tabActiveText: { color: COLORS.text, fontWeight: "700" },
   tabText: { color: COLORS.textSecondary, fontWeight: "600" },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderWidth: 1,
+    borderRadius: 4,
+    borderColor: COLORS.border,
+    marginRight: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  checkmark: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  termsText: {
+    color: COLORS.text,
+    fontSize: 13,
+    flexShrink: 1,
+    lineHeight: 18,
+  },
+  linkText: { color: COLORS.primary, fontSize: 13, fontWeight: "700" },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 24 },
   line: { flex: 1, height: 1, backgroundColor: COLORS.border },
   dividerText: {

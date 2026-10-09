@@ -167,6 +167,10 @@ export default function LoginScreen({ navigation }) {
           disabled={submitting}
         />
 
+        <TouchableOpacity onPress={() => navigation.navigate("Terms")}>
+          <Text style={styles.termsLink}>Terms of Service</Text>
+        </TouchableOpacity>
+
         <View style={styles.divider}>
           <View style={styles.line} />
           <Text style={styles.dividerText}>or continue with</Text>
@@ -265,7 +269,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   forgot: { color: COLORS.primary, fontSize: 13, fontWeight: "600" },
-  divider: { flexDirection: "row", alignItems: "center", marginVertical: 24 },
+  termsLink: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  divider: { flexDirection: "row", alignItems: "center", marginVertical: 20 },
   line: { flex: 1, height: 1, backgroundColor: COLORS.border },
   dividerText: {
     color: COLORS.textSecondary,

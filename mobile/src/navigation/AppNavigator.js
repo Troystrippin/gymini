@@ -13,6 +13,7 @@ import OnboardingGoal from "../screens/OnboardingGoal";
 import OnboardingDetails from "../screens/OnboardingDetails";
 import OnboardingActivity from "../screens/OnboardingActivity";
 import ChatScreen from "../screens/ChatScreen";
+import TermsScreen from "../screens/TermsScreen";
 import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
@@ -47,6 +48,7 @@ const AppNavigator = () => {
             name="ForgotPassword"
             component={ForgotPasswordScreen}
           />
+          <Stack.Screen name="Terms" component={TermsScreen} />
         </>
       ) : !user.emailVerified ? (
         <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
