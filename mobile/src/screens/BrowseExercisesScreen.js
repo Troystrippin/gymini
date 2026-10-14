@@ -37,17 +37,6 @@ const CATEGORIES = [
   "Custom",
 ];
 
-const MUSCLE_GROUPS = [
-  "Chest",
-  "Back",
-  "Legs",
-  "Shoulders",
-  "Core",
-  "Arms",
-  "Full Body",
-  "Cardio",
-];
-
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 export default function BrowseExercisesScreen() {
@@ -64,10 +53,17 @@ export default function BrowseExercisesScreen() {
   const [loadError, setLoadError] = useState(null);
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
+
+  const [category, setCategory] = useState([]);
+  const [equipmentFilter, setEquipmentFilter] = useState([]);
+
+  const [draftCategory, setDraftCategory] = useState([]);
+  const [draftEquipment, setDraftEquipment] = useState([]);
+
+  const [muscleGroupModalVisible, setMuscleGroupModalVisible] = useState(false);
+  const [equipmentModalVisible, setEquipmentModalVisible] = useState(false);
 
   const [activeExercise, setActiveExercise] = useState(null);
-
   const [customVisible, setCustomVisible] = useState(false);
   const [cName, setCName] = useState("");
   const [cGroup, setCGroup] = useState("Chest");
@@ -76,6 +72,40 @@ export default function BrowseExercisesScreen() {
   const [cDesc, setCDesc] = useState("");
   const [cImage, setCImage] = useState(null);
   const [creating, setCreating] = useState(false);
+
+  const equipmentOptions = useMemo(
+    () => [
+      "All",
+      ...new Set(
+        exercises
+          .map((exercise) => exercise.equipment)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b)),
+      ),
+    ],
+    [exercises],
+  );
+
+  const toggleDraftCategory = (option) => {
+    setDraftCategory((current) =>
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option],
+    );
+  };
+
+  const toggleDraftEquipment = (option) => {
+    if (option === "All") {
+      setDraftEquipment([]);
+      return;
+    }
+
+    setDraftEquipment((current) =>
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option],
+    );
+  };
 
   const fetchExercises = useCallback(async () => {
     try {
@@ -87,6 +117,7 @@ export default function BrowseExercisesScreen() {
           ? res.data.exercises
           : [];
       setExercises(list);
+      setLoading(false);
       if (list.length === 0) {
         setFavoritedExerciseIds(new Set());
         return;
@@ -126,19 +157,24 @@ export default function BrowseExercisesScreen() {
 
   const filtered = useMemo(() => {
     const list = Array.isArray(exercises) ? exercises : [];
+    const normalizedSearch = search.trim().toLowerCase();
+    const selectedCategories = new Set(category);
+    const selectedEquipment = new Set(equipmentFilter);
+
     return list.filter((ex) => {
       const matchesCategory =
-        category === "All"
-          ? true
-          : category === "Custom"
-            ? ex.isCustom
-            : ex.muscleGroup === category;
-      const matchesSearch = (ex.name || "")
-        .toLowerCase()
-        .includes(search.trim().toLowerCase());
-      return matchesCategory && matchesSearch;
+        selectedCategories.size === 0 ||
+        (selectedCategories.has("Custom") && ex.isCustom) ||
+        selectedCategories.has(ex.muscleGroup);
+
+      const matchesEquipment =
+        selectedEquipment.size === 0 || selectedEquipment.has(ex.equipment);
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        (ex.name || "").toLowerCase().includes(normalizedSearch);
+      return matchesCategory && matchesEquipment && matchesSearch;
     });
-  }, [exercises, search, category]);
+  }, [exercises, search, category, equipmentFilter]);
 
   const toggleAdd = (exercise) => {
     if (isInDraft(exercise._id)) {
@@ -367,6 +403,7 @@ export default function BrowseExercisesScreen() {
 
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>
@@ -414,17 +451,37 @@ export default function BrowseExercisesScreen() {
           },
         ]}
       />
+      <View style={styles.filterButtonRow}>
+        <TouchableOpacity
+          onPress={() => {
+            setDraftCategory(category);
+            setMuscleGroupModalVisible(true);
+          }}
+          style={[
+            styles.filterButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.filterButtonText, { color: colors.text }]}>
+            Muscle Group
+          </Text>
+        </TouchableOpacity>
 
-      <FlatList
-        horizontal
-        data={CATEGORIES}
-        keyExtractor={(cat) => cat}
-        extraData={category}
-        renderItem={renderCategoryChip}
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipRow}
-        contentContainerStyle={styles.chipRowContent}
-      />
+        <TouchableOpacity
+          onPress={() => {
+            setDraftEquipment(equipmentFilter);
+            setEquipmentModalVisible(true);
+          }}
+          style={[
+            styles.filterButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.filterButtonText, { color: colors.text }]}>
+            Equipment
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <ActivityIndicator
@@ -451,6 +508,10 @@ export default function BrowseExercisesScreen() {
           renderItem={renderExercise}
           style={styles.listContainer}
           contentContainerStyle={styles.list}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          updateCellsBatchingPeriod={50}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -467,6 +528,199 @@ export default function BrowseExercisesScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={muscleGroupModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMuscleGroupModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setMuscleGroupModalVisible(false)}
+          />
+
+          <View
+            style={[styles.modalSheet, { backgroundColor: colors.background }]}
+          >
+            <View
+              style={[styles.modalHandle, { backgroundColor: colors.border }]}
+            />
+
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Filter by muscle group
+              </Text>
+
+              <View style={styles.filterOptions}>
+                {CATEGORIES.filter((option) => option !== "All").map(
+                  (option) => {
+                    const selected = draftCategory.includes(option);
+
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => toggleDraftCategory(option)}
+                        style={[
+                          styles.filterOption,
+                          {
+                            backgroundColor: selected
+                              ? colors.primary
+                              : colors.card,
+                            borderColor: selected
+                              ? colors.primary
+                              : colors.border,
+                          },
+                        ]}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selected }}
+                      >
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            {
+                              color: selected ? "#FFFFFF" : colors.text,
+                              fontWeight: selected ? "700" : "400",
+                            },
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  },
+                )}
+              </View>
+
+              <View style={styles.filterModalActions}>
+                <TouchableOpacity
+                  onPress={() => setDraftCategory([])}
+                  style={[styles.filterAction, { borderColor: colors.border }]}
+                >
+                  <Text style={{ color: colors.text }}>Clear</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setCategory(draftCategory);
+                    setMuscleGroupModalVisible(false);
+                  }}
+                  style={[
+                    styles.filterAction,
+                    {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: "700" }}>
+                    Apply
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={equipmentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEquipmentModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setEquipmentModalVisible(false)}
+          />
+
+          <View
+            style={[styles.modalSheet, { backgroundColor: colors.background }]}
+          >
+            <View
+              style={[styles.modalHandle, { backgroundColor: colors.border }]}
+            />
+
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Filter by equipment
+              </Text>
+
+              <View style={styles.filterOptions}>
+                {equipmentOptions.map((option) => {
+                  const selected =
+                    option === "All"
+                      ? draftEquipment.length === 0
+                      : draftEquipment.includes(option);
+
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      onPress={() => toggleDraftEquipment(option)}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor: selected
+                            ? colors.primary
+                            : colors.card,
+                          borderColor: selected
+                            ? colors.primary
+                            : colors.border,
+                        },
+                      ]}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          {
+                            color: selected ? "#FFFFFF" : colors.text,
+                            fontWeight: selected ? "700" : "400",
+                          },
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.filterModalActions}>
+                <TouchableOpacity
+                  onPress={() => setDraftEquipment([])}
+                  style={[styles.filterAction, { borderColor: colors.border }]}
+                >
+                  <Text style={{ color: colors.text }}>Clear</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setEquipmentFilter(draftEquipment);
+                    setEquipmentModalVisible(false);
+                  }}
+                  style={[
+                    styles.filterAction,
+                    {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: "700" }}>
+                    Apply
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={customVisible}
@@ -693,6 +947,77 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     marginBottom: 14,
+  },
+
+  filterButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 14,
+  },
+  filterButton: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  filterModalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 20,
+  },
+  filterAction: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  filterOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  filterOption: {
+    width: "48%",
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  filterOptionText: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 15,
+    marginRight: 8,
+  },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderWidth: 1.5,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkMark: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
   },
 
   chipRow: { flexGrow: 0, flexShrink: 0, marginBottom: 14 },

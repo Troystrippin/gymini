@@ -341,7 +341,10 @@ export default function PlanScreen() {
   })();
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <NestableScrollContainer
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -481,8 +484,8 @@ export default function PlanScreen() {
               <Text
                 style={[styles.warningText, { color: colors.textSecondary }]}
               >
-                These exercises can't be saved to a plan until an admin
-                approves them:
+                These exercises can't be saved to a plan until an admin approves
+                them:
               </Text>
               {unapprovedExercises.map((e) => (
                 <Text

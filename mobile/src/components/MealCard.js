@@ -1,17 +1,18 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const MEAL_TYPE_ICONS = {
   breakfast: "🍳",
   lunch: "🥗",
   dinner: "🍽️",
   snack: "🍎",
-};
-
-const formatValue = (v) => {
-  if (typeof v === "number") return v;
-  if (typeof v === "string") return v;
-  return "";
 };
 
 export default function MealCard({
@@ -76,27 +77,37 @@ export default function MealCard({
           {meal.type?.toUpperCase()}
         </Text>
         <Text style={[styles.name, { color: colors.text }]}>{meal.name}</Text>
-        <Text style={[styles.goal, { color: colors.textSecondary }]}>
+        <Text style={[styles.nutrition, { color: colors.textSecondary }]}>
           {meal.goal ? `${meal.goal} · ` : ""}
-          {proteinLabel}
+          {proteinLabel ? `${proteinLabel} protein · ` : ""}
+          {calLabel}
         </Text>
       </View>
 
-      <Pressable
+      <TouchableOpacity
         onPress={(e) => {
           e.stopPropagation();
           onPress && onPress();
         }}
-        hitSlop={10}
-        style={styles.rightColumn}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        style={[
+          styles.actionButton,
+          {
+            backgroundColor: selected ? colors.cardBackground : colors.primary,
+            borderColor: colors.primary,
+          },
+        ]}
       >
-        <Text style={[styles.selected, { color: colors.primary }]}>
+        <Text
+          style={[
+            styles.actionButtonText,
+            { color: selected ? colors.primary : "#FFFFFF" },
+          ]}
+        >
           {actionLabel || (selected ? "Added" : "Add")}
         </Text>
-        <Text style={[styles.calories, { color: colors.primary }]}>
-          {calLabel}
-        </Text>
-      </Pressable>
+      </TouchableOpacity>
     </Pressable>
   );
 }
@@ -129,8 +140,16 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   type: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   name: { fontSize: 15, fontWeight: "700", marginTop: 5 },
-  goal: { fontSize: 12, marginTop: 4 },
-  rightColumn: { alignItems: "flex-end", marginLeft: 10 },
-  selected: { fontSize: 11, fontWeight: "800", marginBottom: 4 },
-  calories: { fontSize: 12, fontWeight: "700", marginLeft: 10 },
+  nutrition: { fontSize: 12, marginTop: 4 },
+  actionButton: {
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 9,
+    justifyContent: "center",
+    marginLeft: 10,
+    minWidth: 62,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  actionButtonText: { fontSize: 11, fontWeight: "800" },
 });

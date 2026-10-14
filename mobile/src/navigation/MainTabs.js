@@ -72,9 +72,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     borderTopColor: COLORS.border,
     borderTopWidth: 1,
-    height: 70,
-    paddingBottom: 10,
-    paddingTop: 10,
   },
-  tabLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 }, 
+  tabLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
 });

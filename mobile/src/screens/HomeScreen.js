@@ -109,6 +109,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={[styles.safe, { backgroundColor: colors.background }]}
       >
         <ActivityIndicator
@@ -121,7 +122,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <StatusBar
         barStyle={mode === "dark" ? "light-content" : "dark-content"}
         backgroundColor={colors.background}

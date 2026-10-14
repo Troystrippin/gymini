@@ -59,6 +59,7 @@ export default function FavoritesScreen() {
   if (loading) {
     return (
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={[styles.safe, { backgroundColor: colors.background }]}
       >
         <ActivityIndicator
@@ -72,6 +73,7 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       style={[styles.safe, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>
@@ -137,17 +139,12 @@ export default function FavoritesScreen() {
                   <Text style={[styles.name, { color: colors.text }]}>
                     {item.exercise.name}
                   </Text>
-                  <Text
-                    style={[styles.meta, { color: colors.textSecondary }]}
-                  >
+                  <Text style={[styles.meta, { color: colors.textSecondary }]}>
                     {item.exercise.muscleGroup} - {item.exercise.difficulty}
                   </Text>
                   {inDraft ? (
                     <Text
-                      style={[
-                        styles.inDraftBadge,
-                        { color: colors.accent },
-                      ]}
+                      style={[styles.inDraftBadge, { color: colors.accent }]}
                     >
                       In plan
                     </Text>

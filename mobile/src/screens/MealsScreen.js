@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   FlatList,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -26,6 +28,24 @@ const FILTER_OPTIONS = [
   "Weight Loss",
 ];
 
+const MealListItem = memo(function MealListItem({
+  meal,
+  selected,
+  onToggleEntry,
+  onOpenMeal,
+  colors,
+}) {
+  return (
+    <MealCard
+      meal={meal}
+      selected={selected}
+      onPress={() => onToggleEntry(meal)}
+      onDetailsPress={onOpenMeal}
+      colors={colors}
+    />
+  );
+});
+
 export default function MealsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
@@ -40,60 +60,56 @@ export default function MealsScreen() {
   } = useMealPlan();
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
+  const [filters, setFilters] = useState([]);
+  const [draftFilters, setDraftFilters] = useState([]);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [activeMeal, setActiveMeal] = useState(null);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const normalizedSearch = search.trim().toLowerCase();
+  const toggleMeal = useCallback((meal) => toggleEntry(meal), [toggleEntry]);
+  const openMealDetails = useCallback((meal) => setActiveMeal(meal), []);
+
+  const toggleDraftFilter = (option) => {
+    setDraftFilters((current) =>
+      current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option],
+    );
+  };
 
   // Height of the scrollable meals box. The page itself stays short no
   // matter how many meals there are.
   const mealListHeight = Math.max(320, Math.round(windowHeight * 0.55));
 
   const filteredMeals = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return catalog
-      .filter(
-        (meal) =>
-          !q ||
-          meal.name.toLowerCase().includes(q) ||
-          meal.goal.toLowerCase().includes(q),
-      )
-      .filter(
-        (meal) =>
-          filter === "All" ||
-          meal.type === filter ||
-          (meal.tags || []).includes(filter),
-      );
-  }, [catalog, search, filter]);
+    return catalog.filter((meal) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        (meal.name || "").toLowerCase().includes(normalizedSearch) ||
+        (meal.goal || "").toLowerCase().includes(normalizedSearch);
+      const matchesFilter =
+        filters.length === 0 ||
+        filters.some(
+          (option) =>
+            meal.type === option || (meal.tags || []).includes(option),
+        );
+      return matchesSearch && matchesFilter;
+    });
+  }, [catalog, normalizedSearch, filters]);
 
   const filteredRecs = useMemo(
-    () => recommendations.filter((r) => !selectedIds.includes(r.id)),
-    [recommendations, selectedIds],
-  );
-
-  const renderFilter = ({ item: option }) => (
-    <Pressable
-      onPress={() => setFilter(option)}
-      style={[
-        styles.filter,
-        {
-          backgroundColor:
-            filter === option ? colors.primary : colors.cardBackground,
-        },
-      ]}
-    >
-      <Text
-        style={{
-          color: filter === option ? "#FFFFFF" : colors.text,
-          fontSize: 12,
-          fontWeight: "700",
-        }}
-      >
-        {option}
-      </Text>
-    </Pressable>
+    () =>
+      recommendations.filter(
+        (recommendation) => !selectedIdSet.has(recommendation.id),
+      ),
+    [recommendations, selectedIdSet],
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -156,12 +172,12 @@ export default function MealsScreen() {
               Recommended for you
             </Text>
             {filteredRecs.map((meal) => (
-              <MealCard
+              <MealListItem
                 key={`rec-${meal.id}`}
                 meal={meal}
                 selected={false}
-                onPress={() => toggleEntry(meal)}
-                onDetailsPress={setActiveMeal}
+                onToggleEntry={toggleMeal}
+                onOpenMeal={openMealDetails}
                 colors={colors}
               />
             ))}
@@ -185,17 +201,27 @@ export default function MealsScreen() {
             },
           ]}
         />
-        <FlatList
-          horizontal
-          data={FILTER_OPTIONS}
-          keyExtractor={(option) => option}
-          extraData={[filter, colors]}
-          renderItem={renderFilter}
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={styles.filterRow}
-          contentContainerStyle={styles.filters}
-        />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            setDraftFilters(filters);
+            setFilterModalVisible(true);
+          }}
+          style={[
+            styles.filterButton,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+            },
+          ]}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.filterButtonText, { color: colors.text }]}>
+            {filters.length === 0
+              ? "Filters: All"
+              : `Filters: ${filters.length} selected`}
+          </Text>
+        </TouchableOpacity>
 
         {/* Meals scroll inside this fixed-height box, not the whole page */}
         <View style={[styles.mealBox, { maxHeight: mealListHeight }]}>
@@ -212,12 +238,12 @@ export default function MealsScreen() {
               </Text>
             ) : (
               filteredMeals.map((meal) => (
-                <MealCard
+                <MealListItem
                   key={String(meal.id)}
                   meal={meal}
-                  selected={selectedIds.includes(meal.id)}
-                  onPress={() => toggleEntry(meal)}
-                  onDetailsPress={setActiveMeal}
+                  selected={selectedIdSet.has(meal.id)}
+                  onToggleEntry={toggleMeal}
+                  onOpenMeal={openMealDetails}
                   colors={colors}
                 />
               ))
@@ -226,11 +252,103 @@ export default function MealsScreen() {
         </View>
       </ScrollView>
 
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.filterModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setFilterModalVisible(false)}
+          />
+
+          <View
+            style={[
+              styles.filterModalSheet,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.filterModalTitle, { color: colors.text }]}>
+              Filter meals
+            </Text>
+
+            <ScrollView contentContainerStyle={styles.filterOptions}>
+              {FILTER_OPTIONS.filter((option) => option !== "All").map(
+                (option) => {
+                  const selected = draftFilters.includes(option);
+
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() => toggleDraftFilter(option)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor: selected
+                            ? colors.primary
+                            : colors.cardBackground,
+                          borderColor: selected
+                            ? colors.primary
+                            : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          {
+                            color: selected ? "#FFFFFF" : colors.text,
+                            fontWeight: selected ? "700" : "400",
+                          },
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                },
+              )}
+            </ScrollView>
+
+            <View style={styles.filterActions}>
+              <Pressable
+                onPress={() => setDraftFilters([])}
+                style={[styles.filterAction, { borderColor: colors.border }]}
+              >
+                <Text style={{ color: colors.text }}>Clear</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setFilters(draftFilters);
+                  setFilterModalVisible(false);
+                }}
+                style={[
+                  styles.filterAction,
+                  {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                  },
+                ]}
+              >
+                <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>
+                  Apply
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <MealDetailModal
         meal={activeMeal}
         visible={!!activeMeal}
         onClose={() => setActiveMeal(null)}
-        isAdded={activeMeal ? selectedIds.includes(activeMeal.id) : false}
+        isAdded={activeMeal ? selectedIdSet.has(activeMeal.id) : false}
         onToggle={() => activeMeal && toggleEntry(activeMeal)}
         colors={colors}
       />
@@ -292,4 +410,74 @@ const styles = StyleSheet.create({
   },
   mealBox: { marginTop: 6 },
   empty: { fontSize: 14, marginTop: 20, textAlign: "center" },
+  filterButton: {
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  filterModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
+
+  filterModalSheet: {
+    maxHeight: "80%",
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+
+  filterOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingTop: 8,
+  },
+
+  filterOption: {
+    width: "48%",
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+
+  filterOptionText: {
+    textAlign: "center",
+    fontSize: 14,
+  },
+
+  filterActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 10,
+  },
+
+  filterAction: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+  },
 });

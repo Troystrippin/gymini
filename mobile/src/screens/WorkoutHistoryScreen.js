@@ -69,7 +69,9 @@ const formatDateBadge = (date) => {
   const d = new Date(date);
   return {
     day: String(d.getDate()),
-    weekday: d.toLocaleDateString(undefined, { weekday: "short" }).toUpperCase(),
+    weekday: d
+      .toLocaleDateString(undefined, { weekday: "short" })
+      .toUpperCase(),
   };
 };
 
@@ -135,6 +137,7 @@ export default function WorkoutHistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={[styles.safe, { backgroundColor: colors.background }]}
       >
         <ActivityIndicator
@@ -159,7 +162,10 @@ export default function WorkoutHistoryScreen() {
       : `${totalRemMin}m`;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -239,9 +245,7 @@ export default function WorkoutHistoryScreen() {
             {sections.map((section) => (
               <View key={section.key} style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text
-                    style={[styles.sectionLabel, { color: colors.text }]}
-                  >
+                  <Text style={[styles.sectionLabel, { color: colors.text }]}>
                     {section.label}
                   </Text>
                   <Text
@@ -260,9 +264,9 @@ export default function WorkoutHistoryScreen() {
                   const mins = Math.round((log.durationSec || 0) / 60);
                   const exercises = log.exercisesPerformed || [];
                   const completedCount =
-                    log.completedExercises ?? exercises.filter((e) => e.completed).length;
-                  const totalExercises =
-                    log.totalExercises ?? exercises.length;
+                    log.completedExercises ??
+                    exercises.filter((e) => e.completed).length;
+                  const totalExercises = log.totalExercises ?? exercises.length;
 
                   return (
                     <View
@@ -287,10 +291,7 @@ export default function WorkoutHistoryScreen() {
                           {badge.weekday}
                         </Text>
                         <Text
-                          style={[
-                            styles.dateBadgeDay,
-                            { color: colors.text },
-                          ]}
+                          style={[styles.dateBadgeDay, { color: colors.text }]}
                         >
                           {badge.day}
                         </Text>
@@ -310,7 +311,9 @@ export default function WorkoutHistoryScreen() {
                           ]}
                         >
                           {completedCount} of {totalExercises} exercises ·{" "}
-                          {mins > 0 ? `${mins} min` : formatDuration(log.durationSec)}
+                          {mins > 0
+                            ? `${mins} min`
+                            : formatDuration(log.durationSec)}
                         </Text>
 
                         {exercises.length > 0 && (

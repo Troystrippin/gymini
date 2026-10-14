@@ -243,6 +243,7 @@ export default function WorkoutSessionScreen() {
   if (loading || !workout) {
     return (
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={[styles.safe, { backgroundColor: colors.background }]}
       >
         <ActivityIndicator
@@ -264,6 +265,7 @@ export default function WorkoutSessionScreen() {
       style={[styles.flex, { backgroundColor: colors.background }]}
     >
       <SafeAreaView
+        edges={["top", "left", "right"]}
         style={[styles.safe, { backgroundColor: colors.background }]}
       >
         <ScrollView contentContainerStyle={styles.content}>
