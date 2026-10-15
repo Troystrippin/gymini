@@ -1,21 +1,34 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import Logo from "../components/Logo";
+import MealsIcon from "../icons/MealsIcon";
+import ProfileIcon from "../icons/ProfileIcon";
+import ProgressIcon from "../icons/ProgressIcon";
+import WorkoutIcon from "../icons/WorkoutIcon";
+import DashboardIcon from "../icons/DashboardIcon";
 import { COLORS, ROLE_COLORS } from "../theme";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
 
   const linkStyle = ({ isActive }) => ({
-    display: "block",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
     padding: "12px 18px",
     borderRadius: 10,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 700,
     color: isActive ? COLORS.background : COLORS.text,
     background: isActive ? COLORS.primary : "transparent",
     marginBottom: 6,
     transition: "all 0.15s",
+  });
+
+  const iconProps = (isActive) => ({
+    color: isActive ? COLORS.background : COLORS.text,
+    size: 18,
   });
 
   return (
@@ -25,17 +38,34 @@ export default function Sidebar() {
         padding: "24px 18px",
         borderRight: `1px solid ${COLORS.border}`,
         background: COLORS.background,
+        boxShadow: "4px 0px 12px rgba(0, 0, 0, 0.08)",
         display: "flex",
         flexDirection: "column",
       }}
     >
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1 }}>
-          ◆◆ GYMINI
-        </div>
         <div
           style={{
-            fontSize: 11,
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Logo
+            color={COLORS.text}
+            width={25}
+            height={25}
+            style={{ display: "block" }}
+          />
+          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1 }}>
+            GYMINI
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: 14,
             color: COLORS.textSecondary,
             marginTop: 4,
             letterSpacing: 1,
@@ -47,22 +77,66 @@ export default function Sidebar() {
 
       <nav style={{ flex: 1 }}>
         <NavLink to="/dashboard" style={linkStyle}>
-          📊 Dashboard
+          {({ isActive }) => (
+            <>
+              <DashboardIcon {...iconProps(isActive)} />
+              <span>Dashboard</span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/users" style={linkStyle}>
-          👥 Users
+          {({ isActive }) => (
+            <>
+              <ProfileIcon {...iconProps(isActive)} />
+              <span>Users</span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/analytics" style={linkStyle}>
-          📈 Analytics
+          {({ isActive }) => (
+            <>
+              <ProgressIcon {...iconProps(isActive)} />
+              <span>Analytics</span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/exercises" style={linkStyle}>
-          💪 Exercises
+          {({ isActive }) => (
+            <>
+              <WorkoutIcon {...iconProps(isActive)} />
+              <span>Exercises</span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/activity-logs" style={linkStyle}>
-          📋 Activity Logs
+          {({ isActive }) => (
+            <>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7 3V7M17 3V7M4 11H20M5 5H19C20.1046 5 21 5.89543 21 7V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V7C3 5.89543 3.89543 5 5 5Z"
+                  stroke={isActive ? COLORS.background : COLORS.text}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>Activity Logs</span>
+            </>
+          )}
         </NavLink>
         <NavLink to="/meals" style={linkStyle}>
-          🍽 Meals
+          {({ isActive }) => (
+            <>
+              <MealsIcon {...iconProps(isActive)} />
+              <span>Meals</span>
+            </>
+          )}
         </NavLink>
       </nav>
 
@@ -73,10 +147,10 @@ export default function Sidebar() {
           marginTop: 16,
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 700 }}>{user?.fullName}</div>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>{user?.fullName}</div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 14,
             color: COLORS.textSecondary,
             marginTop: 2,
             marginBottom: 8,
@@ -103,12 +177,13 @@ export default function Sidebar() {
           style={{
             display: "block",
             width: "100%",
+            backgroundColor: COLORS.danger,
             marginTop: 14,
             padding: "10px 14px",
             borderRadius: 10,
             border: `1px solid ${COLORS.border}`,
             background: "transparent",
-            color: COLORS.text,
+            color: COLORS.buttonText,
             fontSize: 13,
             fontWeight: 700,
           }}

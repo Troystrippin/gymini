@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import Logo from "../components/Logo";
 import { COLORS } from "../theme";
 
 export default function Login() {
@@ -71,6 +72,7 @@ export default function Login() {
         style={{
           width: "100%",
           maxWidth: 400,
+          boxShadow: "0px 4px 10px rgba",
           background: COLORS.cardBackground,
           padding: 32,
           borderRadius: 20,
@@ -79,25 +81,41 @@ export default function Login() {
       >
         <div
           style={{
-            fontSize: 28,
-            fontWeight: 900,
-            letterSpacing: 2,
-            textAlign: "center",
-            marginBottom: 4,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
           }}
         >
-          ◆◆ GYMINI
+          <Logo
+            color={COLORS.text}
+            width={55}
+            height={55}
+            style={{ display: "block" }}
+          />
+          <div
+            style={{
+              fontSize: 38,
+              fontWeight: 900,
+              letterSpacing: 2,
+              textAlign: "center",
+              marginTop: 8,
+            }}
+          >
+            GYMINI
+          </div>
         </div>
 
         {(error || secondsRemaining > 0) && (
           <div
             style={{
-              background: "rgba(229, 57, 53, 0.15)",
-              border: "1px solid rgba(229, 57, 53, 0.4)",
+              background: "rgba(229, 56, 53, 0.28)",
+              border: "1px solid rgba(229, 56, 53, 0.47)",
               color: COLORS.danger,
               padding: "10px 12px",
               borderRadius: 10,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 600,
               marginBottom: 18,
               textAlign: "center",
@@ -112,7 +130,7 @@ export default function Login() {
         <label
           style={{
             display: "block",
-            fontSize: 11,
+            fontSize: 16,
             fontWeight: 800,
             letterSpacing: 1,
             color: COLORS.textSecondary,
@@ -134,7 +152,7 @@ export default function Login() {
             border: `1px solid ${COLORS.border}`,
             background: COLORS.background,
             color: COLORS.text,
-            fontSize: 14,
+            fontSize: 16,
             marginBottom: 18,
           }}
         />
@@ -142,7 +160,7 @@ export default function Login() {
         <label
           style={{
             display: "block",
-            fontSize: 11,
+            fontSize: 16,
             fontWeight: 800,
             letterSpacing: 1,
             color: COLORS.textSecondary,
@@ -164,7 +182,7 @@ export default function Login() {
             border: `1px solid ${COLORS.border}`,
             background: COLORS.background,
             color: COLORS.text,
-            fontSize: 14,
+            fontSize: 16,
             marginBottom: 24,
           }}
         />
@@ -177,8 +195,8 @@ export default function Login() {
             padding: "14px",
             borderRadius: 10,
             background: COLORS.primary,
-            color: COLORS.text,
-            fontSize: 15,
+            color: COLORS.buttonText,
+            fontSize: 16,
             fontWeight: 900,
             opacity: loading || secondsRemaining > 0 ? 0.6 : 1,
             cursor: loading || secondsRemaining > 0 ? "not-allowed" : "pointer",

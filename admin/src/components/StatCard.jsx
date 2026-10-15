@@ -20,7 +20,7 @@ export default function StatCard({
       <div style={{ fontSize: 24, marginBottom: 8 }}>{emoji}</div>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 14,
           fontWeight: 800,
           letterSpacing: 1,
           color: COLORS.textSecondary,

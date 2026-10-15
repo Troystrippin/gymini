@@ -117,7 +117,7 @@ export default function ActivityLogs() {
         <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
           Activity Logs
         </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
           Every admin action taken in this panel — auto-deleted after 90 days.
         </p>
       </div>

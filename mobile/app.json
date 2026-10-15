@@ -5,7 +5,7 @@
     "version": "1.0.1",
     "orientation": "portrait",
     "backgroundColor": "#0D0D0D",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/GYMINI logo Splash.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -15,14 +15,12 @@
       "package": "com.troyystrppn.gymini",
       "versionCode": 2,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0D0D0D",
+        "foregroundImage": "./assets/GYMINI logo Splash.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/GYMINI logo Splash.png"
     },
     "plugins": [
       "expo-secure-store",

@@ -179,7 +179,7 @@ export default function Exercises() {
           <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
             Exercises
           </h1>
-          <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+          <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
             Moderate custom exercises and manage the catalog
           </p>
         </div>
@@ -346,7 +346,7 @@ export default function Exercises() {
                     style={{
                       ...tdStyle,
                       color: COLORS.textSecondary,
-                      fontSize: 13,
+                      fontSize: 14,
                     }}
                   >
                     {ex.muscleGroup}
@@ -357,7 +357,7 @@ export default function Exercises() {
                   <td
                     style={{
                       ...tdStyle,
-                      fontSize: 13,
+                      fontSize: 14,
                       color: COLORS.textSecondary,
                     }}
                   >
@@ -370,12 +370,15 @@ export default function Exercises() {
                     <Link
                       to={`/exercises/${ex._id}`}
                       style={{
-                        fontSize: 12,
+                        fontSize: 14,
+                        padding: "4px 10px",
+                        borderRadius: 10,
                         fontWeight: 700,
-                        color: COLORS.primary,
+                        color: COLORS.buttonText,
+                        background: COLORS.primary,
                       }}
                     >
-                      Review →
+                      Review
                     </Link>
                   </td>
                 </tr>
@@ -410,7 +413,7 @@ export default function Exercises() {
             disabled={page === totalPages}
             style={pagerBtn(page === totalPages)}
           >
-            Next →
+            Next
           </button>
         </div>
       )}
@@ -645,7 +648,7 @@ const btnPrimary = {
   padding: "11px 20px",
   borderRadius: 10,
   background: COLORS.primary,
-  color: COLORS.text,
+  color: COLORS.buttonText,
   fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",

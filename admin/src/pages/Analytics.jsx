@@ -66,7 +66,7 @@ export default function Analytics() {
         <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
           Analytics
         </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
           Growth, engagement, and retention metrics
         </p>
       </div>
@@ -261,7 +261,7 @@ function Section({ title, children }) {
     <div style={{ marginBottom: 40 }}>
       <h2
         style={{
-          fontSize: 13,
+          fontSize: 16,
           fontWeight: 800,
           letterSpacing: 1.5,
           color: COLORS.textSecondary,

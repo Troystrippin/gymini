@@ -62,8 +62,8 @@ export default function Dashboard() {
         <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
           Dashboard
         </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
-          Overview of your GYMINI platform
+        <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
+          Overview of GYMINI platform
         </p>
       </div>
 
@@ -114,14 +114,14 @@ export default function Dashboard() {
           <h2 style={{ fontSize: 18, fontWeight: 800 }}>Recent Users</h2>
           <Link
             to="/users"
-            style={{ color: COLORS.primary, fontSize: 13, fontWeight: 700 }}
+            style={{ color: COLORS.primary, fontSize: 14, fontWeight: 700 }}
           >
-            View all →
+            View all
           </Link>
         </div>
 
         {recentUsers.length === 0 ? (
-          <div style={{ color: COLORS.textSecondary, fontSize: 13 }}>
+          <div style={{ color: COLORS.textSecondary, fontSize: 16 }}>
             No users yet.
           </div>
         ) : (
@@ -134,7 +134,7 @@ export default function Dashboard() {
                     style={{
                       textAlign: "left",
                       padding: "10px 8px",
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: 800,
                       letterSpacing: 1,
                       color: COLORS.textSecondary,
@@ -157,7 +157,7 @@ export default function Dashboard() {
                   <td
                     style={{
                       padding: "14px 8px",
-                      fontSize: 13,
+                      fontSize: 14,
                       color: COLORS.textSecondary,
                     }}
                   >

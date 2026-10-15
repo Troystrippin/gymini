@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
@@ -96,7 +97,7 @@ export default function RegisterScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.logo}>◆◆</Text>
+          <GYMINI_LOGO width={75} height={75} color={colors.text} />
           <Text style={styles.brand}>GYMINI</Text>
         </View>
 
@@ -233,7 +234,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.background },
   container: { flexGrow: 1, padding: 24, justifyContent: "center" },
   header: { alignItems: "center", marginBottom: 32 },
-  logo: { fontSize: 50, color: COLORS.text, fontWeight: "bold" },
   brand: {
     color: COLORS.text,
     fontSize: 28,

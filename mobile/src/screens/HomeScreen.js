@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
@@ -185,7 +186,7 @@ export default function HomeScreen() {
           />
         ) : (
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>💤</Text>
+            <GYMINI_LOGO width={75} height={75} color={colors.text} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No workout plan yet
             </Text>
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
   settingsIcon: { fontSize: 22 },
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   emptyState: { padding: 40, alignItems: "center" },
-  emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
+  emptyText: { fontSize: 16, fontWeight: "700", marginBottom: 4, marginTop: 5 },
   emptySubtext: { fontSize: 13 },
   mealPreview: { borderRadius: 18, marginTop: 20, padding: 18, elevation: 2 },
   mealHeaderRow: {

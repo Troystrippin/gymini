@@ -2,6 +2,7 @@ import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { View, Text, StyleSheet } from "react-native";
 import Button from "../components/Button";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 import { useTheme } from "../theme/theme";
 
 export default function SplashScreen({ navigation }) {
@@ -16,7 +17,7 @@ export default function SplashScreen({ navigation }) {
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.centerContent}>
-        <Text style={[styles.logo, { color: colors.text }]}>◆◆</Text>
+        <GYMINI_LOGO width={120} height={90} color={colors.text} />
         <Text style={[styles.brand, { color: colors.text }]}>GYMINI</Text>
         <Text style={[styles.tagline, { color: colors.text }]}>
           IMPROVE YOUR LIFESTYLE
@@ -41,7 +42,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   centerContent: { flex: 1, alignItems: "center", justifyContent: "center" },
-  logo: { fontSize: 80, fontWeight: "bold" },
   brand: {
     fontSize: 40,
     fontWeight: "900",

@@ -145,14 +145,22 @@ export default function Meals() {
                 <button
                   onClick={() => uploadImage(meal)}
                   disabled={busyId === meal.id || !files[meal.id]}
-                  style={buttonStyle}
+                  style={{
+                    ...buttonStyle,
+                    color: COLORS.buttonText,
+                    background: COLORS.success,
+                  }}
                 >
                   {busyId === meal.id ? "Saving..." : "Save photo"}
                 </button>
                 <button
                   onClick={() => removeMeal(meal)}
                   disabled={busyId === meal.id}
-                  style={{ ...buttonStyle, color: COLORS.danger }}
+                  style={{
+                    ...buttonStyle,
+                    color: COLORS.buttonText,
+                    background: COLORS.danger,
+                  }}
                 >
                   Delete
                 </button>

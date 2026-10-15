@@ -1,13 +1,6 @@
 import React from "react";
 import { COLORS } from "../theme";
 
-/**
- * Sparkline: single-series line chart.
- * Props:
- *   - data: array of numbers
- *   - width, height: SVG dimensions
- *   - color: stroke color
- */
 export function Sparkline({
   data = [],
   width = 300,
@@ -16,9 +9,7 @@ export function Sparkline({
 }) {
   if (!data.length) {
     return (
-      <div style={{ color: COLORS.textSecondary, fontSize: 12 }}>
-        No data
-      </div>
+      <div style={{ color: COLORS.textSecondary, fontSize: 12 }}>No data</div>
     );
   }
 
@@ -62,9 +53,7 @@ export function BarChart({
 }) {
   if (!data.length) {
     return (
-      <div style={{ color: COLORS.textSecondary, fontSize: 12 }}>
-        No data
-      </div>
+      <div style={{ color: COLORS.textSecondary, fontSize: 12 }}>No data</div>
     );
   }
 

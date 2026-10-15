@@ -68,7 +68,7 @@ export default function Users() {
         <h1 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6 }}>
           Users
         </h1>
-        <p style={{ color: COLORS.textSecondary, fontSize: 14 }}>
+        <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
           Manage roles and permissions
         </p>
       </div>
@@ -94,7 +94,7 @@ export default function Users() {
             border: `1px solid ${COLORS.border}`,
             background: COLORS.cardBackground,
             color: COLORS.text,
-            fontSize: 14,
+            fontSize: 16,
           }}
         />
         <select
@@ -106,7 +106,7 @@ export default function Users() {
             border: `1px solid ${COLORS.border}`,
             background: COLORS.cardBackground,
             color: COLORS.text,
-            fontSize: 14,
+            fontSize: 16,
             minWidth: 160,
           }}
         >
@@ -125,7 +125,7 @@ export default function Users() {
             padding: 14,
             borderRadius: 10,
             marginBottom: 20,
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           {error}
@@ -170,7 +170,7 @@ export default function Users() {
                     style={{
                       textAlign: "left",
                       padding: "14px 16px",
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: 800,
                       letterSpacing: 1,
                       color: COLORS.textSecondary,
