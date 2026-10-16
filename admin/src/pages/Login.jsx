@@ -1,97 +1,18 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import Logo from "../components/Logo";
 import { COLORS } from "../theme";
 
-let googleIdentityScriptPromise;
-
-function loadGoogleIdentityScript() {
-  if (window.google?.accounts?.id) return Promise.resolve();
-  if (googleIdentityScriptPromise) return googleIdentityScriptPromise;
-
-  googleIdentityScriptPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = () => {
-      googleIdentityScriptPromise = null;
-      reject(new Error("Unable to load Google sign-in. Please try again."));
-    };
-    document.head.appendChild(script);
-  });
-
-  return googleIdentityScriptPromise;
-}
-
 export default function Login() {
-  const { login, googleLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const googleButtonRef = useRef(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleReady, setGoogleReady] = useState(false);
   const [lockoutUntil, setLockoutUntil] = useState(null);
   const [now, setNow] = useState(Date.now());
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-  useEffect(() => {
-    if (!googleClientId) {
-      setError("Google sign-in is not configured for this deployment.");
-      return undefined;
-    }
-
-    let active = true;
-    loadGoogleIdentityScript()
-      .then(() => {
-        if (!active || !googleButtonRef.current) return;
-
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: async ({ credential }) => {
-            if (!credential) {
-              setError("Google did not return an ID token. Please try again.");
-              return;
-            }
-
-            setError("");
-            setLoading(true);
-            try {
-              await googleLogin(credential);
-              navigate("/dashboard");
-            } catch (err) {
-              setError(
-                err.response?.data?.message ||
-                  err.message ||
-                  "Google sign-in failed. Please try again.",
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        });
-        window.google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: "outline",
-          size: "large",
-          text: "continue_with",
-          shape: "rectangular",
-          width: 336,
-        });
-        setGoogleReady(true);
-      })
-      .catch((err) => {
-        if (active) setError(err.message);
-      });
-
-    return () => {
-      active = false;
-      window.google?.accounts?.id?.cancel();
-    };
-  }, [googleClientId]);
 
   useEffect(() => {
     if (!lockoutUntil) return undefined;
@@ -288,32 +209,6 @@ export default function Login() {
               : "Sign In"}
         </button>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            margin: "22px 0",
-            color: COLORS.textSecondary,
-            fontSize: 12,
-            fontWeight: 700,
-          }}
-        >
-          <span style={{ flex: 1, height: 1, background: COLORS.border }} />
-          OR CONTINUE WITH
-          <span style={{ flex: 1, height: 1, background: COLORS.border }} />
-        </div>
-        <div
-          ref={googleButtonRef}
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            minHeight: 40,
-            opacity: loading ? 0.6 : 1,
-            pointerEvents: loading ? "none" : "auto",
-          }}
-          aria-busy={!googleReady}
-        />
       </form>
     </div>
   );
