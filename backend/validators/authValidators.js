@@ -53,6 +53,20 @@ const loginRules = [
     .isLength({ min: 1, max: 128 }),
 ];
 
+const googleLoginRules = [
+  body("idToken")
+    .exists({ checkFalsy: true })
+    .withMessage("Google ID token is required")
+    .isString()
+    .withMessage("Google ID token must be a string")
+    .trim()
+    .isLength({ min: 1, max: 4096 })
+    .withMessage("Google ID token has an invalid length")
+    .isJWT()
+    .withMessage("Google ID token is invalid"),
+  body("adminOnly").optional().isBoolean().toBoolean(),
+];
+
 const onboardingRules = [
   body("goal")
     .optional()
@@ -187,6 +201,7 @@ const updateProfileRules = [
 module.exports = {
   registerRules,
   loginRules,
+  googleLoginRules,
   onboardingRules,
   verifyEmailRules,
   resendVerificationRules,

@@ -186,7 +186,7 @@ export default function HomeScreen() {
           />
         ) : (
           <View style={styles.emptyState}>
-            <GYMINI_LOGO width={75} height={75} color={colors.text} />
+            <GYMINI_LOGO width={75} height={75} color={colors.textSecondary} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No workout plan yet
             </Text>
@@ -309,7 +309,7 @@ export default function HomeScreen() {
           onPress={() => navigation.navigate("Chat")}
           style={[styles.coachCard, { backgroundColor: colors.cardBackground }]}
         >
-          <Text style={[styles.coachEmoji]}>🤖</Text>
+          <GYMINI_LOGO width={30} height={30} color={colors.text} />
           <View style={styles.coachText}>
             <Text style={[styles.coachTitle, { color: colors.text }]}>
               AI Coach
@@ -320,7 +320,6 @@ export default function HomeScreen() {
               Get help with workouts and meals
             </Text>
           </View>
-          <Text style={[styles.coachArrow, { color: colors.primary }]}>→</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -431,6 +430,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
     marginTop: 16,
     padding: 18,
     elevation: 2,
@@ -441,6 +442,7 @@ const styles = StyleSheet.create({
   },
   coachText: {
     flex: 1,
+    marginLeft: 15,
   },
   coachTitle: {
     fontSize: 17,

@@ -70,6 +70,13 @@ export const AuthProvider = ({ children }) => {
     await persistSession(response.data);
   };
 
+  const googleLogin = async (idToken) => {
+    const response = await api.post("/auth/google", { idToken });
+    await persistSession(response.data);
+    setSessionExpired(false);
+    return response.data;
+  };
+
   const login = async (email, password) => {
     const response = await api.post("/auth/login", { email, password });
     await persistSession(response.data);
@@ -164,6 +171,7 @@ export const AuthProvider = ({ children }) => {
         sessionExpired,
         register,
         login,
+        googleLogin,
         logout,
         completeOnboarding,
         verifyEmail,

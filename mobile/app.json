@@ -2,6 +2,7 @@
   "expo": {
     "name": "GYMINI",
     "slug": "gymini",
+    "owner": "gymini",
     "version": "1.0.1",
     "orientation": "portrait",
     "backgroundColor": "#0D0D0D",
@@ -17,13 +18,22 @@
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0D",
         "foregroundImage": "./assets/GYMINI logo Splash.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/GYMINI logo Splash.png"
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "react-native-nitro-google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.739890437061-l7k645rp1cik7kic2hq8srh37ok8cicv"
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -33,7 +43,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "c64c3298-b7fe-40b1-b533-580be3090603"
+        "projectId": "c67db098-4f25-4536-92e1-84648febd797"
       }
     },
     "updates": {

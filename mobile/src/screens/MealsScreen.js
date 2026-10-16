@@ -12,11 +12,13 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { COLORS } from "../theme/colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MealCard from "../components/MealCard";
 import MealDetailModal from "../components/MealDetailModal";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useTheme } from "../theme/theme";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 
 const FILTER_OPTIONS = [
   "All",
@@ -77,8 +79,6 @@ export default function MealsScreen() {
     );
   };
 
-  // Height of the scrollable meals box. The page itself stays short no
-  // matter how many meals there are.
   const mealListHeight = Math.max(320, Math.round(windowHeight * 0.55));
 
   const filteredMeals = useMemo(() => {
@@ -166,6 +166,24 @@ export default function MealsScreen() {
           </Text>
         </View>
 
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("Chat")}
+          style={[styles.coachCard, { backgroundColor: colors.cardBackground }]}
+        >
+          <GYMINI_LOGO width={30} height={30} color={colors.text} />
+          <View style={styles.coachText}>
+            <Text style={[styles.coachTitle, { color: colors.text }]}>
+              AI Coach
+            </Text>
+            <Text
+              style={[styles.coachSubtitle, { color: colors.textSecondary }]}
+            >
+              Get help with workouts and meals
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {filteredRecs.length > 0 && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -223,7 +241,6 @@ export default function MealsScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Meals scroll inside this fixed-height box, not the whole page */}
         <View style={[styles.mealBox, { maxHeight: mealListHeight }]}>
           <ScrollView
             nestedScrollEnabled
@@ -479,5 +496,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderRadius: 10,
+  },
+  coachCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    marginTop: 16,
+    padding: 18,
+    elevation: 2,
+  },
+  coachEmoji: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  coachText: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  coachTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  coachSubtitle: {
+    fontSize: 13,
+  },
+  coachArrow: {
+    fontSize: 22,
+    fontWeight: "700",
   },
 });

@@ -45,7 +45,10 @@ app.use(
       // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
       // In dev, allow everything if no allowlist configured
-      if (process.env.NODE_ENV !== "production" && allowedOrigins.length === 0) {
+      if (
+        process.env.NODE_ENV !== "production" &&
+        allowedOrigins.length === 0
+      ) {
         return callback(null, true);
       }
       if (allowedOrigins.includes(origin)) return callback(null, true);
@@ -142,6 +145,7 @@ app.get("/", (req, res) => res.send("GYMini API is running..."));
 // Apply strict limiter FIRST to specific auth paths, then generous to the rest.
 app.use("/api/auth/register", authStrictLimiter);
 app.use("/api/auth/login", authStrictLimiter);
+app.use("/api/auth/google", authStrictLimiter);
 app.use("/api/auth/forgot-password", authStrictLimiter);
 app.use("/api/auth/reset-password", authStrictLimiter);
 app.use("/api/auth/resend-verification", authStrictLimiter);

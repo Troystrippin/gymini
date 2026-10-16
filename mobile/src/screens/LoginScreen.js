@@ -9,6 +9,12 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import {
+  GoogleOneTapSignIn,
+  isCancelledResponse,
+  isNoSavedCredentialFoundResponse,
+  isSuccessResponse,
+} from "react-native-nitro-google-signin";
 import { LinearGradient } from "expo-linear-gradient";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
@@ -33,7 +39,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
   const [submitting, setSubmitting] = useState(false);
-  const { login, sessionExpired, clearSessionExpired } =
+  const { login, googleLogin, sessionExpired, clearSessionExpired } =
     useContext(AuthContext);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -62,6 +68,39 @@ export default function LoginScreen({ navigation }) {
       Alert.alert(
         "Login Failed",
         err.response?.data?.message || err.message || "Something went wrong",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (submitting) return;
+
+    try {
+      setSubmitting(true);
+      await GoogleOneTapSignIn.checkPlayServices();
+
+      let response = await GoogleOneTapSignIn.signIn();
+
+      if (isNoSavedCredentialFoundResponse(response)) {
+        response = await GoogleOneTapSignIn.createAccount();
+      }
+
+      if (isNoSavedCredentialFoundResponse(response)) {
+        response = await GoogleOneTapSignIn.presentExplicitSignIn();
+      }
+
+      if (isCancelledResponse(response)) return;
+
+      if (!isSuccessResponse(response) || !response.data.idToken) {
+        throw new Error("Google did not return an ID token. Please try again");
+      }
+      await googleLogin(response.data.idToken);
+    } catch (err) {
+      Alert.alert(
+        "Google Sign-In Failed",
+        err.response?.data?.message || err.message || "Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -180,6 +219,8 @@ export default function LoginScreen({ navigation }) {
 
         <View style={styles.socialRow}>
           <TouchableOpacity
+            onPress={handleGoogleLogin}
+            disabled={submitting}
             style={[
               styles.socialBtn,
               {
@@ -190,19 +231,6 @@ export default function LoginScreen({ navigation }) {
           >
             <Text style={[styles.socialText, { color: colors.text }]}>
               G Google
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.socialBtn,
-              {
-                backgroundColor: colors.cardBackground,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.socialText, { color: colors.text }]}>
-              f Facebook
             </Text>
           </TouchableOpacity>
         </View>

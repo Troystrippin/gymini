@@ -48,15 +48,9 @@ export default function OnboardingDetails({ navigation, route }) {
   // ── Per-field errors ─────────────────────────────────────────────
   const errors = {
     biologicalSex: sex ? null : "Please select your biological sex",
-    age: !age
-      ? "Age is required"
-      : validateAge(age),
-    heightCm: !height
-      ? "Height is required"
-      : validateHeight(height),
-    weightKg: !weight
-      ? "Weight is required"
-      : validateWeight(weight),
+    age: !age ? "Age is required" : validateAge(age),
+    heightCm: !height ? "Height is required" : validateHeight(height),
+    weightKg: !weight ? "Weight is required" : validateWeight(weight),
     workoutDaysPerWeek:
       days === null ? "Please select your workout days per week" : null,
   };
@@ -92,16 +86,16 @@ export default function OnboardingDetails({ navigation, route }) {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top", "bottom"]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-      </View>
-
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+        </View>
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -122,9 +116,7 @@ export default function OnboardingDetails({ navigation, route }) {
                 style={[
                   styles.toggleBtn,
                   sex === option && styles.toggleBtnActive,
-                  touched.sex &&
-                    errors.biologicalSex &&
-                    styles.toggleBtnError,
+                  touched.sex && errors.biologicalSex && styles.toggleBtnError,
                 ]}
                 onPress={() => {
                   setSex(option);

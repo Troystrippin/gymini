@@ -18,7 +18,9 @@ const UserSchema = new mongoose.Schema(
     avatarPublicId: { type: String, default: null },
     password: {
       type: String,
-      required: [true, "Please add a password"],
+      required: function () {
+        return !this.googleId;
+      },
       minlength: 6,
     },
 
@@ -110,6 +112,11 @@ const UserSchema = new mongoose.Schema(
     lockoutUntil: {
       type: Date,
       default: null,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   { timestamps: true },

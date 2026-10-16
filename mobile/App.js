@@ -8,6 +8,14 @@ import { PlanDraftProvider } from "./src/context/PlanDraftContext";
 import { MealPlanProvider } from "./src/context/MealPlanContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider, useTheme } from "./src/theme/theme";
+import { GoogleOneTapSignIn } from "react-native-nitro-google-signin";
+
+GoogleOneTapSignIn.configure({
+  webClientId:
+    "739890437061-orlflatdgop8iale1926tn4c3qf55blh.apps.googleusercontent.com",
+  iosClientId:
+    "739890437061-l7k645rp1cik7kic2hq8srh37ok8cicv.apps.googleusercontent.com",
+});
 
 function AppContent() {
   const { mode, colors } = useTheme();

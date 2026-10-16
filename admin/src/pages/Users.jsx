@@ -264,9 +264,8 @@ export default function Users() {
                           style={{
                             padding: "6px 12px",
                             borderRadius: 8,
-                            background: "rgba(229, 57, 53, 0.15)",
-                            border: "1px solid rgba(229, 57, 53, 0.4)",
-                            color: COLORS.danger,
+                            background: COLORS.danger,
+                            color: COLORS.buttonText,
                             fontSize: 12,
                             fontWeight: 700,
                           }}

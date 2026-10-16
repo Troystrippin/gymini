@@ -4,6 +4,7 @@ const {
   registerUser,
   loginUser,
   refreshAccessToken,
+  googleLogin,
   logoutUser,
   logoutAllDevices,
   updateOnboarding,
@@ -22,6 +23,7 @@ const { handleValidation } = require("../middleware/validate");
 const {
   registerRules,
   loginRules,
+  googleLoginRules,
   onboardingRules,
   verifyEmailRules,
   resendVerificationRules,
@@ -34,6 +36,7 @@ const {
 // ---------- Public routes ----------
 router.post("/register", registerRules, handleValidation, registerUser);
 router.post("/login", loginRules, handleValidation, loginUser);
+router.post("/google", googleLoginRules, handleValidation, googleLogin);
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logoutUser);
 router.post(

@@ -9,10 +9,13 @@ import {
   Text,
   TextInput,
   View,
+  TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { COLORS } from "../theme/colors";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 import {
   NestableScrollContainer,
   NestableDraggableFlatList,
@@ -551,6 +554,24 @@ export default function PlanScreen() {
             )}
           </Pressable>
         </View>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate("Chat")}
+          style={[styles.coachCard, { backgroundColor: colors.cardBackground }]}
+        >
+          <GYMINI_LOGO width={30} height={30} color={colors.text} />
+          <View style={styles.coachText}>
+            <Text style={[styles.coachTitle, { color: colors.text }]}>
+              AI Coach
+            </Text>
+            <Text
+              style={[styles.coachSubtitle, { color: colors.textSecondary }]}
+            >
+              Get help with workouts and meals
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         <View style={[styles.savedSection, { marginTop: 28 }]}>
           <View style={styles.savedHeader}>
@@ -1226,4 +1247,34 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   actionText: { fontSize: 15, fontWeight: "700" },
+  coachCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    marginTop: 16,
+    padding: 18,
+    elevation: 2,
+  },
+  coachEmoji: {
+    fontSize: 28,
+    marginRight: 14,
+  },
+  coachText: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  coachTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  coachSubtitle: {
+    fontSize: 13,
+  },
+  coachArrow: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
 });

@@ -182,7 +182,6 @@ export default function Sidebar() {
             padding: "10px 14px",
             borderRadius: 10,
             border: `1px solid ${COLORS.border}`,
-            background: "transparent",
             color: COLORS.buttonText,
             fontSize: 13,
             fontWeight: 700,

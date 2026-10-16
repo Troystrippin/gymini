@@ -76,6 +76,20 @@ export function AuthProvider({ children }) {
     return res.data;
   };
 
+  const googleLogin = async (idToken) => {
+    const res = await api.post("/auth/google", { idToken, adminOnly: true });
+
+    if (!ALLOWED_ROLES.includes(res.data.role)) {
+      throw new Error(
+        "Access denied. This dashboard is for administrators only.",
+      );
+    }
+
+    persistSession(res.data);
+    setUser(res.data);
+    return res.data;
+  };
+
   const logout = async () => {
     const refreshToken = localStorage.getItem("admin_refresh_token");
     try {
@@ -88,7 +102,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

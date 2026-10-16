@@ -1,3 +1,5 @@
+const { OAuth2Client } = require("google-auth-library");
+const googleClient = new OAuth2Client();
 const User = require("../models/User");
 const { uploadImage, deleteImage } = require("../lib/cloudinary");
 const bcrypt = require("bcryptjs");
@@ -122,7 +124,7 @@ const loginUser = async (req, res, next) => {
 
     const passwordMatches = await bcrypt.compare(
       password,
-      user ? user.password : DUMMY_HASH,
+      user?.password || DUMMY_HASH,
     );
 
     if (user && user.lockoutUntil && user.lockoutUntil.getTime() > Date.now()) {
@@ -135,7 +137,7 @@ const loginUser = async (req, res, next) => {
       });
     }
 
-    if (!user || !passwordMatches) {
+    if (!user || !user.password || !passwordMatches) {
       if (user) {
         user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
 
@@ -175,6 +177,89 @@ const loginUser = async (req, res, next) => {
     res.json(authResponse(user, accessToken, refreshToken));
   } catch (error) {
     next(error);
+  }
+};
+
+const googleLogin = async (req, res, next) => {
+  try {
+    const { idToken, adminOnly = false } = req.body;
+
+    if (!process.env.GOOGLE_WEB_CLIENT_ID) {
+      return res.status(500).json({
+        message: "Google sign-in is not configured on the server",
+      });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_WEB_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({ message: "Invalid Google ID token" });
+    }
+    if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({
+        message: " Google account must have a verified email",
+      });
+    }
+    const email = payload.email.trim().toLowerCase();
+    let user = await User.findOne({ googleId: payload.sub });
+
+    if (adminOnly && user && user.role !== "admin") {
+      return res.status(403).json({
+        message: "Access denied. This dashboard is for administrators only.",
+      });
+    }
+
+    if (!user) {
+      const existingUser = await User.findOne({ email });
+
+      if (existingUser) {
+        if (adminOnly && existingUser.role !== "admin") {
+          return res.status(403).json({
+            message:
+              "Access denied. This dashboard is for administrators only.",
+          });
+        }
+        if (existingUser.googleId && existingUser.googleId !== payload.sub) {
+          return res.status(409).json({
+            message: "This account is linked to a different Google account.",
+          });
+        }
+
+        existingUser.googleId = payload.sub;
+        existingUser.emailVerified = true;
+        user = await existingUser.save();
+      } else {
+        if (adminOnly) {
+          return res.status(403).json({
+            message:
+              "Access denied. This dashboard is for administrators only.",
+          });
+        }
+        user = await User.create({
+          googleId: payload.sub,
+          email,
+          fullName: payload.name?.trim() || email,
+          avatarUrl: payload.picture || "",
+          emailVerified: true,
+        });
+      }
+    }
+
+    const accessToken = signAccessToken(user._id);
+    const refreshToken = await issueRefreshToken({
+      userId: user._id,
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+    });
+
+    return res.json(authResponse(user, accessToken, refreshToken));
+  } catch (error) {
+    return next(error);
   }
 };
 
@@ -396,6 +481,12 @@ const changePassword = async (req, res, next) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    if (!user.password) {
+      return res.status(400).json({
+        message: "This account does not have a password. Sign in with Google.",
+      });
+    }
+
     const ok = await bcrypt.compare(currentPassword, user.password);
     if (!ok) {
       return res.status(400).json({ message: "Current password is incorrect" });
@@ -544,6 +635,7 @@ module.exports = {
   registerUser,
   loginUser,
   refreshAccessToken,
+  googleLogin,
   logoutUser,
   logoutAllDevices,
   updateOnboarding,

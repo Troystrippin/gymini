@@ -30,7 +30,10 @@ const processQueue = (error, token = null) => {
     if (error) p.reject(error);
     else {
       // Retry the original request with the new token.
-      p.config.headers = { ...p.config.headers, Authorization: `Bearer ${token}` };
+      p.config.headers = {
+        ...p.config.headers,
+        Authorization: `Bearer ${token}`,
+      };
       p.resolve(api(p.config));
     }
   });
@@ -67,6 +70,7 @@ api.interceptors.response.use(
     if (
       original.url?.includes("/auth/refresh") ||
       original.url?.includes("/auth/login") ||
+      original.url?.includes("/auth/google") ||
       original.url?.includes("/auth/register")
     ) {
       return Promise.reject(error);
@@ -100,7 +104,10 @@ api.interceptors.response.use(
 
     try {
       const newToken = await refreshPromise;
-      original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` };
+      original.headers = {
+        ...original.headers,
+        Authorization: `Bearer ${newToken}`,
+      };
       return api(original);
     } catch (err) {
       return Promise.reject(err);
