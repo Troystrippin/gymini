@@ -1,6 +1,7 @@
 const WorkoutPlan = require("../models/WorkoutPlan");
 const Exercise = require("../models/Exercise");
 const User = require("../models/User");
+const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
 
 // Defensive clamp — keeps values within schema bounds even if validators
 // are bypassed. Bounds match planValidators.js exactly.
@@ -106,6 +107,12 @@ const savePlan = async (req, res, next) => {
         activePlanId: plan._id,
       });
     }
+
+    // Log the action
+    await logUserAction(req, isEdit ? "plan.update" : "plan.create", {
+      planName: plan.name,
+      exerciseCount: plan.exercises.length,
+    });
 
     res.status(isEdit ? 200 : 201).json(plan);
   } catch (err) {

@@ -19,6 +19,7 @@ const {
   hashCode,
   minutesFromNow,
 } = require("../utils/emailCodes");
+const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
 
 // Fields required before we mark onboarding as complete.
 const REQUIRED_ONBOARDING_FIELDS = [
@@ -174,6 +175,10 @@ const loginUser = async (req, res, next) => {
       ip: req.ip,
     });
 
+    // Log the action
+    req.user = user;
+    await logUserAction(req, "user.login", { method: "email" });
+
     res.json(authResponse(user, accessToken, refreshToken));
   } catch (error) {
     next(error);
@@ -256,6 +261,10 @@ const googleLogin = async (req, res, next) => {
       userAgent: req.headers["user-agent"],
       ip: req.ip,
     });
+
+    // Log the action
+    req.user = user;
+    await logUserAction(req, "user.login", { method: "google" });
 
     return res.json(authResponse(user, accessToken, refreshToken));
   } catch (error) {
@@ -510,6 +519,8 @@ const changePassword = async (req, res, next) => {
       ip: req.ip,
     });
     const accessToken = signAccessToken(user._id);
+
+    await logUserAction(req, "user.password_change");
 
     console.log(`[change-password] updated for user=${user._id}`);
     res.json({

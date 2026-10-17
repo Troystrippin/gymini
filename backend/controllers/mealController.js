@@ -1,6 +1,7 @@
 const Meal = require("../models/Meal");
 const MealPlan = require("../models/MealPlan");
 const mealsSeed = require("../data/mealsSeed");
+const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -168,6 +169,13 @@ exports.saveMealPlan = async (req, res, next) => {
       { user: req.user._id, date, entries, totals },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     ).lean();
+
+    // Log the action
+    await logUserAction(req, "meal_plan.save", {
+      date,
+      mealsCount: entries.length,
+      totalCalories: totals.calories,
+    });
 
     res.json(plan);
   } catch (err) {

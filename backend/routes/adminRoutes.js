@@ -30,6 +30,7 @@ const { protect, adminOnly } = require("../middleware/authMiddleware");
 const imageUpload = require("../middleware/imageUpload");
 const {
   listMeals,
+  createMeal,
   updateMealImage,
   deleteMeal,
 } = require("../controllers/adminMealController");
@@ -76,6 +77,7 @@ router.get("/logs/filters", getLogFilters);
 
 // Shared meal catalog
 router.get("/meals", listMeals);
+router.post("/meals", imageUpload, createMeal);
 router.put("/meals/:id/image", imageUpload, updateMealImage);
 router.delete("/meals/:id", deleteMeal);
 

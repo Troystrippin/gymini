@@ -1,12 +1,76 @@
 const Meal = require("../models/Meal");
 const { uploadImage, deleteImage } = require("../lib/cloudinary");
 const { logAdminAction } = require("../utils/auditLog");
+const crypto = require("crypto");
 
 const listMeals = async (req, res, next) => {
   try {
     const meals = await Meal.find({}).sort({ type: 1, name: 1 }).lean();
     res.json({ meals });
   } catch (error) {
+    next(error);
+  }
+};
+
+const createMeal = async (req, res, next) => {
+  let uploaded;
+  try {
+    const {
+      name,
+      type,
+      goal,
+      description,
+      calories,
+      protein,
+      carbs,
+      fats,
+      tags,
+    } = req.body;
+
+    // Generate a unique ID for the meal (since your schema requires it)
+    const mealId = crypto.randomBytes(8).toString("hex");
+
+    if (req.file) {
+      uploaded = await uploadImage(req.file.buffer, "gymini/meals");
+    }
+
+    const newMeal = await Meal.create({
+      id: mealId,
+      name,
+      type,
+      goal,
+      description: description || "",
+      calories: Number(calories),
+      protein: Number(protein),
+      carbs: Number(carbs) || 0,
+      fats: Number(fats) || 0,
+      tags: tags ? tags.split(",").map((t) => t.trim()) : [],
+      image: uploaded?.secure_url || "",
+      imagePublicId: uploaded?.public_id || null,
+      active: true,
+    });
+
+    await logAdminAction(req, {
+      action: "meal.create",
+      targetType: "meal",
+      targetId: newMeal._id,
+      targetLabel: newMeal.name,
+    });
+
+    res.status(201).json({ message: "Meal created", meal: newMeal });
+  } catch (error) {
+    if (uploaded?.public_id) {
+      await deleteImage(uploaded.public_id).catch(() => {});
+    }
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        message: "Invalid meal data",
+        errors: Object.values(error.errors).map((e) => ({
+          field: e.path,
+          message: e.message,
+        })),
+      });
+    }
     next(error);
   }
 };
@@ -74,4 +138,4 @@ const deleteMeal = async (req, res, next) => {
   }
 };
 
-module.exports = { listMeals, updateMealImage, deleteMeal };
+module.exports = { listMeals, createMeal, updateMealImage, deleteMeal };

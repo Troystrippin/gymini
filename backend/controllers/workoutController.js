@@ -1,6 +1,7 @@
 const WorkoutPlan = require("../models/WorkoutPlan");
 const WorkoutLog = require("../models/WorkoutLog");
-const Exercise = require("../models/Exercise"); // registers schema
+const Exercise = require("../models/Exercise");
+const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
 
 // ──────────────────────────────────────────────────────────────
 // EXISTING — today's workout + toggle
@@ -47,8 +48,6 @@ const getTodayWorkout = async (req, res) => {
 
 // @desc    Toggle an exercise's completed status (session-local only)
 // @route   PATCH /api/workouts/:planId/exercises/:exerciseId
-// NOTE: This no longer persists onto the plan. `completed` is a session
-// flag. Real persistence happens on POST /api/workouts/sessions.
 const toggleExercise = async (req, res) => {
   res.json({ _id: req.params.exerciseId, done: true });
 };
@@ -156,6 +155,13 @@ const saveSession = async (req, res) => {
     console.log(
       `[workout] saved session user=${req.user._id} log=${log._id} exercises=${normalized.length}`,
     );
+
+    // Log the action
+    await logUserAction(req, "workout.complete", {
+      planName: log.planName,
+      durationMin: Math.round(log.durationSec / 60),
+      exercisesCompleted: log.completedExercises,
+    });
 
     res.status(201).json(log);
   } catch (error) {

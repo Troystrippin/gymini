@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const AdminLog = require("../models/AdminLog");
+const UserActivity = require("../models/UserActivity");
 
 const MAX_LIMIT = 100;
 const MAX_SKIP = 10000;
@@ -11,7 +12,6 @@ const listLogs = async (req, res, next) => {
     const {
       action,
       targetType,
-      adminId,
       search,
       from,
       to,
@@ -23,75 +23,105 @@ const listLogs = async (req, res, next) => {
     const page = Math.max(1, Number(rawPage) || 1);
     const skip = Math.min(MAX_SKIP, (page - 1) * limit);
 
-    const filter = {};
-    if (action) filter.action = action;
-    if (targetType) filter.targetType = targetType;
-    if (adminId && mongoose.Types.ObjectId.isValid(adminId)) {
-      filter.adminId = adminId;
-    }
-
-    // Date range
+    const dateFilter = {};
     if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = new Date(from);
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.$gte = new Date(from);
       if (to) {
         const toDate = new Date(to);
         toDate.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = toDate;
+        dateFilter.createdAt.$lte = toDate;
       }
     }
 
+    // --- 1. Query Admin Logs ---
+    const adminFilter = { ...dateFilter };
+    if (action) adminFilter.action = action;
     if (search) {
       const safe = escapeRegex(search);
-      filter.$or = [
+      adminFilter.$or = [
         { adminEmail: { $regex: safe, $options: "i" } },
         { targetLabel: { $regex: safe, $options: "i" } },
         { action: { $regex: safe, $options: "i" } },
       ];
     }
 
-    const [logs, total] = await Promise.all([
-      AdminLog.find(filter)
-        .populate("adminId", "fullName email")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      AdminLog.countDocuments(filter),
-    ]);
+    // --- 2. Query User Logs ---
+    const userFilter = { ...dateFilter };
+    if (action) userFilter.action = action;
+    if (search) {
+      const safe = escapeRegex(search);
+      userFilter.$or = [
+        { userEmail: { $regex: safe, $options: "i" } },
+        { action: { $regex: safe, $options: "i" } },
+      ];
+    }
 
-    res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+    const isAdminAction = !action || (!action.startsWith("user.") || action === "user.role_change" || action === "user.delete") && !action.startsWith("plan.") && !action.startsWith("workout.") && !action.startsWith("meal_plan.");
+    const isUserAction = !action || (action.startsWith("user.") && action !== "user.role_change" && action !== "user.delete") || action.startsWith("plan.") || action.startsWith("workout.") || action.startsWith("meal_plan.");
+
+    let adminLogs = [];
+    let userLogs = [];
+
+    if (isAdminAction) {
+      adminLogs = await AdminLog.find(adminFilter).lean();
+    }
+    if (isUserAction) {
+      userLogs = await UserActivity.find(userFilter).lean();
+    }
+
+    // --- 3. Merge and Sort ---
+    const normalizedUserLogs = userLogs.map(log => ({
+      _id: log._id,
+      createdAt: log.createdAt,
+      adminEmail: log.userEmail, 
+      action: log.action,
+      targetType: "user_action",
+      targetLabel: log.userEmail,
+      metadata: log.metadata,
+      isUserLog: true,
+    }));
+
+    let allLogs = [...adminLogs, ...normalizedUserLogs];
+    allLogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Filter by targetType if requested
+    if (targetType) {
+      allLogs = allLogs.filter(l => l.targetType === targetType);
+    }
+
+    const total = allLogs.length;
+    const paginatedLogs = allLogs.slice(skip, skip + limit);
+
+    // Populate admin details
+    const populatedLogs = await Promise.all(
+      paginatedLogs.map(async (log) => {
+        if (log.isUserLog) return log;
+        const adminUser = await mongoose.model("User").findById(log.adminId).select("fullName email").lean();
+        return { ...log, adminId: adminUser };
+      })
+    );
+
+    res.json({ logs: populatedLogs, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     next(err);
   }
 };
 
 // GET /api/admin/logs/filters
-// Returns the distinct set of actions and target types present in the log,
-// plus the list of admins who have performed actions.
 const getLogFilters = async (req, res, next) => {
   try {
-    const [actions, targetTypes, adminAgg] = await Promise.all([
+    const [adminActions, userActions] = await Promise.all([
       AdminLog.distinct("action"),
-      AdminLog.distinct("targetType"),
-      AdminLog.aggregate([
-        {
-          $group: {
-            _id: "$adminId",
-            email: { $first: "$adminEmail" },
-          },
-        },
-        { $limit: 200 },
-      ]),
+      UserActivity.distinct("action"),
     ]);
 
+    const actions = [...new Set([...adminActions, ...userActions])].sort();
+
     res.json({
-      actions: actions.sort(),
-      targetTypes: targetTypes.sort(),
-      admins: adminAgg.map((a) => ({
-        _id: a._id,
-        email: a.email,
-      })),
+      actions,
+      targetTypes: ["exercise", "user", "meal", "user_action"],
+      admins: [], 
     });
   } catch (err) {
     next(err);

@@ -3,12 +3,32 @@ import api from "../api";
 import { COLORS } from "../theme";
 import useAdminPolling from "../hooks/useAdminPolling";
 
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
+const MEAL_GOALS = ["Balanced", "High Protein", "Weight Loss"];
+
 export default function Meals() {
   const [meals, setMeals] = useState([]);
   const [files, setFiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
+
+  // Create Modal State
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    type: "Breakfast",
+    goal: "Balanced",
+    calories: "",
+    protein: "",
+    carbs: "",
+    fats: "",
+    tags: "",
+    description: "",
+  });
+  const [createImage, setCreateImage] = useState(null);
 
   const load = async () => {
     setError("");
@@ -68,12 +88,94 @@ export default function Meals() {
     }
   };
 
+  const openCreate = () => {
+    setCreateForm({
+      name: "",
+      type: "Breakfast",
+      goal: "Balanced",
+      calories: "",
+      protein: "",
+      carbs: "",
+      fats: "",
+      tags: "",
+      description: "",
+    });
+    setCreateImage(null);
+    setCreateError("");
+    setShowCreate(true);
+  };
+
+  const submitCreate = async () => {
+    // Validation: Name must contain only letters, spaces, and basic punctuation
+    const nameRegex = /^[a-zA-Z\s\-',.()]+$/;
+    if (!nameRegex.test(createForm.name)) {
+      setCreateError("Meal name can only contain letters, spaces, and basic punctuation.");
+      return;
+    }
+
+    if (!createForm.name || !createForm.calories || !createForm.protein) {
+      setCreateError("Name, Calories, and Protein are required.");
+      return;
+    }
+    
+    setCreating(true);
+    setCreateError("");
+    try {
+      let payload;
+      let config;
+      
+      if (createImage) {
+        payload = new FormData();
+        Object.entries(createForm).forEach(([k, v]) => payload.append(k, v));
+        payload.append("image", createImage);
+        config = { headers: { "Content-Type": "multipart/form-data" } };
+      } else {
+        payload = createForm;
+      }
+
+      await api.post("/admin/meals", payload, config);
+      setShowCreate(false);
+      setCreateImage(null);
+      load();
+    } catch (err) {
+      setCreateError(err.response?.data?.message || err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div>
-      <h1 style={{ fontSize: 26, fontWeight: 900, marginBottom: 20 }}>Meals</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <h1 style={{ fontSize: 26, fontWeight: 900 }}>Meals</h1>
+        <button
+          onClick={openCreate}
+          style={{
+            padding: "10px 18px",
+            borderRadius: 10,
+            background: COLORS.primary,
+            color: COLORS.text,
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: "pointer",
+            border: "none",
+          }}
+        >
+          + Add Built-in Meal
+        </button>
+      </div>
+
       {error && (
         <div style={{ color: COLORS.danger, marginBottom: 16 }}>{error}</div>
       )}
+      
       {loading ? (
         <div style={{ color: COLORS.textSecondary }}>Loading meals...</div>
       ) : (
@@ -169,6 +271,190 @@ export default function Meals() {
           ))}
         </div>
       )}
+
+      {/* Create Meal Modal */}
+      {showCreate && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: COLORS.cardBackground,
+              padding: 28,
+              borderRadius: 16,
+              width: "100%",
+              maxWidth: 540,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              border: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4 }}>
+              Add Built-in Meal
+            </h2>
+            <p style={{ color: COLORS.textSecondary, fontSize: 13, marginBottom: 20 }}>
+              This meal will be available to all users in the shared catalog.
+            </p>
+
+            {createError && (
+              <div
+                style={{
+                  background: "rgba(229, 57, 53, 0.15)",
+                  color: COLORS.danger,
+                  padding: 12,
+                  borderRadius: 10,
+                  marginBottom: 16,
+                  fontSize: 13,
+                }}
+              >
+                {createError}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Name</label>
+                <input
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder="e.g. Chicken Salad"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Type</label>
+                <select
+                  value={createForm.type}
+                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+                  style={inputStyle}
+                >
+                  {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Goal</label>
+                <select
+                  value={createForm.goal}
+                  onChange={(e) => setCreateForm({ ...createForm, goal: e.target.value })}
+                  style={inputStyle}
+                >
+                  {MEAL_GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Tags (comma separated)</label>
+                <input
+                  value={createForm.tags}
+                  onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
+                  placeholder="e.g. Low Carb, Quick"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginTop: 14 }}>
+              <div>
+                <label style={labelStyle}>Calories</label>
+                <input
+                  type="number"
+                  value={createForm.calories}
+                  onChange={(e) => setCreateForm({ ...createForm, calories: e.target.value })}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Protein (g)</label>
+                <input
+                  type="number"
+                  value={createForm.protein}
+                  onChange={(e) => setCreateForm({ ...createForm, protein: e.target.value })}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Carbs (g)</label>
+                <input
+                  type="number"
+                  value={createForm.carbs}
+                  onChange={(e) => setCreateForm({ ...createForm, carbs: e.target.value })}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Fats (g)</label>
+                <input
+                  type="number"
+                  value={createForm.fats}
+                  onChange={(e) => setCreateForm({ ...createForm, fats: e.target.value })}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <label style={labelStyle}>Description (Optional)</label>
+              <textarea
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                placeholder="Short description..."
+                rows={4}
+                style={{ 
+                  ...inputStyle, 
+                  height: 100, 
+                  resize: "none", 
+                  overflowY: "auto" 
+                }}
+              />
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <label style={labelStyle}>Meal Image (Optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCreateImage(e.target.files?.[0] || null)}
+                style={{ fontSize: 13, color: COLORS.text }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 24 }}>
+              <button
+                onClick={() => setShowCreate(false)}
+                disabled={creating}
+                style={{ ...buttonStyle, padding: "10px 18px" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitCreate}
+                disabled={creating}
+                style={{
+                  ...buttonStyle,
+                  padding: "10px 18px",
+                  background: COLORS.primary,
+                  color: COLORS.text,
+                  opacity: creating ? 0.6 : 1,
+                }}
+              >
+                {creating ? "Creating..." : "Create Meal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -182,4 +468,23 @@ const buttonStyle = {
   fontWeight: 700,
   cursor: "pointer",
   whiteSpace: "nowrap",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: `1px solid ${COLORS.border}`,
+  background: COLORS.background,
+  color: COLORS.text,
+  fontSize: 14,
+  marginTop: 6,
+};
+
+const labelStyle = {
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: 1,
+  color: COLORS.textSecondary,
+  textTransform: "uppercase",
 };
