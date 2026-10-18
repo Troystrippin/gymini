@@ -32,8 +32,7 @@ const createExerciseRules = [
     .isString()
     .trim()
     .isLength({ min: 2, max: 80 })
-    .withMessage("Exercise name must be 2–80 characters")
-    .escape(),
+    .withMessage("Exercise name must be 2–80 characters"),
 
   body("muscleGroup")
     .exists({ checkFalsy: true })

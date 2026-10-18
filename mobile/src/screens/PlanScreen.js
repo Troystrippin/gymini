@@ -24,6 +24,7 @@ import { useTheme } from "../theme/theme";
 import { usePlanDraft } from "../context/PlanDraftContext";
 import Stepper from "../components/Stepper";
 import api from "../api/api";
+import decodeHtmlEntities from "../utils/decodeHtmlEntities";
 
 const MUSCLE_GROUPS = [
   "Chest",
@@ -97,7 +98,6 @@ export default function PlanScreen() {
     }, [fetchSavedPlans]),
   );
 
-  // Rejected-notice alert
   useEffect(() => {
     if (rejectedNotices.length > 0) {
       const lines = rejectedNotices
@@ -283,7 +283,7 @@ export default function PlanScreen() {
           <View style={styles.planHeader}>
             <View style={styles.exerciseInfo}>
               <Text style={[styles.exerciseName, { color: colors.text }]}>
-                {exercise.name}
+                {decodeHtmlEntities(exercise.name)}
               </Text>
               <View style={styles.metaRow}>
                 {exercise.muscleGroup ? (
@@ -359,7 +359,10 @@ export default function PlanScreen() {
           />
         }
       >
-        <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
+        <View style={styles.titleRow}>
+          <GYMINI_LOGO color={colors.text} width={25} height={25} />
+          <Text style={[styles.title, { color: colors.text }]}>Workouts</Text>
+        </View>
 
         {isEditing && (
           <View
@@ -583,7 +586,7 @@ export default function PlanScreen() {
               style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
             >
               <Text style={[styles.historyLink, { color: colors.primary }]}>
-                History →
+                History
               </Text>
             </Pressable>
           </View>
@@ -730,7 +733,7 @@ export default function PlanScreen() {
                         <Text
                           style={[styles.exerciseName, { color: colors.text }]}
                         >
-                          {exercise.name}
+                          {decodeHtmlEntities(exercise.name)}
                         </Text>
                         {exercise.muscleGroup ? (
                           <Text
@@ -994,7 +997,14 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
-  title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
+  title: { fontSize: 30, fontWeight: "800" },
+  titleRow: {
+    alignItems: "center",
+    justifyContent: "left",
+    flexDirection: "row",
+    marginBottom: 20,
+    gap: 10,
+  },
 
   editingBanner: {
     alignItems: "center",

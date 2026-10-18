@@ -4,6 +4,15 @@ import { COLORS, ROLE_COLORS } from "../theme";
 import StatCard from "../components/StatCard";
 import { Sparkline, BarChart } from "../components/Sparkline";
 import useAdminPolling from "../hooks/useAdminPolling";
+import MealsIcon from "../icons/MealsIcon";
+import CalendarIcon from "../icons/CalendarIcon";
+import FireIcon from "../icons/FireIcon";
+import WeightIcon from "../icons/WeightIcon";
+import ProgressIcon from "../icons/ProgressIcon";
+import WorkoutIcon from "../icons/WorkoutIcon";
+import LightningIcon from "../icons/LightningIcon";
+import RetryIcon from "../icons/RetryIcon";
+import CheckCircleIcon from "../icons/CheckCircleIcon";
 
 export default function Analytics() {
   const [data, setData] = useState(null);
@@ -71,7 +80,6 @@ export default function Analytics() {
         </p>
       </div>
 
-      {/* ── Growth ──────────────────────────────────────────── */}
       <Section title="Growth — last 30 days">
         <div
           style={{
@@ -95,7 +103,6 @@ export default function Analytics() {
         </div>
       </Section>
 
-      {/* ── Engagement ─────────────────────────────────────── */}
       <Section title="Engagement">
         <div
           style={{
@@ -107,43 +114,42 @@ export default function Analytics() {
           <StatCard
             label="TOTAL WORKOUTS"
             value={engagement.totalWorkouts}
-            emoji="💪"
+            emoji={<WorkoutIcon />}
             accent={COLORS.primary}
           />
           <StatCard
             label="THIS WEEK"
             value={engagement.workoutsThisWeek}
-            emoji="📅"
+            emoji={<CalendarIcon />}
             accent={COLORS.success}
           />
           <StatCard
             label="TODAY"
             value={engagement.workoutsToday}
-            emoji="🔥"
+            emoji={<FireIcon />}
             accent={COLORS.warning}
           />
           <StatCard
             label="AVG / USER"
             value={engagement.avgWorkoutsPerUser}
-            emoji="📊"
+            emoji={<ProgressIcon />}
             accent={COLORS.primary}
           />
           <StatCard
             label="WEIGHT LOGS"
             value={engagement.totalWeightLogs}
-            emoji="⚖️"
+            emoji={<WeightIcon />}
             accent={ROLE_COLORS.moderator}
           />
           <StatCard
             label="MEAL PLANS"
             value={engagement.totalMealPlans}
-            emoji="🍽️"
+            emoji={<MealsIcon />}
             accent={COLORS.success}
           />
         </div>
       </Section>
 
-      {/* ── New Users Bar Chart ────────────────────────────── */}
       <Section title="Daily new users">
         <div
           style={{
@@ -151,6 +157,14 @@ export default function Analytics() {
             borderRadius: 16,
             padding: 24,
             border: `1px solid ${COLORS.border}`,
+            boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
           }}
         >
           <BarChart
@@ -176,7 +190,6 @@ export default function Analytics() {
         </div>
       </Section>
 
-      {/* ── Leaderboards ───────────────────────────────────── */}
       <Section title="Top 10">
         <div
           style={{
@@ -227,25 +240,25 @@ export default function Analytics() {
           <StatCard
             label="ACTIVE (7D)"
             value={retention.activeLast7Days}
-            emoji="⚡"
+            emoji={<LightningIcon />}
             accent={COLORS.success}
           />
           <StatCard
             label="ONBOARDED"
             value={retention.onboardingComplete}
-            emoji="✅"
+            emoji={<CheckCircleIcon />}
             accent={COLORS.primary}
           />
           <StatCard
             label="USERS WITH PLANS"
             value={retention.usersWithPlans}
-            emoji="📋"
+            emoji={<CalendarIcon />}
             accent={ROLE_COLORS.moderator}
           />
           <StatCard
             label="RETURNING USERS"
             value={retention.returningUsers}
-            emoji="🔁"
+            emoji={<RetryIcon />}
             accent={COLORS.warning}
           />
         </div>
@@ -253,8 +266,6 @@ export default function Analytics() {
     </div>
   );
 }
-
-// ─── Layout sub-components ───────────────────────────────────
 
 function Section({ title, children }) {
   return (
@@ -284,6 +295,14 @@ function ChartCard({ title, value, children }) {
         borderRadius: 16,
         padding: 20,
         border: `1px solid ${COLORS.border}`,
+        boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
       }}
     >
       <div
@@ -318,6 +337,14 @@ function LeaderboardCard({ title, icon, rows }) {
         borderRadius: 16,
         padding: 20,
         border: `1px solid ${COLORS.border}`,
+        boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
       }}
     >
       <div

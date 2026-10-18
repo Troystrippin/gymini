@@ -103,8 +103,6 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  // --- Step 6 additions ---
-
   const verifyEmail = async (code) => {
     const response = await api.post("/auth/verify-email", { code });
     const updatedUser = { ...user, emailVerified: true };
@@ -132,8 +130,6 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  // --- Phase 2.1 additions ---
-
   const refreshUser = async () => {
     const response = await api.get("/auth/me");
     await tokenStorage.setUser(response.data);
@@ -154,8 +150,7 @@ export const AuthProvider = ({ children }) => {
       currentPassword,
       newPassword,
     });
-    // Server revokes all sessions and rotates tokens — persist the new ones
-    // so this device stays logged in.
+
     if (response.data.token) {
       await tokenStorage.setAccessToken(response.data.token);
       await tokenStorage.setRefreshToken(response.data.refreshToken);

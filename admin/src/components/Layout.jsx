@@ -8,12 +8,20 @@ export default function Layout() {
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
+        overflow: "hidden",
         background: COLORS.background,
       }}
     >
       <Sidebar />
-      <main style={{ flex: 1, padding: "32px 40px", overflowY: "auto" }}>
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          padding: "32px 40px",
+          overflowY: "auto",
+        }}
+      >
         <Outlet />
       </main>
     </div>

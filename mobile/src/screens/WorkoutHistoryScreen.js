@@ -4,15 +4,14 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../api/api";
 import { useTheme } from "../theme/theme";
-
-// ─── Date helpers ────────────────────────────────────────────────
 
 const startOfWeek = (date) => {
   const d = new Date(date);
@@ -33,10 +32,6 @@ const startOfMonth = (date) => {
 const shortMonth = (date) =>
   date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
-/**
- * Classify a date into a section key + label.
- * Returns { key, label, order } — order used for sorting sections descending.
- */
 const sectionFor = (date) => {
   const now = new Date();
   const thisWeekStart = startOfWeek(now);
@@ -84,14 +79,13 @@ const formatDuration = (sec) => {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 };
 
-// ─── Screen ─────────────────────────────────────────────────────
-
 export default function WorkoutHistoryScreen() {
   const { colors } = useTheme();
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
 
   const fetchAll = useCallback(async () => {
     try {
@@ -115,7 +109,6 @@ export default function WorkoutHistoryScreen() {
     }, [fetchAll]),
   );
 
-  // Group logs into sections (This Week / Last Week / By month)
   const sections = useMemo(() => {
     if (!logs.length) return [];
     const grouped = new Map();
@@ -196,7 +189,6 @@ export default function WorkoutHistoryScreen() {
           </View>
         ) : (
           <>
-            {/* Stats row */}
             <View
               style={[
                 styles.statsRow,
@@ -240,8 +232,6 @@ export default function WorkoutHistoryScreen() {
                 </Text>
               </View>
             </View>
-
-            {/* Grouped sections */}
             {sections.map((section) => (
               <View key={section.key} style={styles.section}>
                 <View style={styles.sectionHeader}>
@@ -357,6 +347,15 @@ export default function WorkoutHistoryScreen() {
             ))}
           </>
         )}
+        <TouchableOpacity
+          activeOpacity={0.6}
+          onPress={() => navigation.goBack()}
+          style={[styles.returnButton, { backgroundColor: colors.primary }]}
+        >
+          <Text style={[styles.returnText, { color: colors.buttonText }]}>
+            Return
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -367,7 +366,6 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 30, fontWeight: "800", marginBottom: 20 },
 
-  // Stats row
   statsRow: {
     alignItems: "center",
     borderRadius: 14,
@@ -385,7 +383,6 @@ const styles = StyleSheet.create({
   },
   statDivider: { height: 32, width: 1 },
 
-  // Sections
   section: { marginBottom: 24 },
   sectionHeader: {
     alignItems: "center",
@@ -396,7 +393,6 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 17, fontWeight: "800" },
   sectionCount: { fontSize: 12, fontWeight: "700" },
 
-  // Session card
   card: {
     alignItems: "center",
     borderRadius: 14,
@@ -432,8 +428,15 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 11, fontWeight: "700" },
   moreTag: { fontSize: 11, fontWeight: "700", alignSelf: "center" },
 
-  // Empty state
   emptyState: { alignItems: "center", padding: 40 },
   emptyTitle: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
   emptyHint: { fontSize: 13 },
+
+  returnButton: {
+    alignItems: "center",
+    borderRadius: 12,
+    marginTop: 8,
+    padding: 16,
+  },
+  returnText: { fontSize: 16, fontWeight: "800" },
 });

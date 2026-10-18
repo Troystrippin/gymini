@@ -5,6 +5,7 @@ export const COLORS = {
   primary: "#6B45D3",
   text: "#040404",
   textSecondary: "#373737",
+  placeHolder: "#757575",
   border: "#bcbbbb",
   danger: "#E53935",
   warning: "#FB8C00",

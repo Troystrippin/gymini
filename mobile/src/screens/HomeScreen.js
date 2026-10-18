@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
   ScrollView,
   TouchableOpacity,
   StatusBar,
@@ -33,7 +34,7 @@ const MEAL_TYPE_ORDER = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
 export default function HomeScreen() {
   const { user } = useContext(AuthContext);
-  const { toggleTheme, mode, colors } = useTheme();
+  const { mode, colors } = useTheme();
   const navigation = useNavigation();
   const { entries, totals } = useMealPlan();
 
@@ -43,7 +44,13 @@ export default function HomeScreen() {
   const [completedNames, setCompletedNames] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const firstName = user?.fullName?.split(" ")[0] || "Pare";
+  const name = user?.fullName?.split(" ")[0] || "Pare";
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
 
   useFocusEffect(
     useCallback(() => {
@@ -102,10 +109,31 @@ export default function HomeScreen() {
     meal: entries.find((m) => m.type === type) || null,
   }));
 
-  // ── Weekly workout progress for the ring on the workout card.
   const weeklyTarget = user?.details?.workoutDaysPerWeek || 7;
   const weeklyDone = stats?.thisWeekSessions ?? 0;
   const weeklyProgress = Math.min(1, weeklyDone / weeklyTarget);
+
+  function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  }
+  const confirmStartWorkout = () => {
+    Alert.alert(
+      "Start workout?",
+      `Ready to start ${workout?.title || "today's workout"}?`,
+      [
+        { text: "Not now", style: "cancel" },
+        {
+          text: "Start",
+          onPress: () =>
+            navigation.navigate("Workouts", { screen: "WorkoutSession" }),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   if (loading) {
     return (
@@ -140,17 +168,24 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.date}>{getTodayString()}</Text>
             <Text style={[styles.greeting, { color: colors.text }]}>
-              Good Morning,{"\n"}
+              {getGreeting()},{"\n"}
               <Text style={[styles.greetingName, { color: colors.primary }]}>
-                {firstName}
+                {name}
               </Text>{" "}
               👋
             </Text>
           </View>
-          <TouchableOpacity style={styles.settingsBtn} onPress={toggleTheme}>
-            <Text style={styles.settingsIcon}>
-              {mode === "dark" ? "☀️" : "🌙"}
-            </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              {user?.avatarUrl ? (
+                <Image
+                  source={{ uri: user.avatarUrl }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initials || "?"}</Text>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -179,9 +214,7 @@ export default function HomeScreen() {
             exercises={exercises}
             progress={weeklyProgress}
             completedNames={completedNames}
-            onPress={() =>
-              navigation.navigate("Workouts", { screen: "WorkoutSession" })
-            }
+            onPress={confirmStartWorkout}
             colors={colors}
           />
         ) : (
@@ -432,7 +465,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: COLORS.primary,
-    marginTop: 16,
     padding: 18,
     elevation: 2,
   },
@@ -456,4 +488,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
   },
+  avatar: {
+    alignItems: "center",
+    borderRadius: 34,
+    height: 45,
+    justifyContent: "center",
+    width: 45,
+  },
+  avatarText: { color: "#FFFFFF", fontSize: 24, fontWeight: "800" },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 32 },
 });

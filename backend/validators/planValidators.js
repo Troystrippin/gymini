@@ -29,8 +29,7 @@ const savePlanRules = [
     .isString()
     .trim()
     .isLength({ min: 1, max: 30 })
-    .withMessage("Plan name must be 1–30 characters")
-    .escape(),
+    .withMessage("Plan name must be 1–30 characters"),
 
   body("exercises")
     .exists()
@@ -44,8 +43,7 @@ const savePlanRules = [
     .isString()
     .trim()
     .isLength({ min: 1, max: 100 })
-    .withMessage("Exercise name must be 1–100 characters")
-    .escape(),
+    .withMessage("Exercise name must be 1–100 characters"),
 
   body("exercises.*.exerciseId")
     .optional({ nullable: true })
@@ -81,8 +79,8 @@ const savePlanRules = [
     .optional({ nullable: true })
     .isString()
     .trim()
-    .isLength({ max: 500 })
-    .withMessage("Description must be ≤ 500 characters"),
+    .isLength({ max: 2000 })
+    .withMessage("Description must be ≤ 2,000 characters"),
 
   body("exercises.*.order")
     .optional()

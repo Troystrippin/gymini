@@ -6,6 +6,7 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -22,7 +23,11 @@ import WeightIcon from "../icons/weight-icon";
 import HeightIcon from "../icons/HeightIcon";
 import AgeIcon from "../icons/age-icon";
 import BmiIcon from "../icons/BMI-icon";
+import MoonIcon from "../icons/MoonIcon";
+import SunIcon from "../icons/SunIcon";
+import TermsIcon from "../icons/TermsIcon";
 import { goalsApi } from "../api/goalsApi";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 
 const GOALS = [
   { id: "Lose Weight", label: "Fat Loss", icon: "🔥" },
@@ -48,7 +53,7 @@ function getFitnessLevel(activityLevel) {
 
 export default function ProfileScreen({ navigation }) {
   const { user, logout, completeOnboarding } = useContext(AuthContext);
-  const { colors, mode } = useTheme();
+  const { toggleTheme, colors, mode } = useTheme();
   const profileGoal = user?.profile?.goal ?? user?.goal ?? null;
   const details = user?.profile?.details ?? user?.details;
   const [selectedGoal, setSelectedGoal] = useState(profileGoal);
@@ -112,8 +117,17 @@ export default function ProfileScreen({ navigation }) {
   const hasMissingStats = !weight || !height || !age;
 
   const handleGoalSelect = async (goal) => {
+    const previousGoal = selectedGoal;
     setSelectedGoal(goal);
-    await completeOnboarding({ goal });
+    try {
+      await completeOnboarding({ goal });
+    } catch (err) {
+      setSelectedGoal(previousGoal);
+      Alert.alert(
+        "Could not update goal",
+        err.response?.data?.message || err.message || "Please try again.",
+      );
+    }
   };
 
   const handleAbandonGoal = async () => {
@@ -152,7 +166,10 @@ export default function ProfileScreen({ navigation }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+        <View style={styles.titleRow}>
+          <GYMINI_LOGO color={colors.text} width={25} height={25} />
+          <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+        </View>
 
         <View
           style={[
@@ -265,7 +282,6 @@ export default function ProfileScreen({ navigation }) {
           </Pressable>
         )}
 
-        {/* Phase 4.1 — Goal progress + milestones */}
         <GoalProgressCard
           goal={weightGoal}
           onEdit={() => navigation.navigate("CreateGoal", { goal: weightGoal })}
@@ -284,6 +300,66 @@ export default function ProfileScreen({ navigation }) {
         />
 
         <FitnessLevelCard fitnessLevel={fitnessLevel} colors={colors} />
+
+        <View
+          style={[
+            styles.settingsCard,
+            {
+              backgroundColor: colors.cardBackground,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.settingsRow}>
+            <View style={styles.settingsLeft}>
+              <Text style={styles.settingsEmoji}>
+                {mode === "dark" ? (
+                  <MoonIcon color={colors.text} size={22} />
+                ) : (
+                  <SunIcon color={colors.text} size={22} />
+                )}
+              </Text>
+              <View>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>
+                  Dark Mode
+                </Text>
+                <Text
+                  style={[styles.settingsHint, { color: colors.textSecondary }]}
+                >
+                  {mode === "dark" ? "Currently on" : "Currently off"}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              accessibilityLabel="Toggle dark mode"
+              value={mode === "dark"}
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => navigation.navigate("Terms")}
+            style={({ pressed }) => [
+              styles.settingsRow,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
+            <View style={styles.settingsLeft}>
+              <TermsIcon color={colors.text} size={22} />
+              <Text style={[styles.settingsLabel, { color: colors.text }]}>
+                Terms of Service
+              </Text>
+            </View>
+            <Text style={[styles.chevron, { color: colors.textSecondary }]}>
+              ›
+            </Text>
+          </Pressable>
+        </View>
 
         <Pressable
           accessibilityRole="button"
@@ -305,7 +381,14 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   content: { padding: 20, paddingBottom: 36 },
-  title: { fontSize: 30, fontWeight: "800", marginBottom: 28 },
+  title: { fontSize: 30, fontWeight: "800" },
+  titleRow: {
+    alignItems: "center",
+    justifyContent: "left",
+    flexDirection: "row",
+    marginBottom: 28,
+    gap: 10,
+  },
   profileHeader: {
     alignItems: "center",
     borderRadius: 14,
@@ -366,6 +449,31 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
+
+  settingsCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 16,
+    overflow: "hidden",
+  },
+  settingsRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  settingsLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+  },
+  settingsEmoji: { fontSize: 20 },
+  settingsLabel: { fontSize: 15, fontWeight: "700" },
+  settingsHint: { fontSize: 12, marginTop: 2 },
+  divider: { height: 1, marginHorizontal: 16 },
+  chevron: { fontSize: 26, fontWeight: "300", lineHeight: 26 },
+
   logoutButton: {
     alignItems: "center",
     borderRadius: 12,

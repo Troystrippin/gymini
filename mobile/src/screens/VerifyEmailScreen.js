@@ -15,6 +15,7 @@ import InputField from "../components/InputField";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 
 export default function VerifyEmailScreen() {
   const { colors } = useTheme();
@@ -30,8 +31,6 @@ export default function VerifyEmailScreen() {
     setSubmitting(true);
     try {
       await verifyEmail(code);
-      // The navigator will automatically switch to the next stack
-      // because user.emailVerified becomes true.
     } catch (err) {
       Alert.alert(
         "Verification Failed",
@@ -71,7 +70,7 @@ export default function VerifyEmailScreen() {
       />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.logo}>◆◆</Text>
+          <GYMINI_LOGO color={colors.text} width={80} height={80} />
           <Text style={styles.brand}>GYMINI</Text>
         </View>
 

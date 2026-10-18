@@ -7,6 +7,7 @@ import React, {
   useRef,
 } from "react";
 import api from "../api/api";
+import decodeHtmlEntities from "../utils/decodeHtmlEntities";
 
 const PlanDraftContext = createContext(null);
 
@@ -34,7 +35,7 @@ export function PlanDraftProvider({ children }) {
         ...prev,
         {
           exerciseId: exercise._id,
-          name: exercise.name,
+          name: decodeHtmlEntities(exercise.name),
           muscleGroup: exercise.muscleGroup,
           description: exercise.description || "",
           sets: 3,
@@ -116,7 +117,7 @@ export function PlanDraftProvider({ children }) {
     setDraftExercises(
       (plan.exercises || []).map((ex, idx) => ({
         exerciseId: ex.exerciseId || `custom-${idx}-${Date.now()}`,
-        name: ex.name,
+        name: decodeHtmlEntities(ex.name),
         muscleGroup: ex.muscleGroup,
         description: ex.description || "",
         sets: ex.sets,

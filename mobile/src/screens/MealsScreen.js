@@ -133,20 +133,14 @@ export default function MealsScreen() {
 
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: colors.text }]}>Meals</Text>
+            <View style={styles.titleRow}>
+              <GYMINI_LOGO color={colors.text} width={25} height={25} />
+              <Text style={[styles.title, { color: colors.text }]}>Meals</Text>
+            </View>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Build your day one meal at a time.
             </Text>
           </View>
-          <Pressable
-            onPress={() => navigation.navigate("MyMealPlan")}
-            style={({ pressed }) => [
-              styles.planButton,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.75 : 1 },
-            ]}
-          >
-            <Text style={styles.planButtonText}>My plan</Text>
-          </Pressable>
         </View>
 
         <View
@@ -165,6 +159,13 @@ export default function MealsScreen() {
             Tap a meal below to add or remove it.
           </Text>
         </View>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("MyMealPlan")}
+          style={[styles.planButton, { backgroundColor: colors.primary }]}
+        >
+          <Text style={styles.planText}>My plan</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           activeOpacity={0.85}
@@ -384,13 +385,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: { fontSize: 30, fontWeight: "800" },
-  planButton: {
-    alignSelf: "flex-start",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  titleRow: {
+    alignItems: "center",
+    justifyContent: "left",
+    flexDirection: "row",
+    gap: 10,
   },
-  planButtonText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+
+  planButton: {
+    alignItems: "center",
+    borderRadius: 12,
+    marginTop: 16,
+    padding: 16,
+  },
+  planText: { fontSize: 16, fontWeight: "800", color: COLORS.buttonText },
   headerRow: {
     alignItems: "flex-start",
     flexDirection: "row",

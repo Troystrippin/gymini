@@ -4,6 +4,11 @@ import api from "../api";
 import { COLORS } from "../theme";
 import StatCard from "../components/StatCard";
 import useAdminPolling from "../hooks/useAdminPolling";
+import PenIcon from "../icons/PenIcon";
+import WeightIcon from "../icons/WeightIcon";
+import HourglassIcon from "../icons/HourglassIcon";
+import DeniedIcon from "../icons/DeniedIcon";
+import SigmaIcon from "../icons/SigmaIcon";
 
 const STATUS_COLORS = {
   approved: "#43A047",
@@ -112,7 +117,6 @@ export default function Exercises() {
 
   useEffect(() => {
     fetchExercises();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statusFilter, typeFilter, muscleFilter, page]);
 
   useAdminPolling(() => Promise.all([fetchStats(), fetchExercises()]));
@@ -184,7 +188,7 @@ export default function Exercises() {
           </p>
         </div>
         <button onClick={openCreate} style={btnPrimary}>
-          + Add Built-in Exercise
+          Add Built-in Exercise
         </button>
       </div>
 
@@ -200,31 +204,31 @@ export default function Exercises() {
           <StatCard
             label="TOTAL"
             value={stats.total}
-            emoji="📚"
+            emoji={<SigmaIcon />}
             accent={COLORS.primary}
           />
           <StatCard
             label="BUILT-IN"
             value={stats.builtin}
-            emoji="🏋️"
+            emoji={<WeightIcon />}
             accent={COLORS.success}
           />
           <StatCard
             label="CUSTOM"
             value={stats.custom}
-            emoji="✏️"
+            emoji={<PenIcon />}
             accent="#4A9EFF"
           />
           <StatCard
             label="PENDING"
             value={stats.pending}
-            emoji="⏳"
+            emoji={<HourglassIcon />}
             accent={STATUS_COLORS.pending}
           />
           <StatCard
             label="REJECTED"
             value={stats.rejected}
-            emoji="🚫"
+            emoji={<DeniedIcon />}
             accent={STATUS_COLORS.rejected}
           />
         </div>
@@ -252,6 +256,14 @@ export default function Exercises() {
             background: COLORS.cardBackground,
             color: COLORS.text,
             fontSize: 14,
+            boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
           }}
         />
         <select
@@ -309,6 +321,14 @@ export default function Exercises() {
           borderRadius: 16,
           border: `1px solid ${COLORS.border}`,
           overflow: "hidden",
+          boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
         }}
       >
         {loading ? (
@@ -418,7 +438,6 @@ export default function Exercises() {
         </div>
       )}
 
-      {/* ── Create Built-in Exercise Modal ── */}
       {showCreate && (
         <div
           style={modalOverlay}
@@ -559,7 +578,18 @@ export default function Exercises() {
               <button
                 onClick={submitCreate}
                 disabled={creating}
-                style={{ ...btnPrimary, opacity: creating ? 0.6 : 1 }}
+                style={{
+                  ...btnPrimary,
+                  opacity: creating ? 0.6 : 1,
+                  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
+                }}
               >
                 {creating ? "Creating..." : "Create Exercise"}
               </button>
@@ -599,6 +629,14 @@ const selectStyle = {
   color: COLORS.text,
   fontSize: 14,
   minWidth: 150,
+  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
 };
 
 const thStyle = {
@@ -632,6 +670,14 @@ const pagerBtn = (disabled) => ({
   fontWeight: 700,
   opacity: disabled ? 0.4 : 1,
   cursor: disabled ? "not-allowed" : "pointer",
+  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
 });
 
 const inputStyle = {
@@ -652,6 +698,14 @@ const btnPrimary = {
   fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",
+  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
 };
 
 const btnSecondary = {

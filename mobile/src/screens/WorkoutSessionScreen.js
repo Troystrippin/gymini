@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,22 +23,53 @@ import api from "../api/api";
 import { workoutProgressApi, todayKey } from "../api/workoutProgressApi";
 import { useTheme } from "../theme/theme";
 import { COLORS } from "../theme/colors";
+import { AuthContext } from "../context/AuthContext";
+import decodeHtmlEntities from "../utils/decodeHtmlEntities";
+import { workoutSessionStorage } from "../storage/workoutSessionStorage";
 
 export default function WorkoutSessionScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { user } = useContext(AuthContext);
   const [workout, setWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [setResults, setSetResults] = useState({});
+  const [startedAt, setStartedAt] = useState(null);
 
-  const startedAtRef = useRef(new Date().toISOString());
+  const startedAtRef = useRef(null);
+  const loadedSessionRef = useRef(false);
   const saveTimerRef = useRef(null);
+  // Latest unsaved progress, so it can be sent immediately when the user leaves.
+  const pendingSaveRef = useRef(null);
+  const userId = user?._id || user?.id;
 
   const fetchWorkout = useCallback(async () => {
+    if (loadedSessionRef.current) return;
+    loadedSessionRef.current = true;
     try {
       setLoading(true);
+      const cached = await workoutSessionStorage.load(userId);
+      if (
+        cached?.workout?._id &&
+        Array.isArray(cached.workout.exercises) &&
+        cached.startedAt &&
+        Number.isFinite(Date.parse(cached.startedAt))
+      ) {
+        startedAtRef.current = cached.startedAt;
+        setStartedAt(cached.startedAt);
+        setWorkout(cached.workout);
+        setSetResults(cached.setResults || {});
+        setElapsedSeconds(
+          Math.max(
+            0,
+            Math.floor((Date.now() - Date.parse(cached.startedAt)) / 1000),
+          ),
+        );
+        return;
+      }
+
       const response = await api.get("/workouts/today");
       const plan = response.data;
 
@@ -54,6 +91,10 @@ export default function WorkoutSessionScreen() {
           done: savedIdSet.has(String(ex._id)),
         })),
       });
+      const sessionStartedAt = new Date().toISOString();
+      startedAtRef.current = sessionStartedAt;
+      setStartedAt(sessionStartedAt);
+      setElapsedSeconds(0);
 
       setSetResults((current) => {
         const next = { ...current };
@@ -74,6 +115,7 @@ export default function WorkoutSessionScreen() {
         return next;
       });
     } catch (error) {
+      loadedSessionRef.current = false;
       Alert.alert(
         "Workout unavailable",
         error.response?.data?.message || "Could not load this workout.",
@@ -81,7 +123,7 @@ export default function WorkoutSessionScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,48 +131,97 @@ export default function WorkoutSessionScreen() {
     }, [fetchWorkout]),
   );
 
+  // Reset everything when the user logs out, so the timer stops and the next
+  // user never sees this user's session.
   useEffect(() => {
-    const timer = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const persistProgress = useCallback((nextWorkout, nextSets) => {
-    if (!nextWorkout?._id) return;
-
+    if (userId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = null;
+    pendingSaveRef.current = null;
+    loadedSessionRef.current = false;
+    startedAtRef.current = null;
+    setStartedAt(null); // also stops the timer interval below
+    setWorkout(null);
+    setSetResults({});
+    setElapsedSeconds(0);
+  }, [userId]);
 
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        const completedExerciseIds = nextWorkout.exercises
-          .filter((e) => e.done)
-          .map((e) => String(e._id));
-
-        const setResultsPayload = {};
-        for (const exercise of nextWorkout.exercises) {
-          const rows = nextSets[exercise._id] || [];
-          setResultsPayload[String(exercise._id)] = rows.map((r) => ({
-            reps: Number(r.reps) || 0,
-            weightKg: Number(r.weight) || 0,
-          }));
-        }
-
-        await workoutProgressApi.save({
-          planId: nextWorkout._id,
-          date: todayKey(),
-          completedExerciseIds,
-          setResults: setResultsPayload,
-        });
-      } catch (err) {
-        console.warn("[session] failed to save progress:", err.message);
+  useEffect(() => {
+    if (!startedAt) return undefined;
+    const updateElapsed = () => {
+      const startTime = Date.parse(startedAt);
+      if (Number.isFinite(startTime)) {
+        setElapsedSeconds(
+          Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
+        );
       }
-    }, 500);
+    };
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    return () => clearInterval(timer);
+  }, [startedAt]);
+
+  useEffect(() => {
+    if (!workout || !startedAt || !userId) return;
+    workoutSessionStorage
+      .save(userId, { workout, startedAt, setResults })
+      .catch((error) =>
+        console.warn("[session] failed to cache active workout:", error),
+      );
+  }, [workout, startedAt, setResults, userId]);
+
+  // Sends the latest pending progress to the server right away.
+  const flushProgress = useCallback(async () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = null;
+
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    pendingSaveRef.current = null;
+
+    const { nextWorkout, nextSets } = pending;
+    try {
+      const completedExerciseIds = nextWorkout.exercises
+        .filter((e) => e.done)
+        .map((e) => String(e._id));
+
+      const setResultsPayload = {};
+      for (const exercise of nextWorkout.exercises) {
+        const rows = nextSets[exercise._id] || [];
+        setResultsPayload[String(exercise._id)] = rows.map((r) => ({
+          reps: Number(r.reps) || 0,
+          weightKg: Number(r.weight) || 0,
+        }));
+      }
+
+      await workoutProgressApi.save({
+        planId: nextWorkout._id,
+        date: todayKey(),
+        completedExerciseIds,
+        setResults: setResultsPayload,
+      });
+    } catch (err) {
+      console.warn("[session] failed to save progress:", err.message);
+    }
   }, []);
 
+  // Debounced save: waits 500ms after the last change.
+  const persistProgress = useCallback(
+    (nextWorkout, nextSets) => {
+      if (!nextWorkout?._id) return;
+      pendingSaveRef.current = { nextWorkout, nextSets };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(flushProgress, 500);
+    },
+    [flushProgress],
+  );
+
+  // When the screen unmounts, send any unsaved progress instead of dropping it.
   useEffect(
     () => () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      flushProgress();
     },
-    [],
+    [flushProgress],
   );
 
   const toggleExercise = (exerciseId) => {
@@ -168,7 +259,7 @@ export default function WorkoutSessionScreen() {
 
     const exercisesPayload = workout.exercises.map((exercise) => ({
       exerciseId: exercise.exerciseId || null,
-      name: exercise.name,
+      name: decodeHtmlEntities(exercise.name),
       muscleGroup: exercise.muscle || null,
       targetSets: exercise.plannedSets || getPlannedSetCount(exercise.sets),
       targetReps:
@@ -188,12 +279,21 @@ export default function WorkoutSessionScreen() {
     const doSave = async () => {
       try {
         setSaving(true);
+        // finishWorkout saves the final progress itself, so drop the pending one.
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+        pendingSaveRef.current = null;
+
+        const durationSec = Math.max(
+          0,
+          Math.floor((Date.now() - Date.parse(startedAtRef.current)) / 1000),
+        );
 
         await api.post("/workouts/sessions", {
           planId: workout._id,
           planName: workout.title,
           startedAt: startedAtRef.current,
-          durationSec: elapsedSeconds,
+          durationSec,
           exercises: exercisesPayload,
         });
 
@@ -214,11 +314,23 @@ export default function WorkoutSessionScreen() {
           completedExerciseIds,
           setResults: setResultsPayload,
         });
+        try {
+          await workoutSessionStorage.clear(userId);
+        } catch (error) {
+          console.error(
+            "[session] workout saved but active session cache could not be cleared:",
+            error,
+          );
+        }
 
         Alert.alert(
           "Workout saved",
-          `${completedCount} of ${workout.exercises.length} exercises · ${setsLogged} sets · ${Math.floor(elapsedSeconds / 60)} min`,
+          `${completedCount} of ${workout.exercises.length} exercises · ${setsLogged} sets · ${Math.floor(durationSec / 60)} min`,
         );
+        loadedSessionRef.current = false;
+        startedAtRef.current = null;
+        setStartedAt(null);
+        setWorkout(null);
         navigation.navigate("PlanList");
       } catch (error) {
         Alert.alert(
@@ -347,7 +459,7 @@ export default function WorkoutSessionScreen() {
                   </View>
                   <View style={styles.exerciseInfo}>
                     <Text style={[styles.exerciseName, { color: colors.text }]}>
-                      {index + 1}. {exercise.name}
+                      {index + 1}. {decodeHtmlEntities(exercise.name)}
                     </Text>
                     <Text
                       style={[

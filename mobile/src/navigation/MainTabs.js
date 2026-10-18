@@ -56,7 +56,7 @@ export default function MainTabs() {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate("Workouts", { screen: "PlanList" });
+            navigation.navigate("Workouts");
           },
         })}
       />
