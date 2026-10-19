@@ -8,40 +8,75 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { COLORS } from "../theme/colors";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "../theme/theme";
 import ChatMessageBubble from "../components/ChatMessageBubble";
+import api from "../api/api";
 
 export default function ChatScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const listRef = useRef(null);
+  const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([
     {
-      id: "1",
-      text: "Can you give me 5 list of exercises for chest and back?",
-      sender: "user",
-    },
-    {
-      id: "2",
-      text: "Sure! Here are 5 exercises for chest and back:\n\n1. Push-ups\n2. Bench Press\n3. Dumbbell Flyes\n4. Pull-ups\n5. Bent-over Rows",
+      id: "welcome",
+      text: "Hi! I'm here to provide exercise and meal recommendations. What are you looking for?",
       sender: "AI-Coach",
     },
   ]);
   const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
-  const sendMessage = () => {
+  useEffect(() =>{
+    const unsubscribe = navigation.addListener("blur", () => {
+      setConversationId(null);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const sendMessage = async () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || sending) return;
 
+    setDraft("");
+    setError("");
     setMessages((current) => [
       ...current,
       { id: Date.now().toString(), text, sender: "user" },
     ]);
-    setDraft("");
+    setSending(true);
+    
+    try {
+      const {data } = await api.post("/chat", {
+        message: text,
+      conversationId,
+      });
+
+      setConversationId(data.conversationId);
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-assistant`,
+          text: data.reply,
+          sender: "AI-Coach",
+        },
+      ]);
+
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Could not reach the AI. Try again.",
+      );
+    } finally {
+      setSending(false);
+    }
+
   };
   return (
     <SafeAreaView
@@ -86,6 +121,11 @@ export default function ChatScreen() {
             const isUser = item.sender === "user";
             return <ChatMessageBubble text={item.text} isSender={isUser} />;
           }}
+           ListFooterComponent={
+            sending ? (
+              <ChatMessageBubble text="Thinking..." isSender={false} />
+            ) : null
+          }
           contentContainerStyle={styles.messageList}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() =>
