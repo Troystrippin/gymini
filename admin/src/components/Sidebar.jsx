@@ -20,14 +20,24 @@ export default function Sidebar() {
     borderRadius: 10,
     fontSize: 16,
     fontWeight: 700,
-    color: isActive ? COLORS.background : COLORS.text,
-    background: isActive ? COLORS.primary : "transparent",
+    color: isActive ? "#858383" : COLORS.text,
+    background: isActive ? "#d7d5d5" : "transparent",
     marginBottom: 6,
     transition: "all 0.15s",
+    boxShadow: isActive
+      ? `
+          inset 1px 1px 2px rgba(0, 0, 0, 0.12),
+          inset 3px 3px 6px rgba(0, 0, 0, 0.14),
+          inset 6px 6px 12px rgba(0, 0, 0, 0.16),
+          inset -1px -1px 2px rgba(255, 255, 255, 0.9),
+          inset -3px -3px 6px rgba(255, 255, 255, 0.9),
+          2px 2px 4px rgba(255, 255, 255, 0.8)
+        `
+      : "none",
   });
 
   const iconProps = (isActive) => ({
-    color: isActive ? COLORS.background : COLORS.text,
+    color: isActive ? "#858383" : COLORS.text,
     size: 18,
   });
 

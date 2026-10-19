@@ -23,7 +23,6 @@ import { weightApi } from "../api/weightApi";
 import { mealApi } from "../api/mealApi";
 import { useMealPlan } from "../context/MealPlanContext";
 
-// ICONS: import any new icon here, then use it in the `icon` prop below
 import WeightIcon from "../icons/weight-icon";
 import BmiIcon from "../icons/BMI-icon";
 import WorkoutIcon from "../icons/WorkOutIcon";
@@ -46,11 +45,8 @@ const MONTHS = [
   "Dec",
 ];
 
-// Each month gets ~56px, so the chart is wider than the screen and scrolls.
 const CHART_WIDTH = Math.max(screenWidth, MONTHS.length * 56);
 
-// Turns [{label, value}] from the API into 12 values, Jan -> Dec.
-// Months with no data become 0. Accepts labels like "Jan", "January" or "2026-01".
 const toMonthlyValues = (buckets) => {
   const values = Array(12).fill(0);
   (buckets || []).forEach((b) => {
@@ -127,8 +123,9 @@ export default function ProgressScreen() {
       : `Gained ${weightChange30d.toFixed(1)} kg (30d)`;
   })();
 
-  // Weight: latest logged weight of each month in the current year.
   const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+
   const monthlyWeight = Array(12).fill(null);
   [...(analytics?.weightSeries || [])]
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -136,16 +133,27 @@ export default function ProgressScreen() {
       const [y, m] = p.date.split("-");
       if (Number(y) === currentYear) monthlyWeight[Number(m) - 1] = p.weightKg;
     });
-  // Months with no log reuse the previous value (so the line doesn't drop
-  // to 0) and their dots are hidden.
-  let lastWeight = monthlyWeight.find((v) => v !== null) ?? 0;
-  const weightValues = monthlyWeight.map((v) => {
-    if (v !== null) lastWeight = v;
-    return lastWeight;
-  });
-  const emptyWeightMonths = monthlyWeight
-    .map((v, i) => (v === null ? i : null))
-    .filter((i) => i !== null);
+
+  // pin this month to the latest known weight
+  if (weight != null) monthlyWeight[currentMonth] = weight;
+
+  // only plot from the first known month up to the current month
+  const firstIdx = monthlyWeight.findIndex((v) => v !== null);
+  const startIdx = firstIdx === -1 ? currentMonth : firstIdx;
+
+  let lastWeight = monthlyWeight[startIdx] ?? 0;
+  const weightValues = [];
+  const weightLabels = [];
+  const emptyWeightMonths = [];
+
+  for (let i = startIdx; i <= currentMonth; i++) {
+    if (monthlyWeight[i] !== null) lastWeight = monthlyWeight[i];
+    else emptyWeightMonths.push(i - startIdx); // index within the sliced data
+    weightValues.push(lastWeight);
+    weightLabels.push(MONTHS[i]);
+  }
+
+  const weightChartWidth = Math.max(screenWidth, weightLabels.length * 56);
 
   const workoutsByMonth = analytics?.workoutsByMonth || [];
   const caloriesByMonth = analytics?.caloriesByMonth || [];
@@ -153,7 +161,7 @@ export default function ProgressScreen() {
   const charts = {
     weight: {
       data: {
-        labels: MONTHS,
+        labels: weightLabels,
         datasets: [{ data: weightValues }],
       },
       type: "line",
@@ -206,7 +214,6 @@ export default function ProgressScreen() {
   const workoutsThisMonth = summary.workoutsThisMonth ?? 0;
   const caloriesThisMonth = summary.caloriesThisMonth ?? 0;
 
-  // Two stat cards per row, sized from the measured row width (padding 14, gap 12).
   const STATS_PADDING = 14;
   const STATS_GAP = 12;
   const cardWidth = statsWidth
@@ -216,6 +223,11 @@ export default function ProgressScreen() {
   const fullCard = cardWidth ? { width: cardWidth * 2 + STATS_GAP } : null;
 
   const scrollToCurrentMonth = () => {
+    // the weight chart only spans start month -> current month, so start at 0
+    if (activeTab === "weight") {
+      chartScrollRef.current?.scrollTo({ x: 0, animated: false });
+      return;
+    }
     const monthWidth = CHART_WIDTH / 12;
     const x =
       new Date().getMonth() * monthWidth - screenWidth / 2 + monthWidth / 2;
@@ -258,7 +270,6 @@ export default function ProgressScreen() {
           style={[styles.statsRow, { backgroundColor: colors.cardBackground }]}
           onLayout={(e) => setStatsWidth(e.nativeEvent.layout.width)}
         >
-          {/* Change the stat card icons with the `icon` prop on each card */}
           <ProgressStatCard
             label="CURRENT WEIGHT"
             style={halfCard}
@@ -349,10 +360,10 @@ export default function ProgressScreen() {
               {activeChart.type === "line" ? (
                 <LineChart
                   data={activeChart.data}
-                  width={CHART_WIDTH}
+                  width={weightChartWidth}
                   height={200}
                   chartConfig={chartConfig}
-                  bezier
+                  bezier={weightValues.length > 1}
                   withInnerLines
                   withOuterLines={false}
                   hidePointsAtIndex={activeChart.hiddenPoints}

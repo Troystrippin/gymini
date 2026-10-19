@@ -14,6 +14,64 @@ import LightningIcon from "../icons/LightningIcon";
 import RetryIcon from "../icons/RetryIcon";
 import CheckCircleIcon from "../icons/CheckCircleIcon";
 
+const CARD_SHADOW = `
+  inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+  inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+  -3px -3px 6px rgba(255, 255, 255, 0.9),
+  1px 1px 3px rgba(0, 0, 0, 0.12),
+  3px 3px 6px rgba(0, 0, 0, 0.14),
+  6px 6px 12px rgba(0, 0, 0, 0.16)
+`;
+
+const sum = (arr) => arr.reduce((a, b) => a + b, 0);
+
+function fmtDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function fmtNumber(n) {
+  if (n === null || n === undefined || isNaN(n)) return "–";
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function summarize(points = []) {
+  const values = points.map((p) => p.count);
+  const total = sum(values);
+  const avg = values.length ? total / values.length : 0;
+
+  let peak = { count: 0, date: null };
+  points.forEach((p) => {
+    if (p.count > peak.count) peak = p;
+  });
+
+  const last7 = sum(values.slice(-7));
+  const prev7 = sum(values.slice(-14, -7));
+  const hasPrev = values.length >= 14;
+
+  let change = null; // percent
+  if (hasPrev) {
+    if (prev7 === 0) change = last7 === 0 ? 0 : null;
+    else change = ((last7 - prev7) / prev7) * 100;
+  }
+
+  return {
+    values,
+    total,
+    avg,
+    peak,
+    latest: points[points.length - 1],
+    last7,
+    prev7,
+    hasPrev,
+    change,
+    startDate: points[0]?.date,
+    endDate: points[points.length - 1]?.date,
+  };
+}
+
 export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,12 +120,14 @@ export default function Analytics() {
 
   const { growth, engagement, leaderboards, retention } = data;
 
-  const newUserSeries = growth.newUsersByDay.map((d) => d.count);
-  const activeUserSeries = growth.activeUsersByDay.map((d) => d.count);
+  const newUsers = summarize(growth.newUsersByDay);
+  const activeUsers = summarize(growth.activeUsersByDay);
   const newUserBars = growth.newUsersByDay.map((d) => ({
-    label: d.date,
+    label: fmtDate(d.date),
     value: d.count,
   }));
+
+  const daysWithSignups = newUsers.values.filter((v) => v > 0).length;
 
   return (
     <div>
@@ -80,25 +140,68 @@ export default function Analytics() {
         </p>
       </div>
 
-      <Section title="Growth — last 30 days">
+      <Section
+        title="Growth — last 30 days"
+        subtitle={
+          newUsers.startDate
+            ? `${fmtDate(newUsers.startDate)} – ${fmtDate(newUsers.endDate)}`
+            : null
+        }
+      >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
             gap: 20,
           }}
         >
           <ChartCard
             title="New users per day"
-            value={`${newUserSeries.reduce((a, b) => a + b, 0)} total`}
+            value={`${newUsers.total} total`}
+            summary={newUsers}
+            unit="signups"
+            footer={`${fmtDate(newUsers.startDate)} → ${fmtDate(
+              newUsers.endDate,
+            )}`}
+            stats={[
+              { label: "AVG / DAY", value: fmtNumber(newUsers.avg) },
+              {
+                label: "PEAK",
+                value: newUsers.peak.count,
+                hint: fmtDate(newUsers.peak.date),
+              },
+              {
+                label: "LATEST",
+                value: newUsers.latest?.count ?? 0,
+                hint: fmtDate(newUsers.latest?.date),
+              },
+            ]}
           >
-            <Sparkline data={newUserSeries} color={COLORS.primary} />
+            <Sparkline data={newUsers.values} color={COLORS.primary} />
           </ChartCard>
           <ChartCard
             title="Active users per day"
-            value={`${activeUserSeries.reduce((a, b) => a + b, 0)} sessions`}
+            value={`${activeUsers.total} sessions`}
+            summary={activeUsers}
+            unit="sessions"
+            footer={`${fmtDate(activeUsers.startDate)} → ${fmtDate(
+              activeUsers.endDate,
+            )}`}
+            stats={[
+              { label: "AVG / DAY", value: fmtNumber(activeUsers.avg) },
+              {
+                label: "PEAK",
+                value: activeUsers.peak.count,
+                hint: fmtDate(activeUsers.peak.date),
+              },
+              {
+                label: "LATEST",
+                value: activeUsers.latest?.count ?? 0,
+                hint: fmtDate(activeUsers.latest?.date),
+              },
+            ]}
           >
-            <Sparkline data={activeUserSeries} color={COLORS.success} />
+            <Sparkline data={activeUsers.values} color={COLORS.success} />
           </ChartCard>
         </div>
       </Section>
@@ -150,43 +253,104 @@ export default function Analytics() {
         </div>
       </Section>
 
-      <Section title="Daily new users">
+      <Section
+        title="Daily new users"
+        subtitle="Signups per day over the last 30 days"
+      >
         <div
           style={{
             background: COLORS.cardBackground,
             borderRadius: 16,
             padding: 24,
             border: `1px solid ${COLORS.border}`,
-            boxShadow: `
-              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
-              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
-              -3px -3px 6px rgba(255, 255, 255, 0.9),   
-              1px 1px 3px rgba(0, 0, 0, 0.12),          
-              3px 3px 6px rgba(0, 0, 0, 0.14),          
-              6px 6px 12px rgba(0, 0, 0, 0.16)          
-            `,
+            boxShadow: CARD_SHADOW,
           }}
         >
-          <BarChart
-            data={newUserBars}
-            width={800}
-            height={100}
-            color={COLORS.primary}
-          />
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginTop: 8,
-              fontSize: 11,
-              color: COLORS.textSecondary,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 16,
+              marginBottom: 20,
             }}
           >
-            <span>{growth.newUsersByDay[0]?.date}</span>
-            <span>
-              {growth.newUsersByDay[growth.newUsersByDay.length - 1]?.date}
-            </span>
+            <Metric label="TOTAL SIGNUPS" value={newUsers.total} />
+            <Metric
+              label="AVG / DAY"
+              value={fmtNumber(newUsers.avg)}
+              hint={`${daysWithSignups} of ${newUsers.values.length} days had signups`}
+            />
+            <Metric
+              label="BEST DAY"
+              value={newUsers.peak.count}
+              hint={newUsers.peak.date ? fmtDate(newUsers.peak.date) : "–"}
+            />
+            <Metric
+              label="LAST 7 DAYS"
+              value={newUsers.last7}
+              hint={
+                newUsers.hasPrev ? (
+                  <Delta change={newUsers.change} prev={newUsers.prev7} />
+                ) : (
+                  "Not enough data to compare"
+                )
+              }
+            />
           </div>
+
+          {newUsers.total === 0 ? (
+            <div
+              style={{
+                color: COLORS.textSecondary,
+                fontSize: 13,
+                padding: "24px 0",
+                textAlign: "center",
+              }}
+            >
+              No signups in this period yet.
+            </div>
+          ) : (
+            <>
+              <BarChart
+                data={newUserBars}
+                width={800}
+                height={100}
+                color={COLORS.primary}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 8,
+                  fontSize: 11,
+                  color: COLORS.textSecondary,
+                }}
+              >
+                <span>{fmtDate(growth.newUsersByDay[0]?.date)}</span>
+                <span>
+                  {fmtDate(
+                    growth.newUsersByDay[
+                      Math.floor(growth.newUsersByDay.length / 2)
+                    ]?.date,
+                  )}
+                </span>
+                <span>
+                  {fmtDate(
+                    growth.newUsersByDay[growth.newUsersByDay.length - 1]?.date,
+                  )}
+                </span>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 11,
+                  color: COLORS.textSecondary,
+                }}
+              >
+                Each bar is one day. Taller bars = more new signups.
+              </div>
+            </>
+          )}
         </div>
       </Section>
 
@@ -228,7 +392,6 @@ export default function Analytics() {
         </div>
       </Section>
 
-      {/* ── Retention ─────────────────────────────────────── */}
       <Section title="Retention">
         <div
           style={{
@@ -267,27 +430,93 @@ export default function Analytics() {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, subtitle, children }) {
   return (
     <div style={{ marginBottom: 40 }}>
-      <h2
-        style={{
-          fontSize: 16,
-          fontWeight: 800,
-          letterSpacing: 1.5,
-          color: COLORS.textSecondary,
-          textTransform: "uppercase",
-          marginBottom: 16,
-        }}
-      >
-        {title}
-      </h2>
+      <div style={{ marginBottom: 16 }}>
+        <h2
+          style={{
+            fontSize: 16,
+            fontWeight: 800,
+            letterSpacing: 1.5,
+            color: COLORS.textSecondary,
+            textTransform: "uppercase",
+            margin: 0,
+          }}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <div
+            style={{
+              fontSize: 12,
+              color: COLORS.textSecondary,
+              marginTop: 4,
+            }}
+          >
+            {subtitle}
+          </div>
+        )}
+      </div>
       {children}
     </div>
   );
 }
 
-function ChartCard({ title, value, children }) {
+function Delta({ change, prev }) {
+  if (change === null) {
+    return (
+      <span style={{ color: COLORS.textSecondary }}>
+        {prev === 0 ? "New activity vs. 0 prior week" : "–"}
+      </span>
+    );
+  }
+  const up = change > 0;
+  const flat = Math.abs(change) < 0.5;
+  const color = flat
+    ? COLORS.textSecondary
+    : up
+      ? COLORS.success
+      : COLORS.danger;
+  const arrow = flat ? "→" : up ? "▲" : "▼";
+  return (
+    <span style={{ color, fontWeight: 700 }}>
+      {arrow} {Math.abs(change).toFixed(0)}%{" "}
+      <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>
+        vs prev 7d
+      </span>
+    </span>
+  );
+}
+
+function Metric({ label, value, hint }) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: 1,
+          color: COLORS.textSecondary,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 900 }}>{value}</div>
+      {hint && (
+        <div
+          style={{ fontSize: 11, color: COLORS.textSecondary, marginTop: 2 }}
+        >
+          {hint}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChartCard({ title, value, summary, unit, stats, footer, children }) {
+  const empty = summary && summary.total === 0;
   return (
     <div
       style={{
@@ -295,14 +524,7 @@ function ChartCard({ title, value, children }) {
         borderRadius: 16,
         padding: 20,
         border: `1px solid ${COLORS.border}`,
-        boxShadow: `
-              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
-              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
-              -3px -3px 6px rgba(255, 255, 255, 0.9),   
-              1px 1px 3px rgba(0, 0, 0, 0.12),          
-              3px 3px 6px rgba(0, 0, 0, 0.14),          
-              6px 6px 12px rgba(0, 0, 0, 0.16)          
-            `,
+        boxShadow: CARD_SHADOW,
       }}
     >
       <div
@@ -310,7 +532,7 @@ function ChartCard({ title, value, children }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "baseline",
-          marginBottom: 12,
+          marginBottom: 4,
         }}
       >
         <div style={{ fontSize: 13, fontWeight: 700 }}>{title}</div>
@@ -324,7 +546,87 @@ function ChartCard({ title, value, children }) {
           {value}
         </div>
       </div>
-      {children}
+
+      {summary && (
+        <div style={{ fontSize: 12, marginBottom: 12 }}>
+          {summary.hasPrev ? (
+            <>
+              <span style={{ fontWeight: 800 }}>
+                {summary.last7} {unit}
+              </span>{" "}
+              <span style={{ color: COLORS.textSecondary }}>
+                in the last 7 days ·{" "}
+              </span>
+              <Delta change={summary.change} prev={summary.prev7} />
+            </>
+          ) : (
+            <span style={{ color: COLORS.textSecondary }}>
+              Not enough data to show a trend yet
+            </span>
+          )}
+        </div>
+      )}
+
+      {empty ? (
+        <div
+          style={{
+            color: COLORS.textSecondary,
+            fontSize: 13,
+            padding: "24px 0",
+            textAlign: "center",
+          }}
+        >
+          No data in this period.
+        </div>
+      ) : (
+        children
+      )}
+
+      {footer && (
+        <div
+          style={{
+            fontSize: 11,
+            color: COLORS.textSecondary,
+            marginTop: 6,
+          }}
+        >
+          {footer}
+        </div>
+      )}
+
+      {stats && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
+            gap: 12,
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${COLORS.border}`,
+          }}
+        >
+          {stats.map((s) => (
+            <div key={s.label}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  color: COLORS.textSecondary,
+                }}
+              >
+                {s.label}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 900 }}>{s.value}</div>
+              {s.hint && (
+                <div style={{ fontSize: 11, color: COLORS.textSecondary }}>
+                  {s.hint}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -337,14 +639,7 @@ function LeaderboardCard({ title, icon, rows }) {
         borderRadius: 16,
         padding: 20,
         border: `1px solid ${COLORS.border}`,
-        boxShadow: `
-              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
-              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
-              -3px -3px 6px rgba(255, 255, 255, 0.9),   
-              1px 1px 3px rgba(0, 0, 0, 0.12),          
-              3px 3px 6px rgba(0, 0, 0, 0.14),          
-              6px 6px 12px rgba(0, 0, 0, 0.16)          
-            `,
+        boxShadow: CARD_SHADOW,
       }}
     >
       <div
