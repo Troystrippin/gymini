@@ -253,7 +253,6 @@ export default function WorkoutSessionScreen() {
 
     const completedCount = workout.exercises.filter((e) => e.done).length;
 
-    // BLOCK saving if 0 exercises are completed
     if (completedCount === 0) {
       Alert.alert(
         "No exercises completed",
@@ -276,6 +275,9 @@ export default function WorkoutSessionScreen() {
         weightKg: Number(set.weight) || 0,
       })),
     }));
+
+    // DIAGNOSTIC LOG: See exactly what the app is sending
+    console.log("PAYLOAD SENDING:", JSON.stringify(exercisesPayload.map(e => ({ name: e.name, completed: e.completed })), null, 2));
 
     const setsLogged = exercisesPayload.reduce(
       (sum, e) => sum + e.sets.length,
@@ -322,10 +324,7 @@ export default function WorkoutSessionScreen() {
         try {
           await workoutSessionStorage.clear(userId);
         } catch (error) {
-          console.error(
-            "[session] workout saved but active session cache could not be cleared:",
-            error,
-          );
+          console.error("[session] cache clear failed:", error);
         }
 
         Alert.alert(

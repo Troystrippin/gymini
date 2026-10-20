@@ -7,8 +7,6 @@ const { logUserAction } = require("../utils/userActivityLog");
 // EXISTING — today's workout + toggle
 // ──────────────────────────────────────────────────────────────
 
-// @desc    Get the user's active workout plan (used as "today's workout")
-// @route   GET /api/workouts/today
 const getTodayWorkout = async (req, res) => {
   try {
     const plan = req.user.activePlanId
@@ -46,8 +44,6 @@ const getTodayWorkout = async (req, res) => {
   }
 };
 
-// @desc    Toggle an exercise's completed status (session-local only)
-// @route   PATCH /api/workouts/:planId/exercises/:exerciseId
 const toggleExercise = async (req, res) => {
   res.json({ _id: req.params.exerciseId, done: true });
 };
@@ -56,9 +52,6 @@ const toggleExercise = async (req, res) => {
 // NEW — Phase 2.3 endpoints
 // ──────────────────────────────────────────────────────────────
 
-// @desc    Save a completed session
-// @route   POST /api/workouts/sessions
-// @body    { planId, planName, startedAt, durationSec, exercises: [...] }
 const saveSession = async (req, res) => {
   try {
     const {
@@ -75,30 +68,7 @@ const saveSession = async (req, res) => {
         .json({ message: "planName and exercises are required" });
     }
 
-    // ─── Idempotency: prevent duplicate logs from a double-tap or
-    //     from a concurrent saveProgress write ───────────────────
-    if (planId) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setDate(endOfDay.getDate() + 1);
-
-      const existingToday = await WorkoutLog.findOne({
-        userId: req.user._id,
-        planId,
-        dateCompleted: { $gte: startOfDay, $lt: endOfDay },
-      }).lean();
-
-      if (existingToday) {
-        console.log(
-          `[workout] skipping duplicate session user=${req.user._id} plan=${planId}`,
-        );
-        return res.status(200).json(existingToday);
-      }
-    }
-    // ──────────────────────────────────────────────────────────────
-
-    // Normalize + snapshot exercise names so history survives catalog edits.
+    // Normalize + snapshot exercise names
     const normalized = await Promise.all(
       exercises.map(async (ex) => {
         const sets = Array.isArray(ex.sets)
@@ -113,7 +83,6 @@ const saveSession = async (req, res) => {
         const setsCompleted = sets.length;
         const repsCompleted = sets.reduce((sum, s) => sum + s.reps, 0);
 
-        // Resolve name/muscle from catalog if not provided.
         let name = ex.name;
         let muscleGroup = ex.muscleGroup || null;
         if (!name && ex.exerciseId) {
@@ -140,7 +109,7 @@ const saveSession = async (req, res) => {
       }),
     );
 
-    // SAFETY CHECK: Block saving if 0 exercises were actually completed
+    // SAFETY CHECK
     const totalCompleted = normalized.filter((e) => e.completed).length;
     if (totalCompleted === 0) {
       return res.status(400).json({ 
@@ -148,38 +117,68 @@ const saveSession = async (req, res) => {
       });
     }
 
-    const log = await WorkoutLog.create({
-      userId: req.user._id,
-      planId: planId || null,
-      planName: planName.trim(),
-      startedAt: startedAt ? new Date(startedAt) : null,
-      dateCompleted: new Date(),
-      durationSec: Math.max(0, Number(durationSec) || 0),
-      exercisesPerformed: normalized,
-      totalExercises: normalized.length,
-      completedExercises: normalized.filter((e) => e.completed).length,
-    });
+    // ─── Idempotency: Find existing log and UPDATE it ───────────────────
+    let existingToday = null;
+    if (planId) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setDate(endOfDay.getDate() + 1);
 
-    console.log(
-      `[workout] saved session user=${req.user._id} log=${log._id} exercises=${normalized.length}`,
-    );
+      existingToday = await WorkoutLog.findOne({
+        userId: req.user._id,
+        planId,
+        dateCompleted: { $gte: startOfDay, $lt: endOfDay },
+      });
+    }
 
-    // Log the action
+    let log;
+    if (existingToday) {
+      // Update the existing log with the newly completed exercises
+      log = await WorkoutLog.findByIdAndUpdate(existingToday._id, {
+        planName: planName.trim(),
+        startedAt: startedAt ? new Date(startedAt) : null,
+        durationSec: Math.max(0, Number(durationSec) || 0),
+        exercisesPerformed: normalized,
+        totalExercises: normalized.length,
+        completedExercises: totalCompleted,
+      }, { new: true });
+      
+      console.log(
+        `[workout] updated existing session user=${req.user._id} log=${log._id}`,
+      );
+    } else {
+      // Create a brand new log for today
+      log = await WorkoutLog.create({
+        userId: req.user._id,
+        planId: planId || null,
+        planName: planName.trim(),
+        startedAt: startedAt ? new Date(startedAt) : null,
+        dateCompleted: new Date(),
+        durationSec: Math.max(0, Number(durationSec) || 0),
+        exercisesPerformed: normalized,
+        totalExercises: normalized.length,
+        completedExercises: totalCompleted,
+      });
+      
+      console.log(
+        `[workout] created new session user=${req.user._id} log=${log._id}`,
+      );
+    }
+
     await logUserAction(req, "workout.complete", {
       planName: log.planName,
       durationMin: Math.round(log.durationSec / 60),
       exercisesCompleted: log.completedExercises,
     });
 
-    res.status(201).json(log);
+    res.status(existingToday ? 200 : 201).json(log);
   } catch (error) {
     console.error("saveSession:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    List session history (paginated)
-// @route   GET /api/workouts/history?page=1&limit=20
 const getHistory = async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -206,8 +205,6 @@ const getHistory = async (req, res) => {
   }
 };
 
-// @desc    Aggregate stats + streak
-// @route   GET /api/workouts/stats
 const getStats = async (req, res) => {
   try {
     const logs = await WorkoutLog.find({ userId: req.user._id })
