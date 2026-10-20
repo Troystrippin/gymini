@@ -92,7 +92,6 @@ export default function ActivityLogs() {
 
   useEffect(() => {
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionFilter, targetFilter, search, fromDate, toDate, page]);
 
   useAdminPolling(fetchLogs);
@@ -145,6 +144,14 @@ export default function ActivityLogs() {
             background: COLORS.cardBackground,
             color: COLORS.text,
             fontSize: 14,
+            boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
           }}
         />
 
@@ -216,6 +223,14 @@ export default function ActivityLogs() {
           borderRadius: 16,
           border: `1px solid ${COLORS.border}`,
           overflow: "hidden",
+          boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.56),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
         }}
       >
         {loading ? (
@@ -226,7 +241,7 @@ export default function ActivityLogs() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-                {["WHEN", "ADMIN", "ACTION", "TARGET", "DETAILS"].map((h) => (
+                {["WHEN", "USER", "ACTION", "TARGET", "DETAILS"].map((h) => (
                   <th key={h} style={thStyle}>
                     {h}
                   </th>
@@ -354,6 +369,14 @@ const selectStyle = {
   color: COLORS.text,
   fontSize: 14,
   minWidth: 160,
+  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
 };
 
 const thStyle = {
@@ -388,6 +411,14 @@ const pagerBtn = (disabled) => ({
   fontWeight: 700,
   opacity: disabled ? 0.4 : 1,
   cursor: disabled ? "not-allowed" : "pointer",
+  boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
 });
 
 const btnSecondary = {

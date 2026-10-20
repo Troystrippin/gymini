@@ -95,12 +95,28 @@ export default function Users() {
             background: COLORS.cardBackground,
             color: COLORS.text,
             fontSize: 16,
+            boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
           }}
         />
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           style={{
+            boxShadow: `
+              inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+              inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+              -3px -3px 6px rgba(255, 255, 255, 0.9),   
+              1px 1px 3px rgba(0, 0, 0, 0.12),          
+              3px 3px 6px rgba(0, 0, 0, 0.14),          
+              6px 6px 12px rgba(0, 0, 0, 0.16)          
+            `,
             padding: "11px 14px",
             borderRadius: 10,
             border: `1px solid ${COLORS.border}`,
@@ -138,6 +154,13 @@ export default function Users() {
           borderRadius: 16,
           border: `1px solid ${COLORS.border}`,
           overflow: "hidden",
+          boxShadow: `inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+          inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+          -4px -4px 10px rgba(255, 255, 255, 0.9),
+          2px 2px 4px rgba(0, 0, 0, 0.12),
+          6px 6px 12px rgba(0, 0, 0, 0.14),
+          12px 12px 24px rgba(0, 0, 0, 0.16)
+        `,
         }}
       >
         {loading ? (

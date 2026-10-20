@@ -22,20 +22,37 @@ export default function ProgressStatCard({
       ]}
     >
       <View style={styles.statHeader}>
-        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+        <Text
+          style={[styles.statLabel, { color: colors.textSecondary }]}
+          numberOfLines={2}
+        >
           {label}
         </Text>
         {Icon ? (
-          <Icon
-            width={22}
-            height={22}
-            fill={colors.primary}
-            color={colors.primary}
-          />
+          <View style={styles.iconBox}>
+            <Icon
+              width={22}
+              height={22}
+              fill={colors.primary}
+              color={colors.primary}
+            />
+          </View>
         ) : null}
       </View>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statDescription, { color: colors.success }]}>
+
+      <Text
+        style={[styles.statValue, { color: colors.text }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {value}
+      </Text>
+
+      <Text
+        style={[styles.statDescription, { color: colors.success }]}
+        numberOfLines={2}
+      >
         {description}
       </Text>
     </View>
@@ -44,25 +61,32 @@ export default function ProgressStatCard({
 
 const styles = StyleSheet.create({
   statCard: {
-    flex: 1,
     borderRadius: 18,
     padding: 14,
     minHeight: 50,
-    minWidth: 100,
     borderLeftWidth: 3,
+    overflow: "hidden",
   },
   statHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 6,
   },
   statLabel: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0,
   },
-  statEmoji: {
-    fontSize: 18,
+  iconBox: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    flexShrink: 0,
   },
   statValue: {
     fontSize: 22,

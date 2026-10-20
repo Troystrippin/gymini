@@ -109,7 +109,9 @@ export default function Meals() {
     // Validation: Name must contain only letters, spaces, and basic punctuation
     const nameRegex = /^[a-zA-Z\s\-',.()]+$/;
     if (!nameRegex.test(createForm.name)) {
-      setCreateError("Meal name can only contain letters, spaces, and basic punctuation.");
+      setCreateError(
+        "Meal name can only contain letters, spaces, and basic punctuation.",
+      );
       return;
     }
 
@@ -117,13 +119,13 @@ export default function Meals() {
       setCreateError("Name, Calories, and Protein are required.");
       return;
     }
-    
+
     setCreating(true);
     setCreateError("");
     try {
       let payload;
       let config;
-      
+
       if (createImage) {
         payload = new FormData();
         Object.entries(createForm).forEach(([k, v]) => payload.append(k, v));
@@ -161,21 +163,29 @@ export default function Meals() {
             padding: "10px 18px",
             borderRadius: 10,
             background: COLORS.primary,
-            color: COLORS.text,
+            color: COLORS.buttonText,
             fontWeight: 700,
             fontSize: 13,
             cursor: "pointer",
             border: "none",
+            boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
           }}
         >
-          + Add Built-in Meal
+          Add Built-in Meal
         </button>
       </div>
 
       {error && (
         <div style={{ color: COLORS.danger, marginBottom: 16 }}>{error}</div>
       )}
-      
+
       {loading ? (
         <div style={{ color: COLORS.textSecondary }}>Loading meals...</div>
       ) : (
@@ -251,6 +261,14 @@ export default function Meals() {
                     ...buttonStyle,
                     color: COLORS.buttonText,
                     background: COLORS.success,
+                    boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
                   }}
                 >
                   {busyId === meal.id ? "Saving..." : "Save photo"}
@@ -262,6 +280,14 @@ export default function Meals() {
                     ...buttonStyle,
                     color: COLORS.buttonText,
                     background: COLORS.danger,
+                    boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
                   }}
                 >
                   Delete
@@ -272,7 +298,6 @@ export default function Meals() {
         </div>
       )}
 
-      {/* Create Meal Modal */}
       {showCreate && (
         <div
           style={{
@@ -301,7 +326,13 @@ export default function Meals() {
             <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4 }}>
               Add Built-in Meal
             </h2>
-            <p style={{ color: COLORS.textSecondary, fontSize: 13, marginBottom: 20 }}>
+            <p
+              style={{
+                color: COLORS.textSecondary,
+                fontSize: 13,
+                marginBottom: 20,
+              }}
+            >
               This meal will be available to all users in the shared catalog.
             </p>
 
@@ -320,12 +351,20 @@ export default function Meals() {
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+              }}
+            >
               <div>
                 <label style={labelStyle}>Name</label>
                 <input
                   value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, name: e.target.value })
+                  }
                   placeholder="e.g. Chicken Salad"
                   style={inputStyle}
                 />
@@ -334,40 +373,63 @@ export default function Meals() {
                 <label style={labelStyle}>Type</label>
                 <select
                   value={createForm.type}
-                  onChange={(e) => setCreateForm({ ...createForm, type: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, type: e.target.value })
+                  }
                   style={inputStyle}
                 >
-                  {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {MEAL_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Goal</label>
                 <select
                   value={createForm.goal}
-                  onChange={(e) => setCreateForm({ ...createForm, goal: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, goal: e.target.value })
+                  }
                   style={inputStyle}
                 >
-                  {MEAL_GOALS.map((g) => <option key={g} value={g}>{g}</option>)}
+                  {MEAL_GOALS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Tags (comma separated)</label>
                 <input
                   value={createForm.tags}
-                  onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, tags: e.target.value })
+                  }
                   placeholder="e.g. Low Carb, Quick"
                   style={inputStyle}
                 />
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginTop: 14 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                gap: 14,
+                marginTop: 14,
+              }}
+            >
               <div>
                 <label style={labelStyle}>Calories</label>
                 <input
                   type="number"
                   value={createForm.calories}
-                  onChange={(e) => setCreateForm({ ...createForm, calories: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, calories: e.target.value })
+                  }
                   placeholder="0"
                   style={inputStyle}
                 />
@@ -377,7 +439,9 @@ export default function Meals() {
                 <input
                   type="number"
                   value={createForm.protein}
-                  onChange={(e) => setCreateForm({ ...createForm, protein: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, protein: e.target.value })
+                  }
                   placeholder="0"
                   style={inputStyle}
                 />
@@ -387,7 +451,9 @@ export default function Meals() {
                 <input
                   type="number"
                   value={createForm.carbs}
-                  onChange={(e) => setCreateForm({ ...createForm, carbs: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, carbs: e.target.value })
+                  }
                   placeholder="0"
                   style={inputStyle}
                 />
@@ -397,7 +463,9 @@ export default function Meals() {
                 <input
                   type="number"
                   value={createForm.fats}
-                  onChange={(e) => setCreateForm({ ...createForm, fats: e.target.value })}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, fats: e.target.value })
+                  }
                   placeholder="0"
                   style={inputStyle}
                 />
@@ -408,14 +476,16 @@ export default function Meals() {
               <label style={labelStyle}>Description (Optional)</label>
               <textarea
                 value={createForm.description}
-                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, description: e.target.value })
+                }
                 placeholder="Short description..."
                 rows={4}
-                style={{ 
-                  ...inputStyle, 
-                  height: 100, 
-                  resize: "none", 
-                  overflowY: "auto" 
+                style={{
+                  ...inputStyle,
+                  height: 100,
+                  resize: "none",
+                  overflowY: "auto",
                 }}
               />
             </div>
@@ -430,7 +500,14 @@ export default function Meals() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 24 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                justifyContent: "flex-end",
+                marginTop: 24,
+              }}
+            >
               <button
                 onClick={() => setShowCreate(false)}
                 disabled={creating}
@@ -445,7 +522,7 @@ export default function Meals() {
                   ...buttonStyle,
                   padding: "10px 18px",
                   background: COLORS.primary,
-                  color: COLORS.text,
+                  color: COLORS.buttonText,
                   opacity: creating ? 0.6 : 1,
                 }}
               >

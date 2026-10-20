@@ -68,9 +68,11 @@ export default function OnboardingGoal({ navigation }) {
       edges={["top", "bottom"]}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+        {navigation.canGoBack() && (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView

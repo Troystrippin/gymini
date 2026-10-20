@@ -1,4 +1,4 @@
-import React, { useContext, useState, useCallback } from "react";
+import React, { useContext, useState, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -7,11 +7,13 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 import ProgressStatCard from "../components/ProgressStatCard";
 import LogWeightModal from "../components/LogWeightModal";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -28,6 +30,40 @@ import BurnIcon from "../icons/BurnIcon";
 
 const screenWidth = Dimensions.get("window").width - 68;
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const CHART_WIDTH = Math.max(screenWidth, MONTHS.length * 56);
+
+const toMonthlyValues = (buckets) => {
+  const values = Array(12).fill(0);
+  (buckets || []).forEach((b) => {
+    const label = String(b.label ?? "");
+    let idx = -1;
+    if (/^\d{4}-\d{2}/.test(label)) {
+      idx = Number(label.slice(5, 7)) - 1;
+    } else {
+      idx = MONTHS.findIndex(
+        (m) => m.toLowerCase() === label.slice(0, 3).toLowerCase(),
+      );
+    }
+    if (idx >= 0 && idx < 12) values[idx] = b.value ?? 0;
+  });
+  return values;
+};
+
 export default function ProgressScreen() {
   const { user, refreshUser } = useContext(AuthContext);
   const { colors, mode } = useTheme();
@@ -38,6 +74,8 @@ export default function ProgressScreen() {
   const [analytics, setAnalytics] = useState(null);
   const [mealStats, setMealStats] = useState(null);
   const [showLogWeight, setShowLogWeight] = useState(false);
+  const chartScrollRef = useRef(null);
+  const [statsWidth, setStatsWidth] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -85,12 +123,37 @@ export default function ProgressScreen() {
       : `Gained ${weightChange30d.toFixed(1)} kg (30d)`;
   })();
 
-  const weightSeries = analytics?.weightSeries || [];
-  const weightLabels = weightSeries.map((p) => {
-    const [, mm, dd] = p.date.split("-");
-    return `${mm}/${dd}`;
-  });
-  const weightValues = weightSeries.map((p) => p.weightKg);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+
+  const monthlyWeight = Array(12).fill(null);
+  [...(analytics?.weightSeries || [])]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .forEach((p) => {
+      const [y, m] = p.date.split("-");
+      if (Number(y) === currentYear) monthlyWeight[Number(m) - 1] = p.weightKg;
+    });
+
+  // pin this month to the latest known weight
+  if (weight != null) monthlyWeight[currentMonth] = weight;
+
+  // only plot from the first known month up to the current month
+  const firstIdx = monthlyWeight.findIndex((v) => v !== null);
+  const startIdx = firstIdx === -1 ? currentMonth : firstIdx;
+
+  let lastWeight = monthlyWeight[startIdx] ?? 0;
+  const weightValues = [];
+  const weightLabels = [];
+  const emptyWeightMonths = [];
+
+  for (let i = startIdx; i <= currentMonth; i++) {
+    if (monthlyWeight[i] !== null) lastWeight = monthlyWeight[i];
+    else emptyWeightMonths.push(i - startIdx); // index within the sliced data
+    weightValues.push(lastWeight);
+    weightLabels.push(MONTHS[i]);
+  }
+
+  const weightChartWidth = Math.max(screenWidth, weightLabels.length * 56);
 
   const workoutsByMonth = analytics?.workoutsByMonth || [];
   const caloriesByMonth = analytics?.caloriesByMonth || [];
@@ -98,25 +161,18 @@ export default function ProgressScreen() {
   const charts = {
     weight: {
       data: {
-        labels: weightLabels.length ? weightLabels : ["—"],
-        datasets: [{ data: weightValues.length ? weightValues : [0] }],
+        labels: weightLabels,
+        datasets: [{ data: weightValues }],
       },
       type: "line",
       color: "rgba(0, 255, 17, $o)",
       decimalPlaces: 1,
+      hiddenPoints: emptyWeightMonths,
     },
     workouts: {
       data: {
-        labels: workoutsByMonth.length
-          ? workoutsByMonth.map((b) => b.label)
-          : ["—"],
-        datasets: [
-          {
-            data: workoutsByMonth.length
-              ? workoutsByMonth.map((b) => b.value)
-              : [0],
-          },
-        ],
+        labels: MONTHS,
+        datasets: [{ data: toMonthlyValues(workoutsByMonth) }],
       },
       type: "bar",
       color: "rgba(130, 151, 205, $o)",
@@ -124,16 +180,8 @@ export default function ProgressScreen() {
     },
     calories: {
       data: {
-        labels: caloriesByMonth.length
-          ? caloriesByMonth.map((b) => b.label)
-          : ["—"],
-        datasets: [
-          {
-            data: caloriesByMonth.length
-              ? caloriesByMonth.map((b) => b.value)
-              : [0],
-          },
-        ],
+        labels: MONTHS,
+        datasets: [{ data: toMonthlyValues(caloriesByMonth) }],
       },
       type: "bar",
       color: "rgba(254, 110, 0, $o)",
@@ -166,6 +214,26 @@ export default function ProgressScreen() {
   const workoutsThisMonth = summary.workoutsThisMonth ?? 0;
   const caloriesThisMonth = summary.caloriesThisMonth ?? 0;
 
+  const STATS_PADDING = 14;
+  const STATS_GAP = 12;
+  const cardWidth = statsWidth
+    ? Math.floor((statsWidth - STATS_PADDING * 2 - STATS_GAP) / 2)
+    : null;
+  const halfCard = cardWidth ? { width: cardWidth } : null;
+  const fullCard = cardWidth ? { width: cardWidth * 2 + STATS_GAP } : null;
+
+  const scrollToCurrentMonth = () => {
+    // the weight chart only spans start month -> current month, so start at 0
+    if (activeTab === "weight") {
+      chartScrollRef.current?.scrollTo({ x: 0, animated: false });
+      return;
+    }
+    const monthWidth = CHART_WIDTH / 12;
+    const x =
+      new Date().getMonth() * monthWidth - screenWidth / 2 + monthWidth / 2;
+    chartScrollRef.current?.scrollTo({ x: Math.max(0, x), animated: false });
+  };
+
   const handleSaveWeight = async (kg) => {
     await weightApi.log(kg);
     await refreshUser?.();
@@ -186,20 +254,25 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
-          <Pressable
+          <View style={styles.titleRow}>
+            <GYMINI_LOGO color={colors.text} width={25} height={25} />
+            <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+          </View>
+          <TouchableOpacity
             onPress={() => setShowLogWeight(true)}
             style={[styles.logBtn, { backgroundColor: colors.primary }]}
           >
             <Text style={styles.logBtnText}>+ Log weight</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         <View
           style={[styles.statsRow, { backgroundColor: colors.cardBackground }]}
+          onLayout={(e) => setStatsWidth(e.nativeEvent.layout.width)}
         >
           <ProgressStatCard
             label="CURRENT WEIGHT"
+            style={halfCard}
             value={weight ? `${weight} kg` : "N/A"}
             icon={WeightIcon}
             colors={colors}
@@ -208,6 +281,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="BMI"
+            style={halfCard}
             value={bmi ? bmi.toFixed(1) : "N/A"}
             icon={BmiIcon}
             colors={colors}
@@ -216,6 +290,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="WORKOUTS DONE"
+            style={halfCard}
             value={`${workoutsThisMonth}`}
             icon={WorkoutIcon}
             colors={colors}
@@ -224,6 +299,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="CALORIES BURNED"
+            style={halfCard}
             value={caloriesThisMonth ? `${caloriesThisMonth} kcal` : "0"}
             icon={BurnIcon}
             colors={colors}
@@ -232,6 +308,7 @@ export default function ProgressScreen() {
           />
           <ProgressStatCard
             label="AVG INTAKE"
+            style={fullCard}
             value={avgIntake ? `${avgIntake} kcal` : "—"}
             icon={BurnIcon}
             colors={colors}
@@ -273,27 +350,38 @@ export default function ProgressScreen() {
 
           {loading ? (
             <ActivityIndicator color={colors.primary} style={{ height: 200 }} />
-          ) : activeChart.type === "line" ? (
-            <LineChart
-              data={activeChart.data}
-              width={screenWidth}
-              height={200}
-              chartConfig={chartConfig}
-              bezier
-              withInnerLines
-              withOuterLines={false}
-              style={styles.chart}
-            />
           ) : (
-            <BarChart
-              data={activeChart.data}
-              width={screenWidth}
-              height={200}
-              chartConfig={chartConfig}
-              withInnerLines
-              withOuterLines={false}
-              style={styles.chart}
-            />
+            <ScrollView
+              horizontal
+              ref={chartScrollRef}
+              showsHorizontalScrollIndicator={false}
+              onContentSizeChange={scrollToCurrentMonth}
+            >
+              {activeChart.type === "line" ? (
+                <LineChart
+                  data={activeChart.data}
+                  width={weightChartWidth}
+                  height={200}
+                  chartConfig={chartConfig}
+                  bezier={weightValues.length > 1}
+                  withInnerLines
+                  withOuterLines={false}
+                  hidePointsAtIndex={activeChart.hiddenPoints}
+                  style={styles.chart}
+                />
+              ) : (
+                <BarChart
+                  data={activeChart.data}
+                  width={CHART_WIDTH}
+                  height={200}
+                  chartConfig={chartConfig}
+                  fromZero
+                  withInnerLines
+                  withOuterLines={false}
+                  style={styles.chart}
+                />
+              )}
+            </ScrollView>
           )}
         </View>
 
@@ -341,6 +429,12 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   title: { fontSize: 30, fontWeight: "800" },
+  titleRow: {
+    alignItems: "center",
+    justifyContent: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+  },
   logBtn: {
     borderRadius: 10,
     paddingHorizontal: 12,

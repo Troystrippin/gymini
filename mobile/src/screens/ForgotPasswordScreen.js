@@ -15,6 +15,7 @@ import InputField from "../components/InputField";
 import { COLORS } from "../theme/colors";
 import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
+import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 
 export default function ForgotPasswordScreen({ navigation }) {
   const { colors } = useTheme();
@@ -85,7 +86,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.logo}>◆◆</Text>
+          <GYMINI_LOGO color={colors.text} width={80} height={80} />
           <Text style={styles.brand}>GYMINI</Text>
         </View>
 
@@ -144,25 +145,20 @@ export default function ForgotPasswordScreen({ navigation }) {
                 onPress={handleReset}
                 disabled={submitting}
               />
-              <TouchableOpacity
-                onPress={handleSendCode}
-                style={styles.linkRow}
-              >
+              <TouchableOpacity onPress={handleSendCode} style={styles.linkRow}>
                 <Text style={[styles.link, { color: colors.primary }]}>
                   Resend code
                 </Text>
               </TouchableOpacity>
             </>
           )}
-
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.linkRow}
-          >
-            <Text style={[styles.linkMuted, { color: colors.textSecondary }]}>
-              Back to sign in
-            </Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 16 }}>
+            <Button
+              title="Return to Sign in"
+              onPress={() => navigation.goBack()}
+              marginTop={16}
+            />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -194,7 +190,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 20,
   },
-  linkRow: { alignItems: "center", marginTop: 16 },
+  linkRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    width: "100%",
+    borderRadius: 12,
+  },
   link: { fontSize: 14, fontWeight: "600" },
-  linkMuted: { fontSize: 13 },
+  linkMuted: { fontSize: 16, fontWeight: 700 },
 });

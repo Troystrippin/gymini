@@ -24,13 +24,9 @@ export default function MealCard({
   actionLabel,
 }) {
   const calLabel =
-    typeof meal.calories === "number"
-      ? `${meal.calories} kcal`
-      : meal.calories;
+    typeof meal.calories === "number" ? `${meal.calories} kcal` : meal.calories;
   const proteinLabel =
-    typeof meal.protein === "number"
-      ? `${meal.protein}g`
-      : meal.protein;
+    typeof meal.protein === "number" ? `${meal.protein}g` : meal.protein;
 
   return (
     <Pressable
@@ -94,15 +90,15 @@ export default function MealCard({
         style={[
           styles.actionButton,
           {
-            backgroundColor: selected ? colors.cardBackground : colors.primary,
-            borderColor: colors.primary,
+            backgroundColor: selected ? colors.primary : colors.cardBackground,
+            borderColor: colors.border,
           },
         ]}
       >
         <Text
           style={[
             styles.actionButtonText,
-            { color: selected ? colors.primary : "#FFFFFF" },
+            { color: selected ? colors.buttonText : "#FFFFFF" },
           ]}
         >
           {actionLabel || (selected ? "Added" : "Add")}

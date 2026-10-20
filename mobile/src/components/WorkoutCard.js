@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import decodeHtmlEntities from "../utils/decodeHtmlEntities";
 
 export default function WorkoutCard({
   workout,
@@ -116,7 +117,7 @@ function ExerciseRow({ exercise, isDone, colors }) {
             done && styles.exerciseNameDone,
           ]}
         >
-          {exercise.name}
+          {decodeHtmlEntities(exercise.name)}
         </Text>
         <Text style={[styles.exerciseMuscle, { color: colors.textSecondary }]}>
           {exercise.muscle || "—"}

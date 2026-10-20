@@ -4,6 +4,9 @@ import api from "../api";
 import StatCard from "../components/StatCard";
 import { COLORS, ROLE_COLORS } from "../theme";
 import useAdminPolling from "../hooks/useAdminPolling";
+import ProfileIcon from "../icons/ProfileIcon";
+import ShieldCheckIcon from "../icons/ShieldCheckIcon";
+import BicepsIcon from "../icons/BicepsIcon";
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -78,19 +81,19 @@ export default function Dashboard() {
         <StatCard
           label="TOTAL USERS"
           value={stats.totalUsers}
-          emoji="👥"
+          emoji={<ProfileIcon />}
           accent={COLORS.primary}
         />
         <StatCard
           label="ADMINS"
           value={stats.totalAdmins}
-          emoji="🛡️"
+          emoji={<ShieldCheckIcon />}
           accent={ROLE_COLORS.admin}
         />
         <StatCard
           label="WORKOUT PLANS"
           value={stats.totalPlans}
-          emoji="💪"
+          emoji={<BicepsIcon />}
           accent={COLORS.success}
         />
       </div>
@@ -101,6 +104,13 @@ export default function Dashboard() {
           borderRadius: 16,
           padding: 24,
           border: `1px solid ${COLORS.border}`,
+          boxShadow: `inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+          inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+          -4px -4px 10px rgba(255, 255, 255, 0.9),
+          2px 2px 4px rgba(0, 0, 0, 0.12),
+          6px 6px 12px rgba(0, 0, 0, 0.14),
+          12px 12px 24px rgba(0, 0, 0, 0.16)
+        `,
         }}
       >
         <div

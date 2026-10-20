@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import Logo from "../components/Logo";
 import { COLORS } from "../theme";
+import EyeIcon from "../icons/EyeIcon";
+import EyeOffIcon from "../icons/EyeOffIcon";
 
 export default function Login() {
   const { login } = useAuth();
@@ -13,6 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [lockoutUntil, setLockoutUntil] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!lockoutUntil) return undefined;
@@ -169,23 +172,49 @@ export default function Login() {
         >
           PASSWORD
         </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          required
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 10,
-            border: `1px solid ${COLORS.border}`,
-            background: COLORS.background,
-            color: COLORS.text,
-            fontSize: 16,
-            marginBottom: 24,
-          }}
-        />
+        <div style={{ position: "relative", marginBottom: 24 }}>
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            style={{
+              width: "100%",
+              padding: "12px 44px 12px 14px",
+              borderRadius: 10,
+              border: `1px solid ${COLORS.border}`,
+              background: COLORS.background,
+              color: COLORS.text,
+              fontSize: 16,
+              boxSizing: "border-box",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            style={{
+              position: "absolute",
+              right: 12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              color: COLORS.text,
+            }}
+          >
+            {showPassword ? (
+              <EyeOffIcon color={COLORS.placeHolder} width={22} height={22} />
+            ) : (
+              <EyeIcon color={COLORS.placeHolder} width={22} height={22} />
+            )}
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -208,7 +237,6 @@ export default function Login() {
               ? `Try again in ${lockoutLabel}`
               : "Sign In"}
         </button>
-
       </form>
     </div>
   );

@@ -325,31 +325,6 @@ export default function BrowseExercisesScreen() {
     );
   };
 
-  const renderCategoryChip = ({ item: cat }) => {
-    const active = category === cat;
-    return (
-      <TouchableOpacity
-        onPress={() => setCategory(cat)}
-        style={[
-          styles.chip,
-          {
-            backgroundColor: active ? colors.accent : colors.card,
-            borderColor: active ? colors.accent : colors.border,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.chipText,
-            { color: active ? accentTextColor : colors.text },
-          ]}
-        >
-          {cat}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
   const renderMuscleGroupChip = ({ item: g }) => {
     const active = cGroup === g;
     return (
@@ -403,38 +378,31 @@ export default function BrowseExercisesScreen() {
 
   return (
     <SafeAreaView
-      edges={["top", "left", "right"]}
+      edges={["top", "left", "right", "bottom"]}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleDone}>
-          <Text style={[styles.headerBtn, { color: colors.textSecondary }]}>
-            {draftExercises.length > 0
-              ? `Done (${draftExercises.length})`
-              : "Done"}
+        <View style={styles.headerTextWrap}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Browse Exercises
           </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Add Exercises
-        </Text>
-        <View style={styles.headerRightGroup}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Favorites")}
-            style={styles.favoritesHeaderBtn}
+          <Text
+            style={[styles.headerSubtitle, { color: colors.textSecondary }]}
           >
-            <Text style={styles.favoritesHeaderIcon}>{"\u2605"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setCustomVisible(true)}>
-            <Text
-              style={[
-                styles.headerBtn,
-                { color: colors.accent, textAlign: "right" },
-              ]}
-            >
-              + Custom
-            </Text>
-          </TouchableOpacity>
+            {filtered.length} exercises
+          </Text>
         </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Favorites")}
+          activeOpacity={0.7}
+          accessibilityLabel="Favorites"
+          style={[
+            styles.iconButton,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={styles.favoritesHeaderIcon}>{"\u2605"}</Text>
+        </TouchableOpacity>
       </View>
 
       <TextInput
@@ -528,6 +496,35 @@ export default function BrowseExercisesScreen() {
           }
         />
       )}
+
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setCustomVisible(true)}
+          style={[styles.customButton, { borderColor: colors.accent }]}
+        >
+          <Text style={[styles.customButtonText, { color: colors.accent }]}>
+            + Custom
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handleDone}
+          style={[styles.doneButton, { backgroundColor: colors.accent }]}
+        >
+          <Text style={[styles.doneButtonText, { color: accentTextColor }]}>
+            {draftExercises.length > 0
+              ? `Done (${draftExercises.length})`
+              : "Done"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <Modal
         visible={muscleGroupModalVisible}
@@ -776,7 +773,14 @@ export default function BrowseExercisesScreen() {
               >
                 Muscle Group
               </Text>
-              <FlatList />
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                data={CATEGORIES.filter((c) => c !== "All" && c !== "Custom")}
+                keyExtractor={(item) => item}
+                renderItem={renderMuscleGroupChip}
+                style={styles.muscleGroupList}
+              />
 
               <Text
                 style={[styles.fieldLabel, { color: colors.textSecondary }]}
@@ -922,22 +926,24 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  headerBtn: {
-    fontSize: 15,
-    minWidth: 60,
-  },
-  headerTitle: { fontSize: 17 },
-  headerRightGroup: {
-    flexDirection: "row",
+  headerTextWrap: { flex: 1, marginRight: 12 },
+  headerTitle: { fontSize: 26, fontWeight: "800" },
+  headerSubtitle: { fontSize: 13, marginTop: 2 },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
-  favoritesHeaderBtn: { marginRight: 14 },
-  favoritesHeaderIcon: { fontSize: 18, color: "#f5a623" },
+  favoritesHeaderIcon: { fontSize: 20, color: "#f5a623" },
 
   searchInput: {
     marginHorizontal: 20,
@@ -1038,7 +1044,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13 },
 
   listContainer: { flex: 1 },
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  list: { paddingHorizontal: 20, paddingBottom: 20 },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -1094,6 +1100,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  bottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  customButton: {
+    minHeight: 40,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  customButtonText: { fontSize: 13, fontWeight: "700" },
+  doneButton: {
+    minHeight: 40,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+  },
+  doneButtonText: { fontSize: 13, fontWeight: "800" },
 
   loader: { marginTop: 60 },
 

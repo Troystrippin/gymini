@@ -139,6 +139,7 @@ const weightRoutes = require("./routes/weightRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const goalRoutes = require("./routes/goalRoutes");
 const { ensureSeeded } = require("./controllers/mealController");
+const chatRoutes = require("./routes/chatRoutes");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
 
@@ -161,6 +162,7 @@ app.use("/api/meals", apiLimiter, mealRoutes);
 app.use("/api/weight", apiLimiter, weightRoutes);
 app.use("/api/analytics", apiLimiter, analyticsRoutes);
 app.use("/api/goals", apiLimiter, goalRoutes);
+app.use("/api/chat", apiLimiter, chatRoutes);
 
 // --- 404 + centralized error handling ---
 app.use(notFound);
