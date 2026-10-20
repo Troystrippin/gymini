@@ -123,7 +123,7 @@ router.delete(
   "/exercises/:id",
   exerciseIdParam,
   handleValidation,
-  deleteAdminExercise,
+  deleteAdminExercise, 
 );
 
 module.exports = router;
