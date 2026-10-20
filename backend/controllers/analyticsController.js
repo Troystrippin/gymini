@@ -3,8 +3,6 @@ const WeightLog = require("../models/WeightLog");
 const WorkoutPlan = require("../models/WorkoutPlan");
 const { estimateCalories } = require("../utils/calorieEstimate");
 
-// ─── Helpers ────────────────────────────────────────────────────
-
 const dayKey = (date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -31,14 +29,12 @@ const bmiCategory = (bmi) => {
   return "Morbidly Obese";
 };
 
-// ─── GET /api/analytics/progress ────────────────────────────────
 exports.getProgressAnalytics = async (req, res, next) => {
   try {
     const user = req.user;
     const heightCm = user?.details?.heightCm || null;
     const currentWeightKg = user?.details?.weightKg || null;
 
-    // ── Weight history: last 30 days
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const sinceKey = dayKey(since);
@@ -64,7 +60,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
         }))
       : [];
 
-    // ── Workout + calorie history: last 6 months
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
@@ -77,7 +72,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
       .select("dateCompleted durationSec planName completedExercises")
       .lean();
 
-    // Bucket by month
     const monthBuckets = {};
     for (let i = 0; i < 6; i++) {
       const d = new Date();
@@ -105,13 +99,9 @@ exports.getProgressAnalytics = async (req, res, next) => {
 
     const monthOrder = Object.keys(monthBuckets).sort();
 
-    // ── Summary stats (Fixed Timezone Logic) ─────────────────────
+    // Fixed Timezone Logic for Summary
     const now = new Date();
-    
-    // Create a date object for the start of the month in local time
     const localMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    
-    // Adjust for timezone offset so the server doesn't drop logs from today
     const timezoneOffsetMs = localMonthStart.getTimezoneOffset() * 60000;
     const monthStart = new Date(localMonthStart.getTime() - timezoneOffsetMs);
 
@@ -124,7 +114,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
       0,
     );
 
-    // ── Weight delta
     const firstLog = weightSeries[0];
     const lastLog = weightSeries[weightSeries.length - 1];
 
@@ -167,12 +156,10 @@ exports.getProgressAnalytics = async (req, res, next) => {
   }
 };
 
-// ─── GET /api/analytics/home ────────────────────────────────────
 exports.getHomeAnalytics = async (req, res, next) => {
   try {
     const user = req.user;
 
-    // Fix Timezone for "Today"
     const today = new Date();
     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const timezoneOffsetMs = startOfToday.getTimezoneOffset() * 60000;
@@ -191,7 +178,6 @@ exports.getHomeAnalytics = async (req, res, next) => {
       0,
     );
 
-    // ── Weekly streak
     const allLogs = await WorkoutLog.find({ userId: user._id })
       .sort({ dateCompleted: -1 })
       .select("dateCompleted durationSec planName completedExercises")
@@ -219,7 +205,6 @@ exports.getHomeAnalytics = async (req, res, next) => {
       }
     }
 
-    // ── Weekly calories (last 7 days)
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 6);
     weekAgo.setHours(0, 0, 0, 0);
@@ -232,7 +217,6 @@ exports.getHomeAnalytics = async (req, res, next) => {
       0,
     );
 
-    // ── Active plan snapshot
     let activePlan = null;
     if (user.activePlanId) {
       const plan = await WorkoutPlan.findOne({

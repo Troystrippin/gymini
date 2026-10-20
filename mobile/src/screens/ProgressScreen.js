@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  RefreshControl, // <-- ADDED
 } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { useFocusEffect } from "@react-navigation/native";
@@ -71,23 +72,28 @@ export default function ProgressScreen() {
 
   const [activeTab, setActiveTab] = useState("weight");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // <-- ADDED
   const [analytics, setAnalytics] = useState(null);
   const [mealStats, setMealStats] = useState(null);
   const [showLogWeight, setShowLogWeight] = useState(false);
   const chartScrollRef = useRef(null);
   const [statsWidth, setStatsWidth] = useState(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      
       const [a, m] = await Promise.all([
         analyticsApi.progress().catch(() => null),
         mealApi.stats().catch(() => null),
       ]);
+      
       setAnalytics(a);
       setMealStats(m);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -134,10 +140,8 @@ export default function ProgressScreen() {
       if (Number(y) === currentYear) monthlyWeight[Number(m) - 1] = p.weightKg;
     });
 
-  // pin this month to the latest known weight
   if (weight != null) monthlyWeight[currentMonth] = weight;
 
-  // only plot from the first known month up to the current month
   const firstIdx = monthlyWeight.findIndex((v) => v !== null);
   const startIdx = firstIdx === -1 ? currentMonth : firstIdx;
 
@@ -148,7 +152,7 @@ export default function ProgressScreen() {
 
   for (let i = startIdx; i <= currentMonth; i++) {
     if (monthlyWeight[i] !== null) lastWeight = monthlyWeight[i];
-    else emptyWeightMonths.push(i - startIdx); // index within the sliced data
+    else emptyWeightMonths.push(i - startIdx); 
     weightValues.push(lastWeight);
     weightLabels.push(MONTHS[i]);
   }
@@ -223,7 +227,6 @@ export default function ProgressScreen() {
   const fullCard = cardWidth ? { width: cardWidth * 2 + STATS_GAP } : null;
 
   const scrollToCurrentMonth = () => {
-    // the weight chart only spans start month -> current month, so start at 0
     if (activeTab === "weight") {
       chartScrollRef.current?.scrollTo({ x: 0, animated: false });
       return;
@@ -252,6 +255,14 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        // ADDED: Pull to refresh
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.headerRow}>
           <View style={styles.titleRow}>

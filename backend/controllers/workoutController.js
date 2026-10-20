@@ -3,10 +3,6 @@ const WorkoutLog = require("../models/WorkoutLog");
 const Exercise = require("../models/Exercise");
 const { logUserAction } = require("../utils/userActivityLog");
 
-// ──────────────────────────────────────────────────────────────
-// EXISTING — today's workout + toggle
-// ──────────────────────────────────────────────────────────────
-
 const getTodayWorkout = async (req, res) => {
   try {
     const plan = req.user.activePlanId
@@ -33,7 +29,7 @@ const getTodayWorkout = async (req, res) => {
         sets: `${ex.sets}×${ex.reps}`,
         plannedSets: ex.sets,
         plannedReps: ex.reps,
-        done: false, // session-local; reset each day
+        done: false,
       })),
     };
 
@@ -47,10 +43,6 @@ const getTodayWorkout = async (req, res) => {
 const toggleExercise = async (req, res) => {
   res.json({ _id: req.params.exerciseId, done: true });
 };
-
-// ──────────────────────────────────────────────────────────────
-// NEW — Phase 2.3 endpoints
-// ──────────────────────────────────────────────────────────────
 
 const saveSession = async (req, res) => {
   try {
@@ -68,7 +60,6 @@ const saveSession = async (req, res) => {
         .json({ message: "planName and exercises are required" });
     }
 
-    // Normalize + snapshot exercise names
     const normalized = await Promise.all(
       exercises.map(async (ex) => {
         const sets = Array.isArray(ex.sets)
@@ -109,7 +100,6 @@ const saveSession = async (req, res) => {
       }),
     );
 
-    // SAFETY CHECK
     const totalCompleted = normalized.filter((e) => e.completed).length;
     if (totalCompleted === 0) {
       return res.status(400).json({ 
@@ -117,54 +107,22 @@ const saveSession = async (req, res) => {
       });
     }
 
-    // ─── Idempotency: Find existing log and UPDATE it ───────────────────
-    let existingToday = null;
-    if (planId) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(startOfDay);
-      endOfDay.setDate(endOfDay.getDate() + 1);
+    // ALWAYS create a new log for this finish action
+    const log = await WorkoutLog.create({
+      userId: req.user._id,
+      planId: planId || null,
+      planName: planName.trim(),
+      startedAt: startedAt ? new Date(startedAt) : null,
+      dateCompleted: new Date(),
+      durationSec: Math.max(0, Number(durationSec) || 0),
+      exercisesPerformed: normalized,
+      totalExercises: normalized.length,
+      completedExercises: totalCompleted,
+    });
 
-      existingToday = await WorkoutLog.findOne({
-        userId: req.user._id,
-        planId,
-        dateCompleted: { $gte: startOfDay, $lt: endOfDay },
-      });
-    }
-
-    let log;
-    if (existingToday) {
-      // Update the existing log with the newly completed exercises
-      log = await WorkoutLog.findByIdAndUpdate(existingToday._id, {
-        planName: planName.trim(),
-        startedAt: startedAt ? new Date(startedAt) : null,
-        durationSec: Math.max(0, Number(durationSec) || 0),
-        exercisesPerformed: normalized,
-        totalExercises: normalized.length,
-        completedExercises: totalCompleted,
-      }, { new: true });
-      
-      console.log(
-        `[workout] updated existing session user=${req.user._id} log=${log._id}`,
-      );
-    } else {
-      // Create a brand new log for today
-      log = await WorkoutLog.create({
-        userId: req.user._id,
-        planId: planId || null,
-        planName: planName.trim(),
-        startedAt: startedAt ? new Date(startedAt) : null,
-        dateCompleted: new Date(),
-        durationSec: Math.max(0, Number(durationSec) || 0),
-        exercisesPerformed: normalized,
-        totalExercises: normalized.length,
-        completedExercises: totalCompleted,
-      });
-      
-      console.log(
-        `[workout] created new session user=${req.user._id} log=${log._id}`,
-      );
-    }
+    console.log(
+      `[workout] created new session user=${req.user._id} log=${log._id} completed=${totalCompleted}`,
+    );
 
     await logUserAction(req, "workout.complete", {
       planName: log.planName,
@@ -172,7 +130,7 @@ const saveSession = async (req, res) => {
       exercisesCompleted: log.completedExercises,
     });
 
-    res.status(existingToday ? 200 : 201).json(log);
+    res.status(201).json(log);
   } catch (error) {
     console.error("saveSession:", error.message);
     res.status(500).json({ message: error.message });
@@ -220,7 +178,6 @@ const getStats = async (req, res) => {
       0,
     );
 
-    // ── Streak: consecutive days (allowing today or yesterday as anchor)
     const dayKeys = new Set(
       logs.map((l) => toDayKey(new Date(l.dateCompleted))),
     );
@@ -242,7 +199,6 @@ const getStats = async (req, res) => {
       }
     }
 
-    // Longest streak — walk all days in order
     const sortedDays = [...dayKeys].sort();
     let longestStreak = 0;
     let run = 0;
@@ -258,7 +214,6 @@ const getStats = async (req, res) => {
       prev = cur;
     }
 
-    // Sessions this week (Mon–Sun)
     const weekStart = startOfWeek(today);
     const thisWeekSessions = logs.filter(
       (l) => new Date(l.dateCompleted) >= weekStart,
@@ -278,10 +233,6 @@ const getStats = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// ──────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────
 
 function getEmojiForPlan(name = "") {
   const lower = name.toLowerCase();
@@ -315,8 +266,8 @@ function daysBetween(a, b) {
 
 function startOfWeek(date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun
-  const diff = (day + 6) % 7; // days since Monday
+  const day = d.getDay();
+  const diff = (day + 6) % 7;
   d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
