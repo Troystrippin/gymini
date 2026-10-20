@@ -19,18 +19,7 @@ const monthKey = (date) => {
 };
 
 const MONTH_LABELS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 const bmiCategory = (bmi) => {
@@ -43,7 +32,6 @@ const bmiCategory = (bmi) => {
 };
 
 // ─── GET /api/analytics/progress ────────────────────────────────
-// Returns everything ProgressScreen needs in one request.
 exports.getProgressAnalytics = async (req, res, next) => {
   try {
     const user = req.user;
@@ -62,7 +50,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
       .sort({ date: 1 })
       .lean();
 
-    // Seed with initial weight (onboarding) if no logs exist yet
     const weightSeries =
       weightLogs.length > 0
         ? weightLogs.map((l) => ({ date: l.date, weightKg: l.weightKg }))
@@ -70,7 +57,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
           ? [{ date: sinceKey, weightKg: currentWeightKg }]
           : [];
 
-    // BMI trend computed from weight series
     const bmiSeries = heightCm
       ? weightSeries.map((p) => ({
           date: p.date,
@@ -119,9 +105,15 @@ exports.getProgressAnalytics = async (req, res, next) => {
 
     const monthOrder = Object.keys(monthBuckets).sort();
 
-    // ── Summary stats
+    // ── Summary stats (Fixed Timezone Logic) ─────────────────────
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Create a date object for the start of the month in local time
+    const localMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    
+    // Adjust for timezone offset so the server doesn't drop logs from today
+    const timezoneOffsetMs = localMonthStart.getTimezoneOffset() * 60000;
+    const monthStart = new Date(localMonthStart.getTime() - timezoneOffsetMs);
 
     const thisMonthLogs = logs.filter(
       (l) => new Date(l.dateCompleted) >= monthStart,
@@ -133,7 +125,6 @@ exports.getProgressAnalytics = async (req, res, next) => {
     );
 
     // ── Weight delta
-    const initialWeight = user?.details?.weightKg || null;
     const firstLog = weightSeries[0];
     const lastLog = weightSeries[weightSeries.length - 1];
 
@@ -159,8 +150,8 @@ exports.getProgressAnalytics = async (req, res, next) => {
         caloriesThisMonth,
         totalCalories6mo: totalCalories,
       },
-      weightSeries, // [{ date, weightKg }]
-      bmiSeries, // [{ date, bmi }]
+      weightSeries,
+      bmiSeries,
       workoutsByMonth: monthOrder.map((k) => ({
         label: monthBuckets[k].label,
         value: monthBuckets[k].workouts,
@@ -177,19 +168,19 @@ exports.getProgressAnalytics = async (req, res, next) => {
 };
 
 // ─── GET /api/analytics/home ────────────────────────────────────
-// Returns home-screen summary: today's workouts, streak, weekly calories,
-// and a snapshot of the active plan's completion progress.
 exports.getHomeAnalytics = async (req, res, next) => {
   try {
     const user = req.user;
 
-    // ── Today's completed workouts
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    // Fix Timezone for "Today"
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const timezoneOffsetMs = startOfToday.getTimezoneOffset() * 60000;
+    const localStartOfToday = new Date(startOfToday.getTime() - timezoneOffsetMs);
 
     const todayLogs = await WorkoutLog.find({
       userId: user._id,
-      dateCompleted: { $gte: startOfToday },
+      dateCompleted: { $gte: localStartOfToday },
     })
       .select("durationSec planName completedExercises totalExercises")
       .lean();
@@ -200,8 +191,7 @@ exports.getHomeAnalytics = async (req, res, next) => {
       0,
     );
 
-    // ── Weekly streak (already computed in workoutController.getStats)
-    // Reuse the same logic so Home and Progress agree.
+    // ── Weekly streak
     const allLogs = await WorkoutLog.find({ userId: user._id })
       .sort({ dateCompleted: -1 })
       .select("dateCompleted durationSec planName completedExercises")
@@ -211,7 +201,6 @@ exports.getHomeAnalytics = async (req, res, next) => {
       allLogs.map((l) => dayKey(new Date(l.dateCompleted))),
     );
 
-    const today = new Date();
     const todayK = dayKey(today);
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
