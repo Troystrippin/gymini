@@ -1,7 +1,7 @@
 const WorkoutPlan = require("../models/WorkoutPlan");
 const WorkoutLog = require("../models/WorkoutLog");
 const Exercise = require("../models/Exercise");
-const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
+const { logUserAction } = require("../utils/userActivityLog");
 
 // ──────────────────────────────────────────────────────────────
 // EXISTING — today's workout + toggle
@@ -139,6 +139,14 @@ const saveSession = async (req, res) => {
         };
       }),
     );
+
+    // SAFETY CHECK: Block saving if 0 exercises were actually completed
+    const totalCompleted = normalized.filter((e) => e.completed).length;
+    if (totalCompleted === 0) {
+      return res.status(400).json({ 
+        message: "Cannot save a workout with 0 completed exercises." 
+      });
+    }
 
     const log = await WorkoutLog.create({
       userId: req.user._id,

@@ -41,7 +41,6 @@ export default function WorkoutSessionScreen() {
   const startedAtRef = useRef(null);
   const loadedSessionRef = useRef(false);
   const saveTimerRef = useRef(null);
-  // Latest unsaved progress, so it can be sent immediately when the user leaves.
   const pendingSaveRef = useRef(null);
   const userId = user?._id || user?.id;
 
@@ -131,8 +130,6 @@ export default function WorkoutSessionScreen() {
     }, [fetchWorkout]),
   );
 
-  // Reset everything when the user logs out, so the timer stops and the next
-  // user never sees this user's session.
   useEffect(() => {
     if (userId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -140,7 +137,7 @@ export default function WorkoutSessionScreen() {
     pendingSaveRef.current = null;
     loadedSessionRef.current = false;
     startedAtRef.current = null;
-    setStartedAt(null); // also stops the timer interval below
+    setStartedAt(null);
     setWorkout(null);
     setSetResults({});
     setElapsedSeconds(0);
@@ -170,7 +167,6 @@ export default function WorkoutSessionScreen() {
       );
   }, [workout, startedAt, setResults, userId]);
 
-  // Sends the latest pending progress to the server right away.
   const flushProgress = useCallback(async () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = null;
@@ -205,7 +201,6 @@ export default function WorkoutSessionScreen() {
     }
   }, []);
 
-  // Debounced save: waits 500ms after the last change.
   const persistProgress = useCallback(
     (nextWorkout, nextSets) => {
       if (!nextWorkout?._id) return;
@@ -216,7 +211,6 @@ export default function WorkoutSessionScreen() {
     [flushProgress],
   );
 
-  // When the screen unmounts, send any unsaved progress instead of dropping it.
   useEffect(
     () => () => {
       flushProgress();
@@ -257,6 +251,18 @@ export default function WorkoutSessionScreen() {
   const finishWorkout = async () => {
     if (saving || !workout) return;
 
+    const completedCount = workout.exercises.filter((e) => e.done).length;
+
+    // BLOCK saving if 0 exercises are completed
+    if (completedCount === 0) {
+      Alert.alert(
+        "No exercises completed",
+        "You need to check off at least one exercise to save this workout.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     const exercisesPayload = workout.exercises.map((exercise) => ({
       exerciseId: exercise.exerciseId || null,
       name: decodeHtmlEntities(exercise.name),
@@ -279,7 +285,6 @@ export default function WorkoutSessionScreen() {
     const doSave = async () => {
       try {
         setSaving(true);
-        // finishWorkout saves the final progress itself, so drop the pending one.
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
         pendingSaveRef.current = null;
