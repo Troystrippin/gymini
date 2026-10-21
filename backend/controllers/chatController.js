@@ -1,6 +1,5 @@
 const Meal = require('../models/Meal');
 const Exercise = require('../models/Exercise');
-const mongoose = require("mongoose");
 const ChatConversation = require("../models/ChatConversation");
 
 let geminiClient;
@@ -28,41 +27,33 @@ return geminiClient;
 
 
 exports.chat = async (req, res, next) => {
-    const { message, conversationId } = req.body;
+    const { message } = req.body;
 
     if (
         typeof message !== "string" ||
+        !message.trim() ||
         message.trim().length > 2000
+        
 
     ) {
         return res.status(400).json({
             message: "Message is required and must be 2,000 characters or fewer.", // keeps you from sending empty messages. Also adds character limits for dummies    
         });
-    }
-
-    if (
-        conversationId !== undefined &&
-        conversationId !== null &&
-        !mongoose.isValidObjectId(conversationId)
-    ) {
-        return res.status(400).json({ message: "Invalid Conversation ID"});
-    }
-    
-    let conversation = null;
-
-    if (conversationId) {
-        conversation = await ChatConversation.findOne({
-            _id: conversationId,
-            userId: req.user._id,
-            expiresAt: { $gt: new Date() },
-        });
-
-        if (!conversation) {
-            return res.status(404).json({ message: "Conversation not found or expired"});
-        }
-    }
+    }   
 
     try {
+        let conversation = await ChatConversation.findOne({
+            userId: req.user._id,
+        });
+
+        const isExpired = Boolean(
+            conversation && conversation.expiresAt <= new Date(),
+        );
+
+        const previousInteractionId = isExpired
+            ? null
+            : conversation?.geminiInteractionId;
+
         const [meals, exercises] = await Promise.all([
       Meal.find({ active: true })
         .select("name type goal calories protein carbs fats description") //gets the stuff from the db
@@ -106,8 +97,8 @@ recommendations as medical advice. Keep suggestions practical. For exercises ind
         ${JSON.stringify(exercises)}
             `,
             input: message,
-            ...(conversation?.geminiInteractionId
-                ? { previous_interaction_id: conversation.geminiInteractionId }
+            ...(previousInteractionId
+                ? { previous_interaction_id: previousInteractionId }
                 : {}),
     });
 
@@ -121,17 +112,27 @@ recommendations as medical advice. Keep suggestions practical. For exercises ind
         });
     }
 
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const now = new Date();
 
     if (!conversation) {
-        conversation = new ChatConversation({
-            userId: req.user._id,
-        });
+        conversation = new ChatConversation({ userId: req.user._id });
+    }
+
+    if (isExpired) {
+        conversation.messages = [];
     }
 
     conversation.geminiInteractionId = result.id;
-    conversation.lastActiveAt = new Date();
-    conversation.expiresAt = expiresAt;
+    conversation.messages.push(
+        {sender: "user", text: message.trim(), sentAt: now},
+        { sender: "assistant", text: reply, sentAt: now },
+    );
+
+// should let u keep the last 50 messages
+    conversation.messages = conversation.messages.slice(-50)
+    conversation.lastActiveAt = now;
+    conversation.expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000); // expiry timer thingy
+    
     await conversation.save();
 
     return res.json({
@@ -141,5 +142,27 @@ recommendations as medical advice. Keep suggestions practical. For exercises ind
     
     } catch (error) {
         return next(error);
+    }
+};
+
+//Thing that lets u come back to convos ig
+
+exports.getCurrentConversation = async (req, res, next) => {
+    try {
+        const conversation = await ChatConversation.findOne({
+            userId: req.user._id,
+            expiresAt: { $gt: new Date() },
+        }).lean();
+
+        res.json({
+            conversationId: conversation?._id.toString() || null,
+            messages: (conversation?.messages || []).map((message) => ({
+                id: message._id.toString(),
+                text: message.text,
+                sender: message.sender,
+            })),
+        });
+    } catch (err) {
+        next(err);
     }
 };
