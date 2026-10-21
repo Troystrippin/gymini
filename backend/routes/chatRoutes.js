@@ -1,16 +1,16 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const { protect } = require("../middleware/authMiddleware");
-const { chat, getCurrentConversation } = require("../controllers/chatController");
+const {
+  chat,
+  getCurrentConversation,
+} = require("../controllers/chatController");
 
 const router = express.Router();
 
 router.use(protect);
 
-// for the convo comeback thingy
 router.get("/current", getCurrentConversation);
-
-// rate limit for chat endpoint, stops potential(megumi) bots from sending too many requests
 
 router.post(
   "/",

@@ -15,7 +15,6 @@ const run = async () => {
 
     const Exercise = mongoose.connection.collection("exercises");
 
-    // ── 1. Built-in → approved ─────────────────────────────
     const builtinResult = await Exercise.updateMany(
       {
         isCustom: false,
@@ -27,7 +26,6 @@ const run = async () => {
       `✅ Backfilled ${builtinResult.modifiedCount} built-in exercises → approved`,
     );
 
-    // ── 2. Custom → pending ────────────────────────────────
     const customResult = await Exercise.updateMany(
       {
         isCustom: true,
@@ -39,7 +37,6 @@ const run = async () => {
       `✅ Backfilled ${customResult.modifiedCount} custom exercises → pending\n`,
     );
 
-    // ── 3. Final report ────────────────────────────────────
     const total = await Exercise.countDocuments();
     const approved = await Exercise.countDocuments({ status: "approved" });
     const pending = await Exercise.countDocuments({ status: "pending" });

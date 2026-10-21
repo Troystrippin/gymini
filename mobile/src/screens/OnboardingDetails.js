@@ -45,7 +45,6 @@ export default function OnboardingDetails({ navigation, route }) {
     days: false,
   });
 
-  // ── Per-field errors ─────────────────────────────────────────────
   const errors = {
     biologicalSex: sex ? null : "Please select your biological sex",
     age: !age ? "Age is required" : validateAge(age),
@@ -59,7 +58,6 @@ export default function OnboardingDetails({ navigation, route }) {
     setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleContinue = () => {
-    // Reveal all inline errors
     setTouched({
       sex: true,
       age: true,
@@ -68,7 +66,6 @@ export default function OnboardingDetails({ navigation, route }) {
       days: true,
     });
 
-    // Block if any error
     if (showValidationAlert("Cannot Continue", errors, LABELS)) return;
 
     navigation.navigate("OnboardingActivity", {
@@ -107,7 +104,7 @@ export default function OnboardingDetails({ navigation, route }) {
             you.
           </Text>
 
-          {/* ── Biological Sex ─────────────────────────────── */}
+          {}
           <Text style={styles.fieldLabel}>BIOLOGICAL SEX</Text>
           <View style={styles.toggleRow}>
             {["Male", "Female"].map((option) => (
@@ -138,7 +135,7 @@ export default function OnboardingDetails({ navigation, route }) {
             <Text style={styles.errorText}>{errors.biologicalSex}</Text>
           ) : null}
 
-          {/* ── Age ────────────────────────────────────────── */}
+          {}
           <Text style={styles.fieldLabel}>Age</Text>
           <TextInput
             style={[
@@ -157,7 +154,7 @@ export default function OnboardingDetails({ navigation, route }) {
             <Text style={styles.errorText}>{errors.age}</Text>
           ) : null}
 
-          {/* ── Height ─────────────────────────────────────── */}
+          {}
           <Text style={styles.fieldLabel}>Height</Text>
           <TextInput
             style={[
@@ -176,7 +173,7 @@ export default function OnboardingDetails({ navigation, route }) {
             <Text style={styles.errorText}>{errors.heightCm}</Text>
           ) : null}
 
-          {/* ── Weight ─────────────────────────────────────── */}
+          {}
           <Text style={styles.fieldLabel}>Weight</Text>
           <TextInput
             style={[
@@ -195,7 +192,7 @@ export default function OnboardingDetails({ navigation, route }) {
             <Text style={styles.errorText}>{errors.weightKg}</Text>
           ) : null}
 
-          {/* ── Workout Days ───────────────────────────────── */}
+          {}
           <Text style={styles.fieldLabel}>WORKOUT DAYS PER WEEK</Text>
           <View style={styles.daysRow}>
             {[0, 1, 2, 3, 4, 5, 6, 7].map((num) => (
@@ -255,7 +252,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Sex toggle
   toggleRow: { flexDirection: "row", gap: 12, marginBottom: 4 },
   toggleBtn: {
     flex: 1,
@@ -271,7 +267,6 @@ const styles = StyleSheet.create({
   toggleText: { color: COLORS.textSecondary, fontSize: 15, fontWeight: "600" },
   toggleTextActive: { color: COLORS.text },
 
-  // Text inputs
   input: {
     backgroundColor: COLORS.inputBg,
     borderRadius: 12,
@@ -288,7 +283,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
 
-  // Days picker
   daysRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   dayBtn: {
     flex: 1,
@@ -305,7 +299,6 @@ const styles = StyleSheet.create({
   dayText: { color: COLORS.textSecondary, fontSize: 16, fontWeight: "700" },
   dayTextActive: { color: COLORS.text },
 
-  // Error text below each field
   errorText: {
     color: "#E53935",
     fontSize: 12,

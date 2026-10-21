@@ -31,7 +31,7 @@ const mealPlanSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // Store as YYYY-MM-DD string so timezone / time-of-day doesn't shift the "day"
+
     date: { type: String, required: true, index: true },
     entries: { type: [entrySchema], default: [] },
     totals: { type: totalsSchema, default: () => ({}) },
@@ -39,7 +39,6 @@ const mealPlanSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// One plan per user per day
 mealPlanSchema.index({ user: 1, date: 1 }, { unique: true });
 
 module.exports = mongoose.model("MealPlan", mealPlanSchema);

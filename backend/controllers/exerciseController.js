@@ -3,7 +3,6 @@ const { uploadImage, deleteImage } = require("../lib/cloudinary");
 
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// POST /api/exercises — creates a custom exercise (pending review)
 const createExercise = async (req, res, next) => {
   let uploadedImage;
   try {
@@ -58,7 +57,6 @@ const createExercise = async (req, res, next) => {
   }
 };
 
-// GET /api/exercises
 const getExercises = async (req, res, next) => {
   try {
     const {
@@ -96,7 +94,6 @@ const getExercises = async (req, res, next) => {
   }
 };
 
-// GET /api/exercises/:id
 const getExerciseById = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id).lean();
@@ -118,7 +115,6 @@ const getExerciseById = async (req, res, next) => {
   }
 };
 
-// PUT /api/exercises/:id
 const updateExercise = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id);
@@ -148,7 +144,6 @@ const updateExercise = async (req, res, next) => {
       if (req.body[field] !== undefined) exercise[field] = req.body[field];
     });
 
-    // Any edit re-opens moderation
     exercise.status = "pending";
     exercise.rejectionReason = null;
     exercise.moderatedBy = null;
@@ -170,7 +165,6 @@ const updateExercise = async (req, res, next) => {
   }
 };
 
-// DELETE /api/exercises/:id
 const deleteExercise = async (req, res, next) => {
   try {
     const exercise = await Exercise.findById(req.params.id);

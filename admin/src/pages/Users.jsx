@@ -38,7 +38,6 @@ export default function Users() {
 
   useEffect(() => {
     fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, roleFilter]);
   useAdminPolling(fetchUsers);
 

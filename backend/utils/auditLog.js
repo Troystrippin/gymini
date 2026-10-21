@@ -1,9 +1,5 @@
 const AdminLog = require("../models/AdminLog");
 
-/**
- * Fire-and-forget admin action logger.
- * Never throws — logging failures must not break the actual admin action.
- */
 const logAdminAction = async (
   req,
   { action, targetType, targetId = null, targetLabel = null, metadata = null },

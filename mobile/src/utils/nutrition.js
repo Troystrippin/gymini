@@ -1,6 +1,3 @@
-// Numeric macro helpers. Meals from the API are numeric already;
-// these helpers also tolerate legacy string values ("420 kcal").
-
 export const parseCalories = (value) => {
   if (typeof value === "number") return value;
   if (typeof value !== "string") return 0;

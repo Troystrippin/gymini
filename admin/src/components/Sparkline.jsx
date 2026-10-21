@@ -38,13 +38,6 @@ export function Sparkline({
   );
 }
 
-/**
- * BarChart: vertical bars for the last N points.
- * Props:
- *   - data: array of { label, value }
- *   - width, height
- *   - color
- */
 export function BarChart({
   data = [],
   width = 300,

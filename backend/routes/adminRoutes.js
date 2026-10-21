@@ -58,7 +58,6 @@ const updateRoleRules = [
 router.use(protect);
 router.use(adminOnly);
 
-// Users
 router.get("/users", listUsers);
 router.get("/stats", getStats);
 router.get("/analytics", getAnalytics);
@@ -71,21 +70,17 @@ router.put(
 );
 router.delete("/users/:id", userIdParam, handleValidation, deleteUser);
 
-// Activity logs
 router.get("/logs", listLogs);
 router.get("/logs/filters", getLogFilters);
 
-// Shared meal catalog
 router.get("/meals", listMeals);
 router.post("/meals", imageUpload, createMeal);
 router.put("/meals/:id/image", imageUpload, updateMealImage);
 router.delete("/meals/:id", deleteMeal);
 
-// Exercises
 router.get("/exercises", listExercisesRules, handleValidation, listExercises);
 router.get("/exercises/stats", getExerciseStats);
 
-// Create built-in exercise — MUST come before "/:id" routes
 router.post(
   "/exercises",
   imageUpload,
@@ -123,7 +118,7 @@ router.delete(
   "/exercises/:id",
   exerciseIdParam,
   handleValidation,
-  deleteAdminExercise, 
+  deleteAdminExercise,
 );
 
 module.exports = router;

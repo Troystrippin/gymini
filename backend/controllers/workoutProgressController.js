@@ -1,8 +1,6 @@
 const WorkoutProgress = require("../models/WorkoutProgress");
 const WorkoutPlan = require("../models/WorkoutPlan");
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
 const todayKey = () => {
   const d = new Date();
   const y = d.getFullYear();
@@ -31,7 +29,6 @@ const serializeProgress = (doc) => {
   };
 };
 
-// ─── GET /api/workouts/progress?planId=X&date=YYYY-MM-DD ─────────
 exports.getProgress = async (req, res, next) => {
   try {
     const date = req.query.date || todayKey();
@@ -64,8 +61,6 @@ exports.getProgress = async (req, res, next) => {
   }
 };
 
-// ─── PUT /api/workouts/progress ─────────────────────────────────
-// Body: { planId, date?, completedExerciseIds: [...], setResults: { exId: [ {reps, weightKg} ] } }
 exports.saveProgress = async (req, res, next) => {
   try {
     const date = req.body.date || todayKey();
@@ -78,7 +73,6 @@ exports.saveProgress = async (req, res, next) => {
       return res.status(400).json({ message: "planId is required" });
     }
 
-    // Ownership check — user must own the plan.
     const plan = await WorkoutPlan.findOne({
       _id: planId,
       userId: req.user._id,
@@ -87,7 +81,6 @@ exports.saveProgress = async (req, res, next) => {
       return res.status(404).json({ message: "Plan not found" });
     }
 
-    // Validate completedExerciseIds — must all be subdoc _ids of this plan.
     const validIds = new Set(plan.exercises.map((e) => String(e._id)));
     const cleanedIds = Array.isArray(completedExerciseIds)
       ? completedExerciseIds
@@ -95,18 +88,15 @@ exports.saveProgress = async (req, res, next) => {
           .filter((id) => validIds.has(id))
       : [];
 
-    // Sanitize setResults — keep only keys that map to a real exercise subdoc.
     const cleanedSets = {};
     if (setResults && typeof setResults === "object") {
       for (const [exId, sets] of Object.entries(setResults)) {
         if (!validIds.has(String(exId))) continue;
         if (!Array.isArray(sets)) continue;
-        cleanedSets[String(exId)] = sets
-          .slice(0, 50) // cap
-          .map((s) => ({
-            reps: Math.max(0, Number(s?.reps) || 0),
-            weightKg: Math.max(0, Number(s?.weightKg) || 0),
-          }));
+        cleanedSets[String(exId)] = sets.slice(0, 50).map((s) => ({
+          reps: Math.max(0, Number(s?.reps) || 0),
+          weightKg: Math.max(0, Number(s?.weightKg) || 0),
+        }));
       }
     }
 
@@ -115,11 +105,8 @@ exports.saveProgress = async (req, res, next) => {
       setResults: cleanedSets,
     };
 
-    // If the user just completed every exercise, stamp finishedAt.
-    // If they un-completed an exercise, clear it.
     const allDone =
-      plan.exercises.length > 0 &&
-      cleanedIds.length === plan.exercises.length;
+      plan.exercises.length > 0 && cleanedIds.length === plan.exercises.length;
 
     const existing = await WorkoutProgress.findOne({
       userId: req.user._id,
@@ -141,11 +128,6 @@ exports.saveProgress = async (req, res, next) => {
       },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
-
-    // NOTE: Do NOT write a WorkoutLog here. The mobile client already
-    // writes one via POST /api/workouts/sessions when the user taps
-    // "Finish". Duplicating it here caused double-logged sessions.
-    // The WorkoutLog model is owned by workoutController.saveSession.
 
     res.json(serializeProgress(doc));
   } catch (err) {

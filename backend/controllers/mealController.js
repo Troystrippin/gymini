@@ -1,9 +1,7 @@
 const Meal = require("../models/Meal");
 const MealPlan = require("../models/MealPlan");
 const mealsSeed = require("../data/mealsSeed");
-const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
-
-// ─── Helpers ─────────────────────────────────────────────────────
+const { logUserAction } = require("../utils/userActivityLog");
 
 const todayKey = () => {
   const d = new Date();
@@ -27,7 +25,6 @@ const computeTotals = (entries) =>
     { calories: 0, protein: 0, carbs: 0, fats: 0 },
   );
 
-// Map the user's onboarding goal → meal goal tag
 const goalToMealGoal = (userGoal) => {
   if (!userGoal) return "Balanced";
   const g = String(userGoal).toLowerCase();
@@ -38,8 +35,6 @@ const goalToMealGoal = (userGoal) => {
   return "Balanced";
 };
 
-// ─── Auto-seed once per boot if catalog empty ────────────────────
-
 const ensureSeeded = async () => {
   const count = await Meal.estimatedDocumentCount();
   if (count > 0) return;
@@ -47,15 +42,11 @@ const ensureSeeded = async () => {
     await Meal.insertMany(mealsSeed);
     console.log(`[meals] seeded ${mealsSeed.length} meals`);
   } catch (err) {
-    // Race condition: another instance seeded between count and insert
     if (err.code !== 11000) throw err;
   }
 };
 module.exports.ensureSeeded = ensureSeeded;
 
-// ─── Controllers ─────────────────────────────────────────────────
-
-// GET /api/meals?goal=High%20Protein&type=Lunch
 exports.getMeals = async (req, res, next) => {
   try {
     const { goal, type, q } = req.query;
@@ -71,12 +62,10 @@ exports.getMeals = async (req, res, next) => {
   }
 };
 
-// GET /api/meals/recommendations
 exports.getRecommendations = async (req, res, next) => {
   try {
     const targetGoal = goalToMealGoal(req.user?.goal);
 
-    // 1 from each meal type matching the user's goal (fallback to Balanced)
     const types = ["Breakfast", "Lunch", "Dinner", "Snack"];
     const picks = await Promise.all(
       types.map(async (type) => {
@@ -99,7 +88,6 @@ exports.getRecommendations = async (req, res, next) => {
   }
 };
 
-// GET /api/meals/plan?date=YYYY-MM-DD
 exports.getMyPlan = async (req, res, next) => {
   try {
     const date = req.query.date || todayKey();
@@ -121,7 +109,6 @@ exports.getMyPlan = async (req, res, next) => {
   }
 };
 
-// PUT /api/meals/plan  { date?, entries: [{ mealId, type, ... }] }
 exports.saveMealPlan = async (req, res, next) => {
   try {
     const date = req.body.date || todayKey();
@@ -141,7 +128,6 @@ exports.saveMealPlan = async (req, res, next) => {
         .json({ message: "Too many entries in meal plan (max 20)" });
     }
 
-    // Re-hydrate from catalog so client can't spoof nutrition
     const mealIds = rawEntries.map((e) => e.mealId).filter(Boolean);
     const catalog = await Meal.find({ id: { $in: mealIds } }).lean();
     const byId = new Map(catalog.map((m) => [m.id, m]));
@@ -170,7 +156,6 @@ exports.saveMealPlan = async (req, res, next) => {
       { new: true, upsert: true, setDefaultsOnInsert: true },
     ).lean();
 
-    // Log the action
     await logUserAction(req, "meal_plan.save", {
       date,
       mealsCount: entries.length,
@@ -183,7 +168,6 @@ exports.saveMealPlan = async (req, res, next) => {
   }
 };
 
-// POST /api/meals/plan/add  { mealId, date? }
 exports.addMealToPlan = async (req, res, next) => {
   try {
     const date = req.body.date || todayKey();
@@ -198,7 +182,7 @@ exports.addMealToPlan = async (req, res, next) => {
       new MealPlan({ user: req.user._id, date, entries: [] });
 
     if (plan.entries.some((e) => e.mealId === mealId)) {
-      return res.json(plan.toObject()); // already added — idempotent
+      return res.json(plan.toObject());
     }
     if (plan.entries.length >= 20) {
       return res.status(400).json({ message: "Meal plan is full" });
@@ -221,7 +205,6 @@ exports.addMealToPlan = async (req, res, next) => {
   }
 };
 
-// POST /api/meals/plan/remove  { mealId, date? }
 exports.removeMealFromPlan = async (req, res, next) => {
   try {
     const date = req.body.date || todayKey();
@@ -242,7 +225,6 @@ exports.removeMealFromPlan = async (req, res, next) => {
   }
 };
 
-// POST /api/meals/plan/repeat  { fromDate, toDate? }
 exports.repeatPlan = async (req, res, next) => {
   try {
     const { fromDate } = req.body;
@@ -276,7 +258,6 @@ exports.repeatPlan = async (req, res, next) => {
   }
 };
 
-// GET /api/meals/stats?from=YYYY-MM-DD&to=YYYY-MM-DD
 exports.getMealStats = async (req, res, next) => {
   try {
     const to = req.query.to || todayKey();
@@ -284,7 +265,7 @@ exports.getMealStats = async (req, res, next) => {
       req.query.from ||
       (() => {
         const d = new Date();
-        d.setDate(d.getDate() - 29); // last 30 days
+        d.setDate(d.getDate() - 29);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, "0");
         const day = String(d.getDate()).padStart(2, "0");

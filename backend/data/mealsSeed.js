@@ -1,5 +1,3 @@
-// Numeric macros. Carbs/fats estimated from typical values for each dish.
-// Adjust later via admin UI (Phase 4).
 module.exports = [
   {
     id: "oatmeal-banana",

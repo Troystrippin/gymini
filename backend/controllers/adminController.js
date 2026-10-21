@@ -23,7 +23,6 @@ const SENSITIVE_USER_FIELDS =
   "-passwordResetCode -passwordResetExpires " +
   "-failedLoginAttempts -lockoutUntil";
 
-// ─── GET /api/admin/users ────────────────────────────────────
 const listUsers = async (req, res, next) => {
   try {
     const { role, search, limit: rawLimit = 50, page: rawPage = 1 } = req.query;
@@ -65,7 +64,6 @@ const listUsers = async (req, res, next) => {
   }
 };
 
-// ─── GET /api/admin/users/:id ────────────────────────────────
 const getUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
@@ -84,7 +82,6 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-// ─── PUT /api/admin/users/:id/role ───────────────────────────
 const updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
@@ -127,7 +124,6 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-// ─── DELETE /api/admin/users/:id ─────────────────────────────
 const deleteUser = async (req, res, next) => {
   try {
     if (String(req.params.id) === String(req.user._id)) {
@@ -197,7 +193,6 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-// ─── GET /api/admin/stats ────────────────────────────────────
 const getStats = async (req, res, next) => {
   try {
     const [totalUsers, totalAdmins, totalPlans] = await Promise.all([

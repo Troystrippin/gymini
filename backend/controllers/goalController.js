@@ -3,12 +3,10 @@ const User = require("../models/User");
 const WorkoutLog = require("../models/WorkoutLog");
 const WeightLog = require("../models/WeightLog");
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
 const startOfWeek = (date = new Date()) => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = (day + 6) % 7; // Monday = 0
+  const diff = (day + 6) % 7;
   d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -16,13 +14,6 @@ const startOfWeek = (date = new Date()) => {
 
 const clamp = (n, min = 0, max = 1) => Math.max(min, Math.min(max, n));
 
-/**
- * Returns the canonical "starting weight" for a user.
- * Preference order:
- *   1. user.details.initialWeightKg  (set at onboarding, never overwritten)
- *   2. earliest WeightLog            (fallback for legacy users)
- *   3. user.details.weightKg         (last resort)
- */
 const getStartWeight = async (user) => {
   if (user.details?.initialWeightKg != null) {
     return user.details.initialWeightKg;
@@ -53,7 +44,7 @@ const computeProgress = async (goal, user) => {
       };
     }
 
-    const delta = goal.startValue - current; // positive = loss
+    const delta = goal.startValue - current;
     const totalNeeded = goal.startValue - goal.target;
 
     const rawProgress = totalNeeded === 0 ? 1 : delta / totalNeeded;
@@ -97,9 +88,6 @@ const computeProgress = async (goal, user) => {
   return null;
 };
 
-// ─── Controllers ────────────────────────────────────────────────
-
-// POST /api/goals  { type, target, deadline? }
 exports.createGoal = async (req, res, next) => {
   try {
     const { type, target, deadline } = req.body;
@@ -115,7 +103,6 @@ exports.createGoal = async (req, res, next) => {
 
     let startValue = null;
     if (type === "weight") {
-      // Prefer the onboarding baseline. Fall back to the latest log.
       const latest = await WeightLog.findOne({ userId: user._id })
         .sort({ date: -1 })
         .lean();
@@ -133,7 +120,6 @@ exports.createGoal = async (req, res, next) => {
       }
     }
 
-    // Replace any existing active goal of the same type.
     await Goal.updateMany(
       { userId: user._id, type, status: "active" },
       { $set: { status: "abandoned" } },
@@ -154,7 +140,6 @@ exports.createGoal = async (req, res, next) => {
   }
 };
 
-// GET /api/goals/active
 exports.getActiveGoal = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
@@ -196,7 +181,6 @@ exports.getActiveGoal = async (req, res, next) => {
   }
 };
 
-// PATCH /api/goals/:id  { target?, deadline? }
 exports.updateGoal = async (req, res, next) => {
   try {
     const { target, deadline } = req.body;
@@ -224,7 +208,6 @@ exports.updateGoal = async (req, res, next) => {
   }
 };
 
-// DELETE /api/goals/:id  (abandon)
 exports.abandonGoal = async (req, res, next) => {
   try {
     const goal = await Goal.findOneAndUpdate(
@@ -239,7 +222,6 @@ exports.abandonGoal = async (req, res, next) => {
   }
 };
 
-// GET /api/goals/milestones
 exports.getMilestones = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
@@ -250,7 +232,6 @@ exports.getMilestones = async (req, res, next) => {
       Goal.countDocuments({ userId: user._id, status: "completed" }),
     ]);
 
-    // Longest streak — walk unique workout days in order.
     const logs = await WorkoutLog.find({ userId: user._id })
       .select("dateCompleted")
       .lean();
@@ -279,13 +260,11 @@ exports.getMilestones = async (req, res, next) => {
       prev = cur;
     }
 
-    // Weight baseline: prefer initialWeightKg, fall back to earliest log.
     const startWeight = await getStartWeight(user);
     const latestLog = await WeightLog.findOne({ userId: user._id })
       .sort({ date: -1 })
       .lean();
-    const currentWeight =
-      latestLog?.weightKg ?? user.details?.weightKg ?? null;
+    const currentWeight = latestLog?.weightKg ?? user.details?.weightKg ?? null;
     const kgLost =
       startWeight != null && currentWeight != null
         ? startWeight - currentWeight

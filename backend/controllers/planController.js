@@ -1,17 +1,14 @@
 const WorkoutPlan = require("../models/WorkoutPlan");
 const Exercise = require("../models/Exercise");
 const User = require("../models/User");
-const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
+const { logUserAction } = require("../utils/userActivityLog");
 
-// Defensive clamp — keeps values within schema bounds even if validators
-// are bypassed. Bounds match planValidators.js exactly.
 const clampInt = (value, min, max, fallback) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(max, Math.max(min, Math.floor(n)));
 };
 
-// POST /api/plans or PUT /api/plans/:id → body: { name, exercises: [...] }
 const savePlan = async (req, res, next) => {
   try {
     const { name, exercises } = req.body;
@@ -31,7 +28,6 @@ const savePlan = async (req, res, next) => {
         try {
           const found = await Exercise.findById(raw.exerciseId);
           if (found) {
-            // Block pending / rejected custom exercises from being saved.
             if (
               found.isCustom &&
               (found.status === "pending" || found.status === "rejected")
@@ -53,7 +49,6 @@ const savePlan = async (req, res, next) => {
             description = description || found.description;
             displayName = displayName || found.name;
           } else {
-            // exerciseId points to a deleted catalog item → treat as custom
             isCustom = true;
           }
         } catch {
@@ -101,14 +96,12 @@ const savePlan = async (req, res, next) => {
       return res.status(404).json({ message: "Plan not found" });
     }
 
-    // Auto-activate ONLY on create.
     if (!isEdit) {
       await User.findByIdAndUpdate(req.user._id, {
         activePlanId: plan._id,
       });
     }
 
-    // Log the action
     await logUserAction(req, isEdit ? "plan.update" : "plan.create", {
       planName: plan.name,
       exerciseCount: plan.exercises.length,
@@ -121,7 +114,6 @@ const savePlan = async (req, res, next) => {
   }
 };
 
-// PUT /api/plans/:id/select
 const selectPlan = async (req, res, next) => {
   try {
     const plan = await WorkoutPlan.findOne({
@@ -142,7 +134,6 @@ const selectPlan = async (req, res, next) => {
   }
 };
 
-// GET /api/plans
 const getPlans = async (req, res, next) => {
   try {
     const plans = await WorkoutPlan.find({ userId: req.user._id }).sort({
@@ -160,7 +151,6 @@ const getPlans = async (req, res, next) => {
   }
 };
 
-// GET /api/plans/:id
 const getPlanById = async (req, res, next) => {
   try {
     const plan = await WorkoutPlan.findOne({
@@ -175,7 +165,6 @@ const getPlanById = async (req, res, next) => {
   }
 };
 
-// DELETE /api/plans/:id
 const deletePlan = async (req, res, next) => {
   try {
     const plan = await WorkoutPlan.findOneAndDelete({

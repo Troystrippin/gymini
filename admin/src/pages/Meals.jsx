@@ -13,7 +13,6 @@ export default function Meals() {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
 
-  // Create Modal State
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
@@ -106,7 +105,6 @@ export default function Meals() {
   };
 
   const submitCreate = async () => {
-    // Validation: Name must contain only letters, spaces, and basic punctuation
     const nameRegex = /^[a-zA-Z\s\-',.()]+$/;
     if (!nameRegex.test(createForm.name)) {
       setCreateError(

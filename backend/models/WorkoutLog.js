@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-// One set's outcome: what the user actually logged.
 const PerformedSetSchema = new mongoose.Schema(
   {
     reps: { type: Number, min: 0, default: 0 },
@@ -9,27 +8,22 @@ const PerformedSetSchema = new mongoose.Schema(
   { _id: false },
 );
 
-// One exercise's outcome within a session.
-// Embeds both the aggregate (fast stats) and the per-set detail
-// (progression tracking / "last time you did X").
 const PerformedExerciseSchema = new mongoose.Schema(
   {
     exerciseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exercise",
-      default: null, // null for custom exercises
+      default: null,
     },
-    name: { type: String, required: true }, // snapshot
+    name: { type: String, required: true },
     muscleGroup: { type: String, default: null },
 
     targetSets: { type: Number, default: 0 },
     targetReps: { type: Number, default: 0 },
 
-    // Aggregate — fastest for list views & stats
     setsCompleted: { type: Number, min: 0, default: 0 },
     repsCompleted: { type: Number, min: 0, default: 0 },
 
-    // Per-set detail — used for progression charts
     sets: { type: [PerformedSetSchema], default: [] },
 
     completed: { type: Boolean, default: false },
@@ -37,7 +31,6 @@ const PerformedExerciseSchema = new mongoose.Schema(
   { _id: false },
 );
 
-// Full session record.
 const WorkoutLogSchema = new mongoose.Schema(
   {
     userId: {
@@ -48,7 +41,7 @@ const WorkoutLogSchema = new mongoose.Schema(
     planId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "WorkoutPlan",
-      default: null, // may be null if plan was deleted after
+      default: null,
     },
     planName: {
       type: String,

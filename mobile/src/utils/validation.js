@@ -94,20 +94,6 @@ export const validateExerciseName = (value) => {
   return null;
 };
 
-// ─────────────────────────────────────────────────────────────
-// Popup helper — builds a native Alert with all validation errors.
-// Usage:
-//   const errs = { email: "Email is required", password: "..." };
-//   showValidationAlert("Sign-in Failed", errs, labels);
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Show a native alert listing every failed field.
- *
- * @param {string} title - Alert title (e.g., "Sign-in Failed")
- * @param {object} errors - { fieldKey: errorMessage | null }
- * @param {object} labels - { fieldKey: "Human-friendly label" }
- */
 export const showValidationAlert = (title, errors, labels = {}) => {
   const entries = Object.entries(errors).filter(([, msg]) => Boolean(msg));
 

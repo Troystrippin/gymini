@@ -43,7 +43,6 @@ export default function ChangePasswordScreen({ navigation }) {
     confirm: validateConfirmPassword(confirm, next),
   };
 
-  // Extra: new password can't equal current
   if (!errors.next && current && next && next === current) {
     errors.next = "New password must be different from current";
   }

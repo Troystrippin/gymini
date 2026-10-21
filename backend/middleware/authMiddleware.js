@@ -1,9 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// ─────────────────────────────────────────────────────────────
-// Authentication: verifies JWT and attaches req.user
-// ─────────────────────────────────────────────────────────────
 const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -31,23 +28,12 @@ const protect = async (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// Authorization: role-based access control
-// Must be used AFTER protect.
-// ─────────────────────────────────────────────────────────────
-
-// Role hierarchy for rank-based checks
 const ROLE_RANK = {
   user: 1,
   moderator: 2,
   admin: 3,
 };
 
-/**
- * Authorize by exact role match:
- *   authorize("admin")
- *   authorize("admin", "moderator")
- */
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -67,11 +53,6 @@ const authorize = (...allowedRoles) => {
   };
 };
 
-/**
- * Authorize by minimum rank (hierarchical):
- *   authorizeAtLeast("moderator")  → moderator + admin
- *   authorizeAtLeast("admin")      → only admin
- */
 const authorizeAtLeast = (minimumRole) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -92,7 +73,6 @@ const authorizeAtLeast = (minimumRole) => {
   };
 };
 
-// Convenience shortcuts
 const adminOnly = authorize("admin");
 const moderatorOrAdmin = authorize("moderator", "admin");
 

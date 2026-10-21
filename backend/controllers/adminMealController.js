@@ -27,7 +27,6 @@ const createMeal = async (req, res, next) => {
       tags,
     } = req.body;
 
-    // Generate a unique ID for the meal (since your schema requires it)
     const mealId = crypto.randomBytes(8).toString("hex");
 
     if (req.file) {

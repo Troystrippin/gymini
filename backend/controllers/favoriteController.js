@@ -2,18 +2,8 @@ const mongoose = require("mongoose");
 const FavoriteExercise = require("../models/FavoriteExercise");
 const Exercise = require("../models/Exercise");
 
-// Cap per user — prevents unbounded growth.
 const MAX_FAVORITES_PER_USER = 500;
 
-// ─── Helpers ─────────────────────────────────────────────────────
-
-/**
- * Loads an exercise and enforces the visibility rule:
- *   - built-in exercises (isCustom: false) are favoritable by anyone
- *   - custom exercises are only favoritable by their creator
- *
- * Returns { exercise } on success, or { error: { status, message } }.
- */
 const loadFavoritableExercise = async (exerciseId, userId) => {
   const exercise = await Exercise.findById(exerciseId).lean();
   if (!exercise) {
@@ -32,8 +22,6 @@ const loadFavoritableExercise = async (exerciseId, userId) => {
   return { exercise };
 };
 
-// ─── POST /api/exercises/:id/favorite ────────────────────────────
-// Idempotent: favoriting twice is a success, not an error.
 const favoriteExercise = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -41,7 +29,6 @@ const favoriteExercise = async (req, res, next) => {
     const { error } = await loadFavoritableExercise(id, req.user._id);
     if (error) return res.status(error.status).json({ message: error.message });
 
-    // Enforce per-user cap only if this is a NEW favorite.
     const existing = await FavoriteExercise.findOne({
       userId: req.user._id,
       exerciseId: id,
@@ -58,8 +45,6 @@ const favoriteExercise = async (req, res, next) => {
       }
     }
 
-    // Upsert — races resolve via the unique index; duplicate error
-    // is treated as success because the desired end-state is achieved.
     let favorite;
     try {
       favorite = await FavoriteExercise.findOneAndUpdate(
@@ -88,13 +73,10 @@ const favoriteExercise = async (req, res, next) => {
   }
 };
 
-// ─── DELETE /api/exercises/:id/favorite ──────────────────────────
-// Idempotent: unfavoriting something that isn't favorited is success.
 const unfavoriteExercise = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Validate id shape early so a malformed id returns 400 not 500.
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid exercise id" });
     }
@@ -110,7 +92,6 @@ const unfavoriteExercise = async (req, res, next) => {
   }
 };
 
-// ─── GET /api/exercises/favorites?page=1&limit=20 ────────────────
 const listFavorites = async (req, res, next) => {
   try {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
@@ -130,9 +111,6 @@ const listFavorites = async (req, res, next) => {
       FavoriteExercise.countDocuments({ userId: req.user._id }),
     ]);
 
-    // Filter out favorites whose exercise has been deleted since,
-    // and hide custom exercises the user no longer owns (edge case:
-    // creator changed). Keeps response shape clean.
     const items = favorites
       .filter((f) => f.exerciseId)
       .filter(
@@ -164,8 +142,6 @@ const listFavorites = async (req, res, next) => {
   }
 };
 
-// ─── GET /api/exercises/:id/favorite ─────────────────────────────
-// Lightweight status check for the star icon.
 const getFavoriteStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -185,7 +161,6 @@ const getFavoriteStatus = async (req, res, next) => {
   }
 };
 
-// POST /api/exercises/favorites/status
 const getFavoriteStatuses = async (req, res, next) => {
   try {
     const favorites = await FavoriteExercise.find({

@@ -73,7 +73,6 @@ const updateExerciseRules = [
     .isLength({ max: 500 }),
 ];
 
-// NEW — for admin creating built-in exercises
 const createBuiltInExerciseRules = [
   body("name")
     .exists({ checkFalsy: true })

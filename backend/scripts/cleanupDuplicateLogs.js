@@ -1,6 +1,3 @@
-// One-off: remove duplicate WorkoutLog documents sharing
-// (userId, planId, day). Keeps the earliest, deletes the rest.
-
 require("dotenv").config();
 const mongoose = require("mongoose");
 const WorkoutLog = require("../models/WorkoutLog");

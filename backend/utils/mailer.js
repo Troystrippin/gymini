@@ -1,4 +1,3 @@
-// backend/utils/mailer.js — Brevo HTTP API (Railway-compatible)
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || "GYMini <no-reply@gymini.local>";
 
@@ -28,7 +27,10 @@ const sendEmail = async ({ to, subject, text, html }) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "GYMINI", email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM },
+        sender: {
+          name: "GYMINI",
+          email: EMAIL_FROM.match(/<(.+)>/)?.[1] || EMAIL_FROM,
+        },
         to: [{ email: to }],
         subject,
         textContent: text,

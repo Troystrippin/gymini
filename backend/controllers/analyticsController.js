@@ -17,7 +17,18 @@ const monthKey = (date) => {
 };
 
 const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const bmiCategory = (bmi) => {
@@ -99,9 +110,16 @@ exports.getProgressAnalytics = async (req, res, next) => {
 
     const monthOrder = Object.keys(monthBuckets).sort();
 
-    // Fixed Timezone Logic for Summary
     const now = new Date();
-    const localMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const localMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
     const timezoneOffsetMs = localMonthStart.getTimezoneOffset() * 60000;
     const monthStart = new Date(localMonthStart.getTime() - timezoneOffsetMs);
 
@@ -161,9 +179,19 @@ exports.getHomeAnalytics = async (req, res, next) => {
     const user = req.user;
 
     const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
     const timezoneOffsetMs = startOfToday.getTimezoneOffset() * 60000;
-    const localStartOfToday = new Date(startOfToday.getTime() - timezoneOffsetMs);
+    const localStartOfToday = new Date(
+      startOfToday.getTime() - timezoneOffsetMs,
+    );
 
     const todayLogs = await WorkoutLog.find({
       userId: user._id,

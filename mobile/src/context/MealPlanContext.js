@@ -8,7 +8,11 @@ import React, {
   useRef,
 } from "react";
 import { mealApi } from "../api/mealApi";
-import { mealPlanCache, todayKey, yesterdayKey } from "../storage/mealPlanCache";
+import {
+  mealPlanCache,
+  todayKey,
+  yesterdayKey,
+} from "../storage/mealPlanCache";
 import { sumMacros, groupByType } from "../utils/nutrition";
 import { AuthContext } from "./AuthContext";
 
@@ -24,7 +28,6 @@ export const MealPlanProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
 
-  // ─── Initial load + cache fallback ─────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -53,7 +56,7 @@ export const MealPlanProvider = ({ children }) => {
       } catch (err) {
         if (cancelled) return;
         setOffline(true);
-        // Keep cached entries. Try to load catalog from cache too.
+
         console.warn("[meals] using cache, fetch failed:", err.message);
       } finally {
         if (!cancelled) {
@@ -67,7 +70,6 @@ export const MealPlanProvider = ({ children }) => {
     };
   }, [user]);
 
-  // ─── Helpers ────────────────────────────────────────────────
   const persistLocal = useCallback(async (nextEntries) => {
     const totals = sumMacros(nextEntries);
     await mealPlanCache.save({
@@ -171,11 +173,7 @@ export const MealPlanProvider = ({ children }) => {
     }
   }, []);
 
-  // ─── Derived ────────────────────────────────────────────────
-  const selectedIds = useMemo(
-    () => entries.map((e) => e.mealId),
-    [entries],
-  );
+  const selectedIds = useMemo(() => entries.map((e) => e.mealId), [entries]);
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const byType = useMemo(() => groupByType(entries), [entries]);
 

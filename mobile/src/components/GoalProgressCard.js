@@ -23,12 +23,9 @@ export default function GoalProgressCard({
   onCreate,
   colors,
 }) {
-  // Empty state — no active goal of this type
   if (!goal) {
     return (
-      <View
-        style={[styles.card, { backgroundColor: colors.cardBackground }]}
-      >
+      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.emptyTitle, { color: colors.text }]}>
           No active goal
         </Text>

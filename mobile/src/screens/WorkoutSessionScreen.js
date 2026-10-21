@@ -257,7 +257,7 @@ export default function WorkoutSessionScreen() {
       Alert.alert(
         "No exercises completed",
         "You need to check off at least one exercise to save this workout.",
-        [{ text: "OK" }]
+        [{ text: "OK" }],
       );
       return;
     }
@@ -276,8 +276,14 @@ export default function WorkoutSessionScreen() {
       })),
     }));
 
-    // DIAGNOSTIC LOG: See exactly what the app is sending
-    console.log("PAYLOAD SENDING:", JSON.stringify(exercisesPayload.map(e => ({ name: e.name, completed: e.completed })), null, 2));
+    console.log(
+      "PAYLOAD SENDING:",
+      JSON.stringify(
+        exercisesPayload.map((e) => ({ name: e.name, completed: e.completed })),
+        null,
+        2,
+      ),
+    );
 
     const setsLogged = exercisesPayload.reduce(
       (sum, e) => sum + e.sets.length,

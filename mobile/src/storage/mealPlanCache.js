@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEY = "meal-plan-cache-v1";
 
-// Cache shape: { date: "YYYY-MM-DD", entries: [...], totals: {...} }
 export const mealPlanCache = {
   async load() {
     try {
@@ -15,16 +14,12 @@ export const mealPlanCache = {
   async save(plan) {
     try {
       await AsyncStorage.setItem(KEY, JSON.stringify(plan));
-    } catch {
-      // best-effort
-    }
+    } catch {}
   },
   async clear() {
     try {
       await AsyncStorage.removeItem(KEY);
-    } catch {
-      // ignore
-    }
+    } catch {}
   },
 };
 

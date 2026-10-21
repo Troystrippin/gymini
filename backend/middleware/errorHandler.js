@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   console.error("[error]", err);
 
@@ -6,7 +5,6 @@ const errorHandler = (err, req, res, next) => {
     return res.status(413).json({ message: "Image must be 5 MB or smaller" });
   }
 
-  // Mongoose validation error → 400
   if (err.name === "ValidationError") {
     return res.status(400).json({
       message: "Validation failed",
@@ -17,12 +15,10 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Mongoose bad ObjectId → 400
   if (err.name === "CastError") {
     return res.status(400).json({ message: "Invalid id format" });
   }
 
-  // Mongo duplicate key → 409
   if (err.code === 11000) {
     return res.status(409).json({ message: "Duplicate key" });
   }

@@ -27,12 +27,14 @@ const UserActivitySchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// Auto-delete after 90 days
-UserActivitySchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
-// Compound index for querying
+UserActivitySchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 90 * 24 * 60 * 60 },
+);
+
 UserActivitySchema.index({ createdAt: -1, action: 1 });
 
 module.exports = mongoose.model("UserActivity", UserActivitySchema);

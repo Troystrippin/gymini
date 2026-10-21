@@ -9,7 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  RefreshControl, // <-- ADDED
+  RefreshControl,
 } from "react-native";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { useFocusEffect } from "@react-navigation/native";
@@ -72,7 +72,7 @@ export default function ProgressScreen() {
 
   const [activeTab, setActiveTab] = useState("weight");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // <-- ADDED
+  const [refreshing, setRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [mealStats, setMealStats] = useState(null);
   const [showLogWeight, setShowLogWeight] = useState(false);
@@ -83,12 +83,12 @@ export default function ProgressScreen() {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
-      
+
       const [a, m] = await Promise.all([
         analyticsApi.progress().catch(() => null),
         mealApi.stats().catch(() => null),
       ]);
-      
+
       setAnalytics(a);
       setMealStats(m);
     } finally {
@@ -152,7 +152,7 @@ export default function ProgressScreen() {
 
   for (let i = startIdx; i <= currentMonth; i++) {
     if (monthlyWeight[i] !== null) lastWeight = monthlyWeight[i];
-    else emptyWeightMonths.push(i - startIdx); 
+    else emptyWeightMonths.push(i - startIdx);
     weightValues.push(lastWeight);
     weightLabels.push(MONTHS[i]);
   }
@@ -255,7 +255,6 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        // ADDED: Pull to refresh
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

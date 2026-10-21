@@ -8,7 +8,7 @@ const mealLogSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // Same date format as MealPlan
+
     date: { type: String, required: true, index: true },
     mealId: { type: mongoose.Schema.Types.ObjectId, ref: "Meal" },
     slug: { type: String },

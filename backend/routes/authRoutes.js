@@ -33,7 +33,6 @@ const {
   updateProfileRules,
 } = require("../validators/authValidators");
 
-// ---------- Public routes ----------
 router.post("/register", registerRules, handleValidation, registerUser);
 router.post("/login", loginRules, handleValidation, loginUser);
 router.post("/google", googleLoginRules, handleValidation, googleLogin);
@@ -58,7 +57,6 @@ router.post(
   resetPassword,
 );
 
-// ---------- Private routes ----------
 router.post("/logout-all", protect, logoutAllDevices);
 router.post(
   "/verify-email",

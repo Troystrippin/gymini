@@ -11,8 +11,6 @@ const todayKey = () => {
 
 const isValidDateKey = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
-// POST /api/weight  { weightKg, date?, note? }
-// Upserts today's log and syncs user.details.weightKg.
 exports.logWeight = async (req, res, next) => {
   try {
     const weightKg = Number(req.body.weightKg);
@@ -33,7 +31,6 @@ exports.logWeight = async (req, res, next) => {
       { new: true, upsert: true, setDefaultsOnInsert: true },
     ).lean();
 
-    // Keep user.details.weightKg in sync with the latest entry
     await User.findByIdAndUpdate(req.user._id, {
       "details.weightKg": weightKg,
     });
@@ -44,7 +41,6 @@ exports.logWeight = async (req, res, next) => {
   }
 };
 
-// GET /api/weight?days=30
 exports.getWeightHistory = async (req, res, next) => {
   try {
     const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
@@ -71,7 +67,6 @@ exports.getWeightHistory = async (req, res, next) => {
   }
 };
 
-// DELETE /api/weight/:id
 exports.deleteWeightLog = async (req, res, next) => {
   try {
     const removed = await WeightLog.findOneAndDelete({

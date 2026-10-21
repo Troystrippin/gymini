@@ -19,9 +19,8 @@ const {
   hashCode,
   minutesFromNow,
 } = require("../utils/emailCodes");
-const { logUserAction } = require("../utils/userActivityLog"); // <-- ADDED
+const { logUserAction } = require("../utils/userActivityLog");
 
-// Fields required before we mark onboarding as complete.
 const REQUIRED_ONBOARDING_FIELDS = [
   "goal",
   "biologicalSex",
@@ -32,7 +31,6 @@ const REQUIRED_ONBOARDING_FIELDS = [
   "activityLevel",
 ];
 
-// Strip sensitive/internal fields before sending user data to the client.
 const serializeUser = (user) => ({
   _id: user.id,
   fullName: user.fullName,
@@ -55,17 +53,9 @@ const authResponse = (user, accessToken, refreshToken) => ({
   refreshToken,
 });
 
-// Bcrypt hash of a random string. Used to make bcrypt.compare run
-// even when the user doesn't exist (timing-attack mitigation).
 const DUMMY_HASH =
   "$2a$10$CwTycUXWue0Thq9StjUM0uJ8ZcT0ZK1q0VpXt/qvUX8nQ4TGwBq3K";
 
-// ─────────────────────────────────────────────────────────────
-// TEMPORARY: auto-verify new users while email delivery is on
-// Resend sandbox (only the account owner's inbox receives mail).
-// Remove this flag and the `emailVerified` override below once a
-// verified sending domain is wired up.
-// ─────────────────────────────────────────────────────────────
 const AUTO_VERIFY_NEW_USERS = true;
 
 const registerUser = async (req, res, next) => {
@@ -175,7 +165,6 @@ const loginUser = async (req, res, next) => {
       ip: req.ip,
     });
 
-    // Log the action
     req.user = user;
     await logUserAction(req, "user.login", { method: "email" });
 
@@ -262,7 +251,6 @@ const googleLogin = async (req, res, next) => {
       ip: req.ip,
     });
 
-    // Log the action
     req.user = user;
     await logUserAction(req, "user.login", { method: "google" });
 
@@ -482,8 +470,6 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-// ---------- Phase 2.1 additions ----------
-
 const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -580,8 +566,6 @@ const updateProfileAvatar = async (req, res, next) => {
   }
 };
 
-// ---------- Existing onboarding (tightened) ----------
-
 const updateOnboarding = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
@@ -602,8 +586,6 @@ const updateOnboarding = async (req, res, next) => {
 
     user.details = user.details || {};
 
-    // Preserve the first-ever onboarding weight before applying updates.
-    // This is the baseline used for goal + milestone progress.
     if (
       user.details.initialWeightKg == null &&
       incomingDetails.weightKg != null
@@ -617,7 +599,6 @@ const updateOnboarding = async (req, res, next) => {
       }
     });
 
-    // Only flip onboardingCompleted to true when every required field is set.
     const merged = {
       goal: user.goal,
       biologicalSex: user.details.biologicalSex,

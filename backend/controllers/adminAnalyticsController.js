@@ -6,8 +6,6 @@ const MealPlan = require("../models/MealPlan");
 const FavoriteExercise = require("../models/FavoriteExercise");
 const Exercise = require("../models/Exercise");
 
-// ─── Helpers ─────────────────────────────────────────────────
-
 const startOfDay = (date = new Date()) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -28,7 +26,6 @@ const dayKey = (date) => {
   return `${y}-${m}-${day}`;
 };
 
-// Build a dense array of the last N day keys (oldest → newest).
 const lastNDays = (n) => {
   const days = [];
   const today = startOfDay();
@@ -41,25 +38,21 @@ const lastNDays = (n) => {
 const startOfWeek = (date = new Date()) => {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = (day + 6) % 7; // Monday = 0
+  const diff = (day + 6) % 7;
   d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
 };
 
-// ─── GET /api/admin/analytics ────────────────────────────────
-// Moderator + Admin. Read-only aggregate metrics for the dashboard.
 const getAnalytics = async (req, res, next) => {
   try {
     const now = new Date();
     const todayStart = startOfDay();
     const weekStart = startOfWeek();
-    const thirtyDaysAgo = addDays(todayStart, -29); // inclusive of today
+    const thirtyDaysAgo = addDays(todayStart, -29);
     const sevenDaysAgo = addDays(todayStart, -6);
 
-    // ── Growth ────────────────────────────────────────────────
     const [newUsersRaw, activeUsersRaw] = await Promise.all([
-      // New users per day — last 30 days
       User.aggregate([
         { $match: { createdAt: { $gte: thirtyDaysAgo } } },
         {
@@ -74,7 +67,7 @@ const getAnalytics = async (req, res, next) => {
           },
         },
       ]),
-      // Distinct users with a workout per day — last 30 days
+
       WorkoutLog.aggregate([
         { $match: { dateCompleted: { $gte: thirtyDaysAgo } } },
         {
@@ -112,7 +105,6 @@ const getAnalytics = async (req, res, next) => {
       count: activeUsersMap.get(d) || 0,
     }));
 
-    // ── Engagement ────────────────────────────────────────────
     const [
       totalUsers,
       totalWorkouts,
@@ -132,16 +124,14 @@ const getAnalytics = async (req, res, next) => {
     const avgWorkoutsPerUser =
       totalUsers > 0 ? Math.round((totalWorkouts / totalUsers) * 10) / 10 : 0;
 
-    // ── Leaderboards ──────────────────────────────────────────
     const [topFavoritesRaw, topPlanExercisesRaw, topUsersRaw] =
       await Promise.all([
-        // Most favorited exercises
         FavoriteExercise.aggregate([
           { $group: { _id: "$exerciseId", count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 10 },
         ]),
-        // Most-used exercises across all workout plans
+
         WorkoutPlan.aggregate([
           { $unwind: "$exercises" },
           {
@@ -153,7 +143,7 @@ const getAnalytics = async (req, res, next) => {
           { $sort: { count: -1 } },
           { $limit: 10 },
         ]),
-        // Most active users (by workout count)
+
         WorkoutLog.aggregate([
           { $group: { _id: "$userId", count: { $sum: 1 } } },
           { $sort: { count: -1 } },
@@ -161,7 +151,6 @@ const getAnalytics = async (req, res, next) => {
         ]),
       ]);
 
-    // Hydrate favorite exercises with names
     const favoriteIds = topFavoritesRaw.map((f) => f._id);
     const favoriteExercises = await Exercise.find({
       _id: { $in: favoriteIds },
@@ -189,7 +178,6 @@ const getAnalytics = async (req, res, next) => {
       count: p.count,
     }));
 
-    // Hydrate top users
     const topUserIds = topUsersRaw.map((u) => u._id);
     const topUsersDocs = await User.find({ _id: { $in: topUserIds } })
       .select("fullName email")
@@ -208,7 +196,6 @@ const getAnalytics = async (req, res, next) => {
       })
       .filter(Boolean);
 
-    // ── Retention ─────────────────────────────────────────────
     const [
       activeLast7DaysRaw,
       onboardingComplete,
@@ -220,7 +207,7 @@ const getAnalytics = async (req, res, next) => {
       }),
       User.countDocuments({ onboardingCompleted: true }),
       WorkoutPlan.distinct("userId").then((a) => a.length),
-      // Users with 2+ workouts = returning
+
       WorkoutLog.aggregate([
         { $group: { _id: "$userId", count: { $sum: 1 } } },
         { $match: { count: { $gte: 2 } } },

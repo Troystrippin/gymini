@@ -80,9 +80,7 @@ export function AuthProvider({ children }) {
     const refreshToken = localStorage.getItem("admin_refresh_token");
     try {
       if (refreshToken) await api.post("/auth/logout", { refreshToken });
-    } catch {
-      // ignore — session is cleared locally regardless
-    }
+    } catch {}
     clearSession();
     setUser(null);
   };

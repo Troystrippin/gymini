@@ -36,7 +36,6 @@ const ExerciseSchema = new mongoose.Schema(
       index: true,
     },
 
-    // -- Moderation ----
     status: {
       type: String,
       enum: ["approved", "pending", "rejected"],

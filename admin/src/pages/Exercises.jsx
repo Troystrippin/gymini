@@ -62,7 +62,6 @@ export default function Exercises() {
   const [muscleFilter, setMuscleFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  // Create built-in modal state
   const [showCreate, setShowCreate] = useState(false);
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);

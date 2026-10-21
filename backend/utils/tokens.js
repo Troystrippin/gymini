@@ -5,7 +5,6 @@ const RefreshToken = require("../models/RefreshToken");
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_DAYS = 30;
 
-// --- Access tokens (JWT, short-lived) ---
 const signAccessToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: ACCESS_TOKEN_TTL,
@@ -16,7 +15,6 @@ const verifyAccessToken = (token) => {
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
-// --- Refresh tokens (opaque random string, not a JWT) ---
 const generateRefreshToken = () => {
   return crypto.randomBytes(48).toString("hex");
 };
@@ -31,10 +29,6 @@ const refreshTokenExpiry = () => {
   return d;
 };
 
-/**
- * Issue a new refresh token, persist its hash, return the raw string.
- * Raw string is only ever sent to the client once.
- */
 const issueRefreshToken = async ({ userId, userAgent, ip }) => {
   const raw = generateRefreshToken();
   const tokenHash = hashRefreshToken(raw);
@@ -50,17 +44,12 @@ const issueRefreshToken = async ({ userId, userAgent, ip }) => {
   return raw;
 };
 
-/**
- * Verify a refresh token is valid (exists, not expired). Returns the
- * RefreshToken doc or null.
- */
 const findRefreshToken = async (raw) => {
   if (!raw || typeof raw !== "string") return null;
   const tokenHash = hashRefreshToken(raw);
   const doc = await RefreshToken.findOne({ tokenHash });
   if (!doc) return null;
   if (doc.expiresAt.getTime() < Date.now()) {
-    // Expired — clean up and reject.
     await RefreshToken.deleteOne({ _id: doc._id });
     return null;
   }

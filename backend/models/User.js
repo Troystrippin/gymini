@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    // --- Authentication Info ---
     fullName: {
       type: String,
       required: [true, "Please add a full name"],
@@ -24,7 +23,6 @@ const UserSchema = new mongoose.Schema(
       minlength: 6,
     },
 
-    // --- Role-based access control ---
     role: {
       type: String,
       enum: ["user", "moderator", "admin"],
@@ -39,7 +37,6 @@ const UserSchema = new mongoose.Schema(
       default: null,
     },
 
-    // --- Onboarding Info ---
     onboardingCompleted: {
       type: Boolean,
       default: false,
@@ -64,8 +61,7 @@ const UserSchema = new mongoose.Schema(
       age: { type: Number, min: 13, max: 120, default: null },
       heightCm: { type: Number, min: 50, max: 300, default: null },
       weightKg: { type: Number, min: 20, max: 500, default: null },
-      // Preserves the weight entered during onboarding. Never overwritten
-      // by later weight logs. Used as the baseline for goal + milestone math.
+
       initialWeightKg: { type: Number, min: 20, max: 500, default: null },
       workoutDaysPerWeek: { type: Number, min: 0, max: 7, default: null },
       activityLevel: {
@@ -80,7 +76,6 @@ const UserSchema = new mongoose.Schema(
       },
     },
 
-    // --- Email verification ---
     emailVerified: {
       type: Boolean,
       default: false,
@@ -94,7 +89,6 @@ const UserSchema = new mongoose.Schema(
       default: null,
     },
 
-    // --- Password reset ---
     passwordResetCode: {
       type: String,
       default: null,
@@ -104,7 +98,6 @@ const UserSchema = new mongoose.Schema(
       default: null,
     },
 
-    // --- Login lockout ---
     failedLoginAttempts: {
       type: Number,
       default: 0,

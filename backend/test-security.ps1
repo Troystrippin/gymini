@@ -1,10 +1,6 @@
-# ============================================================
-# GYMINI API Security Test Suite
-# ============================================================
 
 $API = "https://gymini-production-c2e5.up.railway.app"
 
-# ---- Test users ----
 $TEST_USER_EMAIL = "secur-test-user@example.com"
 $TEST_USER_PASS  = "Test1234!"
 $TEST_USER_NAME  = "Secur Testuser"
@@ -12,7 +8,6 @@ $TEST_USER_NAME  = "Secur Testuser"
 $TEST_ADMIN_EMAIL = "rbactest@example.com"
 $TEST_ADMIN_PASS  = "PUT_YOUR_ADMIN_PASSWORD_HERE"
 
-# ---- Result tracking ----
 $script:pass = 0
 $script:fail = 0
 
@@ -33,17 +28,11 @@ function Section($title) {
 }
 
 
-# ============================================================
-# 1. HEALTH CHECK
-# ============================================================
 Section "1. Public health check"
 $r = Invoke-WebRequest -Uri "$API/health" -SkipHttpErrorCheck
 Test-Result "GET /health" 200 $r.StatusCode
 Write-Host "         body: $($r.Content)" -ForegroundColor DarkGray
 
-# ============================================================
-# 2. REGISTER
-# ============================================================
 Section "2. Register endpoint"
 
 $r = Invoke-WebRequest -Uri "$API/api/auth/register" -Method POST `
@@ -85,9 +74,6 @@ if ($r.StatusCode -eq 201) {
     $userToken = $null
 }
 
-# ============================================================
-# 3. LOGIN
-# ============================================================
 Section "3. Login endpoint"
 
 $r = Invoke-WebRequest -Uri "$API/api/auth/login" -Method POST `
@@ -121,9 +107,6 @@ if ($r.StatusCode -eq 200) {
 
 
 
-# ============================================================
-# 4. /auth/me
-# ============================================================
 Section "4. /auth/me (requires auth)"
 
 $r = Invoke-WebRequest -Uri "$API/api/auth/me" -SkipHttpErrorCheck
@@ -138,9 +121,6 @@ Test-Result "GET /auth/me (wrong scheme)" 401 $r.StatusCode
 $r = Invoke-WebRequest -Uri "$API/api/auth/me" -Headers @{ Authorization = "Bearer $userToken" } -SkipHttpErrorCheck
 Test-Result "GET /auth/me (valid user token)" 200 $r.StatusCode
 
-# ============================================================
-# 5. USER ENDPOINTS
-# ============================================================
 Section "5. User endpoints (require auth)"
 
 $r = Invoke-WebRequest -Uri "$API/api/plans" -Headers @{ Authorization = "Bearer $userToken" } -SkipHttpErrorCheck
@@ -158,9 +138,6 @@ if ($r.StatusCode -in 200, 404) {
     $script:fail++
 }
 
-# ============================================================
-# 6. ADMIN RBAC
-# ============================================================
 Section "6. Admin RBAC"
 
 $r = Invoke-WebRequest -Uri "$API/api/admin/users" -Headers @{ Authorization = "Bearer $userToken" } -SkipHttpErrorCheck
@@ -190,9 +167,6 @@ if ($adminToken) {
 }
 
 
-# ============================================================
-# 7. REFRESH TOKEN FLOW
-# ============================================================
 Section "7. Refresh token flow"
 
 $r = Invoke-WebRequest -Uri "$API/api/auth/refresh" -Method POST `
@@ -218,9 +192,6 @@ $r = Invoke-WebRequest -Uri "$API/api/auth/refresh" -Method POST `
     -SkipHttpErrorCheck
 Test-Result "POST /auth/refresh (bogus)" 401 $r.StatusCode
 
-# ============================================================
-# 8. LOGOUT
-# ============================================================
 Section "8. Logout"
 
 $r = Invoke-WebRequest -Uri "$API/api/auth/logout" -Method POST `
@@ -229,9 +200,6 @@ $r = Invoke-WebRequest -Uri "$API/api/auth/logout" -Method POST `
     -SkipHttpErrorCheck
 Test-Result "POST /auth/logout" 200 $r.StatusCode
 
-# ============================================================
-# 9. CORS
-# ============================================================
 Section "9. CORS enforcement"
 
 try {
@@ -250,9 +218,6 @@ try {
     $script:pass++
 }
 
-# ============================================================
-# SUMMARY
-# ============================================================
 Write-Host "`n============================================================" -ForegroundColor Cyan
 Write-Host "  SECURITY TEST SUMMARY" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan

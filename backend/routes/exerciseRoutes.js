@@ -29,15 +29,8 @@ const {
   listFavoritesRules,
 } = require("../validators/favoriteValidators");
 
-// ─────────────────────────────────────────────────────────────
-// IMPORTANT: static paths must come BEFORE "/:id", or Express
-// will match "favorites" as an :id and return a cast error.
-// ─────────────────────────────────────────────────────────────
-
-// Public catalog
 router.get("/", listExercisesRules, handleValidation, getExercises);
 
-// Create custom exercise
 router.post(
   "/",
   protect,
@@ -47,7 +40,6 @@ router.post(
   createExercise,
 );
 
-// ── Favorites (auth required) ────────────────────────────────
 router.get(
   "/favorites",
   protect,
@@ -88,7 +80,6 @@ router.get(
   getFavoriteStatus,
 );
 
-// ── Exercise detail (must be last) ───────────────────────────
 router.get("/:id", exerciseIdParam, handleValidation, getExerciseById);
 
 module.exports = router;

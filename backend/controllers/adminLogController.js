@@ -6,7 +6,6 @@ const MAX_LIMIT = 100;
 const MAX_SKIP = 10000;
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// GET /api/admin/logs
 const listLogs = async (req, res, next) => {
   try {
     const {
@@ -34,7 +33,6 @@ const listLogs = async (req, res, next) => {
       }
     }
 
-    // --- 1. Query Admin Logs ---
     const adminFilter = { ...dateFilter };
     if (action) adminFilter.action = action;
     if (search) {
@@ -46,7 +44,6 @@ const listLogs = async (req, res, next) => {
       ];
     }
 
-    // --- 2. Query User Logs ---
     const userFilter = { ...dateFilter };
     if (action) userFilter.action = action;
     if (search) {
@@ -57,8 +54,22 @@ const listLogs = async (req, res, next) => {
       ];
     }
 
-    const isAdminAction = !action || (!action.startsWith("user.") || action === "user.role_change" || action === "user.delete") && !action.startsWith("plan.") && !action.startsWith("workout.") && !action.startsWith("meal_plan.");
-    const isUserAction = !action || (action.startsWith("user.") && action !== "user.role_change" && action !== "user.delete") || action.startsWith("plan.") || action.startsWith("workout.") || action.startsWith("meal_plan.");
+    const isAdminAction =
+      !action ||
+      ((!action.startsWith("user.") ||
+        action === "user.role_change" ||
+        action === "user.delete") &&
+        !action.startsWith("plan.") &&
+        !action.startsWith("workout.") &&
+        !action.startsWith("meal_plan."));
+    const isUserAction =
+      !action ||
+      (action.startsWith("user.") &&
+        action !== "user.role_change" &&
+        action !== "user.delete") ||
+      action.startsWith("plan.") ||
+      action.startsWith("workout.") ||
+      action.startsWith("meal_plan.");
 
     let adminLogs = [];
     let userLogs = [];
@@ -70,11 +81,10 @@ const listLogs = async (req, res, next) => {
       userLogs = await UserActivity.find(userFilter).lean();
     }
 
-    // --- 3. Merge and Sort ---
-    const normalizedUserLogs = userLogs.map(log => ({
+    const normalizedUserLogs = userLogs.map((log) => ({
       _id: log._id,
       createdAt: log.createdAt,
-      adminEmail: log.userEmail, 
+      adminEmail: log.userEmail,
       action: log.action,
       targetType: "user_action",
       targetLabel: log.userEmail,
@@ -85,30 +95,36 @@ const listLogs = async (req, res, next) => {
     let allLogs = [...adminLogs, ...normalizedUserLogs];
     allLogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Filter by targetType if requested
     if (targetType) {
-      allLogs = allLogs.filter(l => l.targetType === targetType);
+      allLogs = allLogs.filter((l) => l.targetType === targetType);
     }
 
     const total = allLogs.length;
     const paginatedLogs = allLogs.slice(skip, skip + limit);
 
-    // Populate admin details
     const populatedLogs = await Promise.all(
       paginatedLogs.map(async (log) => {
         if (log.isUserLog) return log;
-        const adminUser = await mongoose.model("User").findById(log.adminId).select("fullName email").lean();
+        const adminUser = await mongoose
+          .model("User")
+          .findById(log.adminId)
+          .select("fullName email")
+          .lean();
         return { ...log, adminId: adminUser };
-      })
+      }),
     );
 
-    res.json({ logs: populatedLogs, total, page, pages: Math.ceil(total / limit) });
+    res.json({
+      logs: populatedLogs,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// GET /api/admin/logs/filters
 const getLogFilters = async (req, res, next) => {
   try {
     const [adminActions, userActions] = await Promise.all([
@@ -121,7 +137,7 @@ const getLogFilters = async (req, res, next) => {
     res.json({
       actions,
       targetTypes: ["exercise", "user", "meal", "user_action"],
-      admins: [], 
+      admins: [],
     });
   } catch (err) {
     next(err);

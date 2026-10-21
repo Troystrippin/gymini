@@ -59,7 +59,6 @@ export default function ExerciseDetail() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
   useAdminPolling(load);
 

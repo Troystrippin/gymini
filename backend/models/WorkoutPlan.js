@@ -2,14 +2,12 @@ const mongoose = require("mongoose");
 
 const PlanExerciseSchema = new mongoose.Schema(
   {
-    // Catalog ref — null when the exercise is user-created (isCustom: true).
     exerciseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exercise",
       default: null,
     },
-    // Snapshot so custom exercises work AND so we don't break
-    // if the catalog exercise is later edited/deleted.
+
     name: { type: String, required: true },
     muscleGroup: { type: String, default: null },
     description: { type: String, default: "" },
@@ -19,7 +17,7 @@ const PlanExerciseSchema = new mongoose.Schema(
     completed: { type: Boolean, default: false },
     order: { type: Number, default: 0 },
   },
-  // _id: true so each subdoc has its own _id for toggling.
+
   { _id: true },
 );
 

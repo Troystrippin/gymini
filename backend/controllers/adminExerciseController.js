@@ -9,7 +9,6 @@ const MAX_LIMIT = 100;
 const MAX_SKIP = 10000;
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-// GET /api/admin/exercises
 const listExercises = async (req, res, next) => {
   try {
     const {
@@ -55,7 +54,6 @@ const listExercises = async (req, res, next) => {
   }
 };
 
-// GET /api/admin/exercises/stats
 const getExerciseStats = async (req, res, next) => {
   try {
     const [total, builtin, custom, pending, approved, rejected] =
@@ -76,7 +74,6 @@ const getExerciseStats = async (req, res, next) => {
   }
 };
 
-// GET /api/admin/exercises/:id
 const getExerciseById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -105,14 +102,12 @@ const getExerciseById = async (req, res, next) => {
   }
 };
 
-// POST /api/admin/exercises — admin creates a built-in exercise
 const createExercise = async (req, res, next) => {
   let uploadedImage;
   try {
     const { name, muscleGroup, equipment, difficulty, description, mediaUrl } =
       req.body;
 
-    // Prevent duplicate built-in exercises with same name + muscle.
     const existing = await Exercise.findOne({
       name: name.trim(),
       muscleGroup,
@@ -179,7 +174,6 @@ const createExercise = async (req, res, next) => {
   }
 };
 
-// PATCH /api/admin/exercises/:id/approve
 const approveExercise = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -220,7 +214,6 @@ const approveExercise = async (req, res, next) => {
   }
 };
 
-// PATCH /api/admin/exercises/:id/reject
 const rejectExercise = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -264,7 +257,6 @@ const rejectExercise = async (req, res, next) => {
   }
 };
 
-// PUT /api/admin/exercises/:id
 const updateExercise = async (req, res, next) => {
   let uploadedImage;
   try {
@@ -349,7 +341,6 @@ const updateExercise = async (req, res, next) => {
   }
 };
 
-// DELETE /api/admin/exercises/:id
 const deleteExercise = async (req, res, next) => {
   try {
     const { id } = req.params;

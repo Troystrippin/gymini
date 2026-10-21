@@ -1,8 +1,10 @@
 import React from "react";
 
-// The original SVG used nested translate() groups; they're baked into the
-// polygon points here so the icon is a single clean shape.
-export default function LightningIcon({ size = 24, color = "currentColor", ...props }) {
+export default function LightningIcon({
+  size = 24,
+  color = "currentColor",
+  ...props
+}) {
   return (
     <svg
       width={size}

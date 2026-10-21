@@ -10,7 +10,6 @@ require("dotenv").config();
 
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 
-// --- Validate required env vars at boot ---
 const REQUIRED_ENV = ["MONGO_URI", "JWT_SECRET"];
 const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missing.length) {
@@ -20,20 +19,12 @@ if (missing.length) {
 
 const app = express();
 
-// ─────────────────────────────────────────────────────────────
-// Trust proxy — Railway/Render/Heroku/Vercel sit behind a reverse
-// proxy that adds X-Forwarded-For. Without this, express-rate-limit
-// throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request.
-// ─────────────────────────────────────────────────────────────
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
-// ─────────────────────────────────────────────────────────────
-// CORS — must run BEFORE helmet so its headers aren't stripped.
-// ─────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
-  .map((s) => s.trim().replace(/^["']|["']$/g, "")) // strip wrapping quotes
+  .map((s) => s.trim().replace(/^["']|["']$/g, ""))
   .filter(Boolean);
 
 console.log(`[cors] allowed origins: ${JSON.stringify(allowedOrigins)}`);
@@ -42,9 +33,8 @@ console.log(`[cors] NODE_ENV: ${process.env.NODE_ENV}`);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
-      // In dev, allow everything if no allowlist configured
+
       if (
         process.env.NODE_ENV !== "production" &&
         allowedOrigins.length === 0
@@ -62,26 +52,16 @@ app.use(
   }),
 );
 
-// ─────────────────────────────────────────────────────────────
-// Helmet — configured for cross-origin API consumption.
-// Default CORP (`same-origin`) silently blocks cross-origin fetches.
-// ─────────────────────────────────────────────────────────────
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginOpenerPolicy: { policy: "unsafe-none" },
-    contentSecurityPolicy: false, // API only — no HTML to secure
+    contentSecurityPolicy: false,
   }),
 );
 
-// --- Body parser with size limit ---
 app.use(express.json({ limit: "1mb" }));
 
-// ─────────────────────────────────────────────────────────────
-// Rate limiting
-// ─────────────────────────────────────────────────────────────
-
-// Global light limiter — safety net for the entire API.
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -91,7 +71,6 @@ app.use(
   }),
 );
 
-// Strict limiter — brute-force-sensitive endpoints only.
 const authStrictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -101,7 +80,6 @@ const authStrictLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Generous limiter — authenticated user actions.
 const authGenerousLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -110,7 +88,6 @@ const authGenerousLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// API limiter — protects plan/exercise/workout/admin/meal/analytics/goal routes.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -119,7 +96,6 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// --- Health check ---
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -128,7 +104,6 @@ app.get("/health", (req, res) => {
   });
 });
 
-// --- Routes ---
 const authRoutes = require("./routes/authRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const exerciseRoutes = require("./routes/exerciseRoutes");
@@ -143,17 +118,13 @@ const chatRoutes = require("./routes/chatRoutes");
 
 app.get("/", (req, res) => res.send("GYMini API is running..."));
 
-// Apply strict limiter FIRST to specific auth paths, then generous to the rest.
 app.use("/api/auth/register", authStrictLimiter);
 app.use("/api/auth/login", authStrictLimiter);
 app.use("/api/auth/google", authStrictLimiter);
 app.use("/api/auth/forgot-password", authStrictLimiter);
 app.use("/api/auth/reset-password", authStrictLimiter);
 app.use("/api/auth/resend-verification", authStrictLimiter);
-
 app.use("/api/auth", authGenerousLimiter, authRoutes);
-
-// Feature routes — protected by the general API limiter.
 app.use("/api/workouts", apiLimiter, workoutRoutes);
 app.use("/api/exercises", apiLimiter, exerciseRoutes);
 app.use("/api/plans", apiLimiter, planRoutes);
@@ -163,12 +134,9 @@ app.use("/api/weight", apiLimiter, weightRoutes);
 app.use("/api/analytics", apiLimiter, analyticsRoutes);
 app.use("/api/goals", apiLimiter, goalRoutes);
 app.use("/api/chat", apiLimiter, chatRoutes);
-
-// --- 404 + centralized error handling ---
 app.use(notFound);
 app.use(errorHandler);
 
-// --- Boot ---
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 

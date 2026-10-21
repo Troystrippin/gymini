@@ -51,7 +51,7 @@ function summarize(points = []) {
   const prev7 = sum(values.slice(-14, -7));
   const hasPrev = values.length >= 14;
 
-  let change = null; // percent
+  let change = null;
   if (hasPrev) {
     if (prev7 === 0) change = last7 === 0 ? 0 : null;
     else change = ((last7 - prev7) / prev7) * 100;

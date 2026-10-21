@@ -1,7 +1,5 @@
 const { body } = require("express-validator");
 
-// Allows: ASCII letters, accented Latin, spaces, hyphens, apostrophes, periods.
-// Rejects: digits, emoji, symbols (except '. -'), control chars.
 const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ'.\- ]+$/;
 
 const registerRules = [
@@ -94,7 +92,6 @@ const onboardingRules = [
     .optional()
     .isIn(["Sedentary", "Lightly Active", "Moderately Active", "Very Active"]),
 
-  // Legacy flat fields (kept for transition)
   body("biologicalSex").optional().isIn(["Male", "Female"]),
   body("age").optional().isInt({ min: 13, max: 120 }).toInt(),
   body("height").optional().isFloat({ min: 50, max: 300 }).toFloat(),

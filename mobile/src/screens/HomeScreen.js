@@ -109,11 +109,11 @@ export default function HomeScreen() {
     meal: entries.find((m) => m.type === type) || null,
   }));
 
-  // Calculates plan progress dynamically based on today's exercises
   const completedCount = exercises.filter((ex) =>
-    completedNames.includes(ex.name)
+    completedNames.includes(ex.name),
   ).length;
-  const planProgress = exercises.length > 0 ? completedCount / exercises.length : 0;
+  const planProgress =
+    exercises.length > 0 ? completedCount / exercises.length : 0;
 
   function getGreeting() {
     const hour = new Date().getHours();
@@ -121,7 +121,7 @@ export default function HomeScreen() {
     if (hour < 18) return "Good Afternoon";
     return "Good Evening";
   }
-  
+
   const confirmStartWorkout = () => {
     Alert.alert(
       "Start workout?",

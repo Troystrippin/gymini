@@ -20,8 +20,7 @@ import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 export default function ForgotPasswordScreen({ navigation }) {
   const { colors } = useTheme();
   const { forgotPassword, resetPassword } = useContext(AuthContext);
-
-  const [step, setStep] = useState(1); // 1 = email, 2 = code + new password
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");

@@ -15,7 +15,7 @@ const mealSchema = new mongoose.Schema(
       enum: ["Balanced", "High Protein", "Weight Loss"],
     },
     tags: [{ type: String }],
-    // Numeric macros — parse from the old string format
+
     calories: { type: Number, required: true, min: 0 },
     protein: { type: Number, required: true, min: 0 },
     carbs: { type: Number, required: true, min: 0, default: 0 },
@@ -23,7 +23,7 @@ const mealSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     imagePublicId: { type: String, default: null },
     description: { type: String, default: "" },
-    active: { type: Boolean, default: true }, // for Phase 4 moderation
+    active: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

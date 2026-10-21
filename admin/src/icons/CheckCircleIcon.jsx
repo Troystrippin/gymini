@@ -1,8 +1,10 @@
 import React from "react";
 
-// The original had a white <rect> background; it's removed here so the icon
-// is transparent and works on any card color.
-export default function CheckCircleIcon({ size = 24, color = "currentColor", ...props }) {
+export default function CheckCircleIcon({
+  size = 24,
+  color = "currentColor",
+  ...props
+}) {
   return (
     <svg
       width={size}

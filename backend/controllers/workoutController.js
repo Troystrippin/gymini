@@ -102,12 +102,11 @@ const saveSession = async (req, res) => {
 
     const totalCompleted = normalized.filter((e) => e.completed).length;
     if (totalCompleted === 0) {
-      return res.status(400).json({ 
-        message: "Cannot save a workout with 0 completed exercises." 
+      return res.status(400).json({
+        message: "Cannot save a workout with 0 completed exercises.",
       });
     }
 
-    // ALWAYS create a new log for this finish action
     const log = await WorkoutLog.create({
       userId: req.user._id,
       planId: planId || null,

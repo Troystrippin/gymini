@@ -23,8 +23,6 @@ export function PlanDraftProvider({ children }) {
   const [refreshingStatuses, setRefreshingStatuses] = useState(false);
   const [rejectedNotices, setRejectedNotices] = useState([]);
 
-  // Mirror draftExercises in a ref so refreshDraftStatuses can read the
-  // latest value without depending on the array identity.
   const draftRef = useRef(draftExercises);
   draftRef.current = draftExercises;
 
@@ -141,9 +139,6 @@ export function PlanDraftProvider({ children }) {
 
   const hasUnapprovedExercises = unapprovedExercises.length > 0;
 
-  // Stable callback — reads current draft via ref, so its identity never
-  // changes. Also removes rejected/invisible exercises from the draft and
-  // queues a notification so the UI can inform the user.
   const refreshDraftStatuses = useCallback(async () => {
     const current = draftRef.current || [];
     const candidates = current.filter(
@@ -158,31 +153,26 @@ export function PlanDraftProvider({ children }) {
     try {
       const results = await Promise.all(
         candidates.map((e) =>
-          api
-            .get(`/exercises/${e.exerciseId}`)
-            .then(
-              (res) => ({
-                id: e.exerciseId,
-                status: res.data.status,
-                reason: res.data.rejectionReason || null,
-                gone: false,
-              }),
-              (err) => {
-                // 404 = the exercise is no longer visible to this user.
-                // That means it was rejected, deleted, or belongs to
-                // someone else. Treat it as "gone" and remove from draft.
-                if (err.response?.status === 404) {
-                  return {
-                    id: e.exerciseId,
-                    status: "rejected",
-                    reason: "This exercise is no longer available to you.",
-                    gone: true,
-                  };
-                }
-                // Any other error (network, 5xx) → leave it alone.
-                return null;
-              },
-            ),
+          api.get(`/exercises/${e.exerciseId}`).then(
+            (res) => ({
+              id: e.exerciseId,
+              status: res.data.status,
+              reason: res.data.rejectionReason || null,
+              gone: false,
+            }),
+            (err) => {
+              if (err.response?.status === 404) {
+                return {
+                  id: e.exerciseId,
+                  status: "rejected",
+                  reason: "This exercise is no longer available to you.",
+                  gone: true,
+                };
+              }
+
+              return null;
+            },
+          ),
         ),
       );
 
@@ -196,7 +186,6 @@ export function PlanDraftProvider({ children }) {
           .map((r) => r.id),
       );
 
-      // Collect notices for anything being removed (gone or rejected).
       const rejectedItems = current
         .filter(
           (e) => goneIds.has(e.exerciseId) || rejectedIds.has(e.exerciseId),
@@ -206,7 +195,6 @@ export function PlanDraftProvider({ children }) {
           return { name: e.name, reason: r?.reason || null };
         });
 
-      // Remove gone + rejected items; update statuses for the rest.
       setDraftExercises((prev) => {
         let next = prev.filter(
           (ex) =>
@@ -215,10 +203,7 @@ export function PlanDraftProvider({ children }) {
         next = next.map((ex) => {
           const match = results.find(
             (r) =>
-              r &&
-              r.id === ex.exerciseId &&
-              !r.gone &&
-              r.status !== ex.status,
+              r && r.id === ex.exerciseId && !r.gone && r.status !== ex.status,
           );
           return match ? { ...ex, status: match.status } : ex;
         });
