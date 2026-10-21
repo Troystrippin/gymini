@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { COLORS } from "../theme/colors";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../theme/theme";
 import ChatMessageBubble from "../components/ChatMessageBubble";
 import api from "../api/api";
@@ -32,13 +32,34 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() =>{
-    const unsubscribe = navigation.addListener("blur", () => {
-      setConversationId(null);
-    });
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-    return unsubscribe;
-  }, [navigation]);
+      const loadConversation = async () => {
+        try {
+          const { data } = await api.get("/chat/current");
+
+          if (active && data.messages.length > 0) {
+            setMessages(data.messages);
+          }
+        } catch (err) {
+          if (active) {
+            setError(
+              err.response?.data?.message || "Could not load your previous conversation.",
+            );
+          }
+        }
+      };
+
+      loadConversation();
+
+      return () => {
+        active = false;
+      };
+
+    }, []),
+  );
 
   const sendMessage = async () => {
     const text = draft.trim();
@@ -55,10 +76,7 @@ export default function ChatScreen() {
     try {
       const {data } = await api.post("/chat", {
         message: text,
-      conversationId,
       });
-
-      setConversationId(data.conversationId);
 
       setMessages((current) => [
         ...current,
