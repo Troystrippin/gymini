@@ -12,6 +12,19 @@ const listMeals = async (req, res, next) => {
   }
 };
 
+const getMealById = async (req, res, next) => {
+  try {
+    const meal = await Meal.findOne({ id: req.params.id }).lean();
+
+    if (!meal) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    res.json({ meal });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createMeal = async (req, res, next) => {
   let uploaded;
   try {
@@ -137,4 +150,10 @@ const deleteMeal = async (req, res, next) => {
   }
 };
 
-module.exports = { listMeals, createMeal, updateMealImage, deleteMeal };
+module.exports = {
+  listMeals,
+  createMeal,
+  updateMealImage,
+  deleteMeal,
+  getMealById,
+};

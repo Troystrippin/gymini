@@ -46,7 +46,8 @@ export default function ChatScreen() {
         } catch (err) {
           if (active) {
             setError(
-              err.response?.data?.message || "Could not load your previous conversation.",
+              err.response?.data?.message ||
+                "Could not load your previous conversation.",
             );
           }
         }
@@ -57,7 +58,6 @@ export default function ChatScreen() {
       return () => {
         active = false;
       };
-
     }, []),
   );
 
@@ -72,9 +72,9 @@ export default function ChatScreen() {
       { id: Date.now().toString(), text, sender: "user" },
     ]);
     setSending(true);
-    
+
     try {
-      const {data } = await api.post("/chat", {
+      const { data } = await api.post("/chat", {
         message: text,
       });
 
@@ -86,7 +86,6 @@ export default function ChatScreen() {
           sender: "AI-Coach",
         },
       ]);
-
     } catch (err) {
       setError(
         err.response?.data?.message || "Could not reach the AI. Try again.",
@@ -94,11 +93,18 @@ export default function ChatScreen() {
     } finally {
       setSending(false);
     }
-
   };
+
+  const renderMessage = useCallback(
+    ({ item }) => (
+      <ChatMessageBubble text={item.text} isSender={item.sender === "user"} />
+    ),
+    [],
+  );
+
   return (
     <SafeAreaView
-      edges={["top"]}
+      edges={["top", "left", "right"]}
       style={[styles.flex, { backgroundColor: colors.background }]}
     >
       <KeyboardAvoidingView
@@ -135,11 +141,8 @@ export default function ChatScreen() {
           ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const isUser = item.sender === "user";
-            return <ChatMessageBubble text={item.text} isSender={isUser} />;
-          }}
-           ListFooterComponent={
+          renderItem={renderMessage}
+          ListFooterComponent={
             sending ? (
               <ChatMessageBubble text="Thinking..." isSender={false} />
             ) : null

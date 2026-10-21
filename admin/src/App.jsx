@@ -11,6 +11,7 @@ import Exercises from "./pages/Exercises";
 import ExerciseDetail from "./pages/ExerciseDetail";
 import ActivityLogs from "./pages/ActivityLogs";
 import Meals from "./pages/Meals";
+import MealsDetail from "./pages/MealsDetail";
 
 const ALLOWED_ROLES = ["admin"];
 
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="exercises/:id" element={<ExerciseDetail />} />
             <Route path="activity-logs" element={<ActivityLogs />} />
             <Route path="meals" element={<Meals />} />
+            <Route path="meals/:id" element={<MealsDetail />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

@@ -174,7 +174,7 @@ export default function ExerciseDetail() {
         to="/exercises"
         style={{
           color: COLORS.textSecondary,
-          fontSize: 13,
+          fontSize: 16,
           marginBottom: 16,
           display: "inline-block",
         }}
@@ -256,6 +256,14 @@ export default function ExerciseDetail() {
             padding: 24,
             border: `1px solid ${COLORS.border}`,
             marginBottom: 24,
+            boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
           }}
         >
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>
@@ -370,6 +378,14 @@ export default function ExerciseDetail() {
             borderRadius: 16,
             padding: 24,
             marginBottom: 24,
+            boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
           }}
         >
           <h2
@@ -432,6 +448,14 @@ export default function ExerciseDetail() {
             padding: 24,
             border: `1px solid ${COLORS.border}`,
             marginBottom: 24,
+            boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
           }}
         >
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>
@@ -513,6 +537,14 @@ function InfoCard({ label, value }) {
         borderRadius: 14,
         padding: 18,
         border: `1px solid ${COLORS.border}`,
+        boxShadow: `
+                      inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+                      inset -1px -1px 2px rgba(0, 0, 0, 0.12),
+                      -3px -3px 6px rgba(255, 255, 255, 0.9),   
+                      1px 1px 3px rgba(0, 0, 0, 0.12),          
+                      3px 3px 6px rgba(0, 0, 0, 0.14),          
+                      6px 6px 12px rgba(0, 0, 0, 0.16)          
+                    `,
       }}
     >
       <div
@@ -544,8 +576,8 @@ const inputStyle = {
 const btnPrimary = {
   padding: "10px 18px",
   borderRadius: 10,
-  background: COLORS.primary,
-  color: COLORS.text,
+  background: COLORS.success,
+  color: COLORS.buttonText,
   fontSize: 13,
   fontWeight: 700,
 };

@@ -31,6 +31,7 @@ const imageUpload = require("../middleware/imageUpload");
 const {
   listMeals,
   createMeal,
+  getMealById,
   updateMealImage,
   deleteMeal,
 } = require("../controllers/adminMealController");
@@ -74,6 +75,7 @@ router.get("/logs", listLogs);
 router.get("/logs/filters", getLogFilters);
 
 router.get("/meals", listMeals);
+router.get("/meals/:id", getMealById);
 router.post("/meals", imageUpload, createMeal);
 router.put("/meals/:id/image", imageUpload, updateMealImage);
 router.delete("/meals/:id", deleteMeal);

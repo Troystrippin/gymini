@@ -21,6 +21,7 @@
     "react-native": "0.86.3",
     "react-native-chart-kit": "^7.0.4",
     "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-enriched-markdown": "^1.1.1",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-nitro-google-signin": "^2.3.0",
     "react-native-nitro-modules": "^0.37.1",

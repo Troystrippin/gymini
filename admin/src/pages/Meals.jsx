@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api";
+import { Link } from "react-router-dom";
 import { COLORS } from "../theme";
 import useAdminPolling from "../hooks/useAdminPolling";
 
@@ -229,7 +230,9 @@ export default function Meals() {
               )}
               <div>
                 <div style={{ fontWeight: 800, color: COLORS.text }}>
-                  {meal.name}
+                  <Link to={`/meals/${encodeURIComponent(meal.id)}`}>
+                    {meal.name}
+                  </Link>
                 </div>
                 <div
                   style={{
