@@ -1,6 +1,7 @@
 const Meal = require("../models/Meal");
 const Exercise = require("../models/Exercise");
 const ChatConversation = require("../models/ChatConversation");
+const mongoose = require("mongoose");
 
 let geminiClient;
 
@@ -37,6 +38,7 @@ exports.chat = async (req, res, next) => {
   try {
     let conversation = await ChatConversation.findOne({
       userId: req.user._id,
+      status: "active",
     });
 
     const isExpired = Boolean(
@@ -111,7 +113,7 @@ recommendations as medical advice. Keep suggestions practical. For exercises, in
     conversation.geminiInteractionId = result.id;
     conversation.messages.push(
       { sender: "user", text: message.trim(), sentAt: now },
-      { sender: "assistant", text: reply, sentAt: now },
+      { sender: "assistant", text: reply, sentAt: now, geminiInteractionId: result.id, },
     );
 
     conversation.messages = conversation.messages.slice(-50);
@@ -133,12 +135,95 @@ exports.getCurrentConversation = async (req, res, next) => {
   try {
     const conversation = await ChatConversation.findOne({
       userId: req.user._id,
+      status: "active",
       expiresAt: { $gt: new Date() },
     }).lean();
 
     res.json({
       conversationId: conversation?._id.toString() || null,
       messages: (conversation?.messages || []).map((message) => ({
+        id: message._id.toString(),
+        text: message.text,
+        sender: message.sender,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.archiveCurrentConversation = async (req, res, next ) => {
+  try {
+    await ChatConversation.findOneAndUpdate(
+      { userId: req.user._id, status: "active" },
+      {
+        $set : {
+          status: "archived",
+          archivedAt: new Date(),
+        },
+      },
+    );
+    res.json({ message: "Conversation archived. "});
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getChatHistory = async (req, res, next) => {
+  try {
+    const conversations = await ChatConversation.aggregate([
+      {
+        $match: {
+          userId: req.user._id,
+          status: "archived",
+          expiresAt: { $gt: new Date() },
+        },
+      },
+      { $sort: { archivedAt: -1, _id: -1 } },
+      { $limit: 20 },
+      {
+        $project: {
+          archivedAt: 1,
+          lastActiveAt: 1,
+          firstMessage: { $arrayElemAt: ["$messages", 0] },
+        },
+      },
+    ]);
+
+      res.json(
+        conversations.map((conversation) => ({
+          id: conversation._id.toString(),
+          archivedAt: conversation.archivedAt,
+          preview:
+          conversation.firstMessage?.text?.slice(0, 120) ||
+          "Archived conversation",
+        })),
+      );
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getArchivedConversation = async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid conversation ID,"});
+    }
+
+    const conversation = await ChatConversation.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      status: "archived",
+      expiresAt: { $gt: new Date() },
+    }).lean();
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Archived conversation not found."});
+    }
+
+    res.json({
+      id: conversation._id.toString(),
+      messages: conversation.messages.map((message) => ({
         id: message._id.toString(),
         text: message.text,
         sender: message.sender,
