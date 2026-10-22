@@ -34,9 +34,9 @@ export default function NewUserBar({ data }) {
             dataKey="value"
             fill={COLORS.primary}
             fillOpacity={0.85}
-            stroke={COLORS.success}
-            strokeWidth={2}
-            radius={4}
+            stroke={COLORS.text}
+            strokeWidth={1}
+            radius={2}
             maxBarSize={30}
           />
         </BarChart>

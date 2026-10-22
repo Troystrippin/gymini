@@ -1,7 +1,7 @@
 import { PieChart, Pie, Tooltip, ResponsiveContainer } from "recharts";
 import { COLORS } from "../theme";
 
-export default function NewUserChart({ data }) {
+export default function GoalPieChart({ data }) {
   return (
     <div
       style={{
@@ -27,6 +27,8 @@ export default function NewUserChart({ data }) {
               `${name}: ${(percent * 100).toFixed(0)}%`
             }
             fill={COLORS.primary}
+            stroke={COLORS.text}
+            strokeWidth={1}
           />
           <Tooltip />
         </PieChart>

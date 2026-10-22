@@ -210,25 +210,25 @@ export default function Exercises() {
             label="BUILT-IN"
             value={stats.builtin}
             emoji={<WeightIcon />}
-            accent={COLORS.success}
+            accent={COLORS.primary}
           />
           <StatCard
             label="CUSTOM"
             value={stats.custom}
             emoji={<PenIcon />}
-            accent="#4A9EFF"
+            accent={COLORS.primary}
           />
           <StatCard
             label="PENDING"
             value={stats.pending}
             emoji={<HourglassIcon />}
-            accent={STATUS_COLORS.pending}
+            accent={COLORS.primary}
           />
           <StatCard
             label="REJECTED"
             value={stats.rejected}
             emoji={<DeniedIcon />}
-            accent={STATUS_COLORS.rejected}
+            accent={COLORS.primary}
           />
         </div>
       )}

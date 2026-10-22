@@ -88,13 +88,13 @@ export default function Dashboard() {
           label="ADMINS"
           value={stats.totalAdmins}
           emoji={<ShieldCheckIcon />}
-          accent={ROLE_COLORS.admin}
+          accent={ROLE_COLORS.primary}
         />
         <StatCard
           label="WORKOUT PLANS"
           value={stats.totalPlans}
           emoji={<BicepsIcon />}
-          accent={COLORS.success}
+          accent={COLORS.primary}
         />
       </div>
 

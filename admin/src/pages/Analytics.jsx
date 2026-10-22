@@ -122,13 +122,7 @@ export default function Analytics() {
     );
   }
 
-  const {
-    growth,
-    engagement,
-    leaderboards,
-    retention,
-    userGoals = [],
-  } = data;
+  const { growth, engagement, leaderboards, retention, userGoals = [] } = data;
 
   const newUsers = summarize(growth.newUsersByDay);
   const activeUsers = summarize(growth.activeUsersByDay);
@@ -252,13 +246,13 @@ export default function Analytics() {
             label="THIS WEEK"
             value={engagement.workoutsThisWeek}
             emoji={<CalendarIcon />}
-            accent={COLORS.success}
+            accent={COLORS.primary}
           />
           <StatCard
             label="TODAY"
             value={engagement.workoutsToday}
             emoji={<FireIcon />}
-            accent={COLORS.warning}
+            accent={COLORS.primary}
           />
           <StatCard
             label="AVG / USER"
@@ -270,13 +264,13 @@ export default function Analytics() {
             label="WEIGHT LOGS"
             value={engagement.totalWeightLogs}
             emoji={<WeightIcon />}
-            accent={ROLE_COLORS.moderator}
+            accent={ROLE_COLORS.primary}
           />
           <StatCard
             label="MEAL PLANS"
             value={engagement.totalMealPlans}
             emoji={<MealsIcon />}
-            accent={COLORS.success}
+            accent={COLORS.primary}
           />
         </div>
       </Section>
@@ -406,10 +400,7 @@ export default function Analytics() {
                 marginBottom: 20,
               }}
             >
-              <Metric
-                label="USERS WITH A GOAL"
-                value={usersWithGoal}
-              />
+              <Metric label="USERS WITH A GOAL" value={usersWithGoal} />
               <Metric
                 label="MOST POPULAR GOAL"
                 value={mostPopularGoal?.value ?? 0}
@@ -506,7 +497,7 @@ export default function Analytics() {
             label="ACTIVE (7D)"
             value={retention.activeLast7Days}
             emoji={<LightningIcon />}
-            accent={COLORS.success}
+            accent={COLORS.primary}
           />
           <StatCard
             label="ONBOARDED"
@@ -518,13 +509,13 @@ export default function Analytics() {
             label="USERS WITH PLANS"
             value={retention.usersWithPlans}
             emoji={<CalendarIcon />}
-            accent={ROLE_COLORS.moderator}
+            accent={COLORS.primary}
           />
           <StatCard
             label="RETURNING USERS"
             value={retention.returningUsers}
             emoji={<RetryIcon />}
-            accent={COLORS.warning}
+            accent={COLORS.primary}
           />
         </div>
       </Section>
