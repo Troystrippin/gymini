@@ -57,14 +57,16 @@ router.post(
   resetPassword,
 );
 
-router.post("/logout-all", protect, logoutAllDevices);
+// PUBLIC route (no protect) because the user is not logged in yet
 router.post(
   "/verify-email",
-  protect,
   verifyEmailRules,
   handleValidation,
   verifyEmail,
 );
+
+// PRIVATE routes
+router.post("/logout-all", protect, logoutAllDevices);
 router.put(
   "/onboarding",
   protect,

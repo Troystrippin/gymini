@@ -103,6 +103,13 @@ const onboardingRules = [
 ];
 
 const verifyEmailRules = [
+  body("email")
+    .exists({ checkFalsy: true })
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Invalid email")
+    .normalizeEmail(),
+
   body("code")
     .exists({ checkFalsy: true })
     .withMessage("Code is required")
