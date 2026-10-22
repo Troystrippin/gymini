@@ -28,8 +28,8 @@ export default function NewUserChart({ data }) {
             }
             fill={COLORS.primary}
           />
+          <Tooltip />
         </PieChart>
-        <Tooltip />
       </ResponsiveContainer>
     </div>
   );
