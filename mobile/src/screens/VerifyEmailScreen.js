@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -17,12 +17,14 @@ import { AuthContext } from "../context/AuthContext";
 import { useTheme } from "../theme/theme";
 import GYMINI_LOGO from "../icons/GYMINI_LOGO";
 
-export default function VerifyEmailScreen() {
+export default function VerifyEmailScreen({ route, navigation }) {
   const { colors } = useTheme();
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { user, verifyEmail, resendVerification, logout } =
-    useContext(AuthContext);
+  const { user, verifyEmail, resendVerification } = useContext(AuthContext);
+
+  // Get email from route params (if coming from Register/Login) or from user context
+  const targetEmail = route?.params?.email || user?.email;
 
   const handleVerify = async () => {
     if (code.length !== 6) {
@@ -30,7 +32,9 @@ export default function VerifyEmailScreen() {
     }
     setSubmitting(true);
     try {
-      await verifyEmail(code);
+      await verifyEmail(targetEmail, code);
+      // AuthContext will update user state, and AppNavigator will automatically 
+      // switch away from VerifyEmail screen.
     } catch (err) {
       Alert.alert(
         "Verification Failed",
@@ -43,7 +47,7 @@ export default function VerifyEmailScreen() {
 
   const handleResend = async () => {
     try {
-      await resendVerification(user.email);
+      await resendVerification(targetEmail);
       Alert.alert("Sent", "A new code is on the way to your email.");
     } catch (err) {
       Alert.alert(
@@ -53,8 +57,8 @@ export default function VerifyEmailScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleBackToLogin = () => {
+    navigation.navigate("Login");
   };
 
   return (
@@ -79,7 +83,7 @@ export default function VerifyEmailScreen() {
             Verify your email
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            We sent a 6-digit code to {user?.email}. Enter it below.
+            We sent a 6-digit code to {targetEmail}. Enter it below.
           </Text>
 
           <InputField
@@ -104,9 +108,9 @@ export default function VerifyEmailScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleLogout} style={styles.linkRow}>
+          <TouchableOpacity onPress={handleBackToLogin} style={styles.linkRow}>
             <Text style={[styles.linkMuted, { color: colors.textSecondary }]}>
-              Log out
+              Back to Login
             </Text>
           </TouchableOpacity>
         </View>
@@ -119,7 +123,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.background },
   container: { flexGrow: 1, padding: 24, justifyContent: "center" },
   header: { alignItems: "center", marginBottom: 40 },
-  logo: { fontSize: 50, color: COLORS.text, fontWeight: "bold" },
   brand: {
     color: COLORS.text,
     fontSize: 28,

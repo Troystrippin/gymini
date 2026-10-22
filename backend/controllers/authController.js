@@ -56,7 +56,7 @@ const authResponse = (user, accessToken, refreshToken) => ({
 const DUMMY_HASH =
   "$2a$10$CwTycUXWue0Thq9StjUM0uJ8ZcT0ZK1q0VpXt/qvUX8nQ4TGwBq3K";
 
-const AUTO_VERIFY_NEW_USERS = true;
+const AUTO_VERIFY_NEW_USERS = false;
 
 const registerUser = async (req, res, next) => {
   try {
@@ -74,34 +74,29 @@ const registerUser = async (req, res, next) => {
       fullName,
       email,
       password: hashedPassword,
-      emailVerified: AUTO_VERIFY_NEW_USERS,
+      emailVerified: false,
     });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid user data" });
     }
 
-    if (!AUTO_VERIFY_NEW_USERS) {
-      const code = generate6DigitCode();
-      user.emailVerificationCode = hashCode(code);
-      user.emailVerificationExpires = minutesFromNow(
-        Number(process.env.EMAIL_VERIFICATION_TTL_MIN) || 10,
-      );
-      await user.save();
+    const code = generate6DigitCode();
+    user.emailVerificationCode = hashCode(code);
+    user.emailVerificationExpires = minutesFromNow(
+      Number(process.env.EMAIL_VERIFICATION_TTL_MIN) || 10,
+    );
+    await user.save();
 
-      sendVerificationEmail(user, code).catch((err) => {
-        console.error("[register] verification email failed:", err.message);
-      });
-    }
-
-    const accessToken = signAccessToken(user._id);
-    const refreshToken = await issueRefreshToken({
-      userId: user._id,
-      userAgent: req.headers["user-agent"],
-      ip: req.ip,
+    sendVerificationEmail(user, code).catch((err) => {
+      console.error("[register] verification email failed:", err.message);
     });
 
-    res.status(201).json(authResponse(user, accessToken, refreshToken));
+    // Do NOT return tokens on registration.
+    res.status(201).json({
+      message: "Registration successful. Please check your email for the verification code.",
+      email: user.email,
+    });
   } catch (error) {
     next(error);
   }
@@ -158,6 +153,14 @@ const loginUser = async (req, res, next) => {
       await user.save();
     }
 
+    // Block login if email is not verified
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email address before logging in.",
+        code: "EMAIL_NOT_VERIFIED"
+      });
+    }
+
     const accessToken = signAccessToken(user._id);
     const refreshToken = await issueRefreshToken({
       userId: user._id,
@@ -169,6 +172,62 @@ const loginUser = async (req, res, next) => {
     await logUserAction(req, "user.login", { method: "email" });
 
     res.json(authResponse(user, accessToken, refreshToken));
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+
+    // Find user by email (since they are not logged in yet)
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.emailVerified) {
+      return res.json({
+        message: "Email already verified",
+        emailVerified: true,
+      });
+    }
+
+    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
+      return res
+        .status(400)
+        .json({ message: "No verification code on file. Request a new one." });
+    }
+
+    if (user.emailVerificationExpires.getTime() < Date.now()) {
+      return res
+        .status(400)
+        .json({ message: "Code expired. Request a new one." });
+    }
+
+    if (user.emailVerificationCode !== hashCode(code)) {
+      return res.status(400).json({ message: "Invalid code" });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationCode = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    // Now that they are verified, log them in automatically!
+    const accessToken = signAccessToken(user._id);
+    const refreshToken = await issueRefreshToken({
+      userId: user._id,
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+    });
+
+    req.user = user;
+    await logUserAction(req, "user.login", { method: "email_verify" });
+
+    res.json({
+      message: "Email verified and logged in",
+      ...authResponse(user, accessToken, refreshToken),
+    });
   } catch (error) {
     next(error);
   }
@@ -325,55 +384,8 @@ const logoutAllDevices = async (req, res, next) => {
   }
 };
 
-const verifyEmail = async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    const user = await User.findById(req.user._id);
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.emailVerified) {
-      return res.json({
-        message: "Email already verified",
-        emailVerified: true,
-      });
-    }
-
-    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-      return res
-        .status(400)
-        .json({ message: "No verification code on file. Request a new one." });
-    }
-
-    if (user.emailVerificationExpires.getTime() < Date.now()) {
-      return res
-        .status(400)
-        .json({ message: "Code expired. Request a new one." });
-    }
-
-    if (user.emailVerificationCode !== hashCode(code)) {
-      return res.status(400).json({ message: "Invalid code" });
-    }
-
-    user.emailVerified = true;
-    user.emailVerificationCode = null;
-    user.emailVerificationExpires = null;
-    await user.save();
-
-    console.log(`[verify-email] verified user=${user._id}`);
-    res.json({ message: "Email verified", emailVerified: true });
-  } catch (error) {
-    next(error);
-  }
-};
-
 const resendVerification = async (req, res, next) => {
   try {
-    if (AUTO_VERIFY_NEW_USERS) {
-      return res.json({
-        message: "Email verification is currently disabled.",
-      });
-    }
-
     const { email } = req.body;
     const user = await User.findOne({ email });
 

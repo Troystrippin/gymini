@@ -65,6 +65,11 @@ export default function LoginScreen({ navigation }) {
       setSubmitting(true);
       await login(email.trim().toLowerCase(), password);
     } catch (err) {
+      if (err.response?.data?.code === "EMAIL_NOT_VERIFIED") {
+        // Redirect to VerifyEmail screen if the backend says they are unverified
+        navigation.navigate("VerifyEmail", { email: email.trim().toLowerCase() });
+        return;
+      }
       Alert.alert(
         "Login Failed",
         err.response?.data?.message || err.message || "Something went wrong",

@@ -78,7 +78,13 @@ export default function RegisterScreen({ navigation }) {
 
     try {
       setSubmitting(true);
-      await register(fullName.trim(), email.trim().toLowerCase(), password);
+      const normalizedEmail = email.trim().toLowerCase();
+      
+      await register(fullName.trim(), normalizedEmail, password);
+      
+      // Navigate to verify screen with the email
+      navigation.navigate("VerifyEmail", { email: normalizedEmail });
+
     } catch (err) {
       Alert.alert(
         "Registration Failed",
@@ -292,7 +298,6 @@ const styles = StyleSheet.create({
   termsRow: {
     flexDirection: "row",
     alignItems: "center",
-
     marginBottom: 12,
   },
   checkbox: {

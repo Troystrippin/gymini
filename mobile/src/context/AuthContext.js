@@ -67,7 +67,21 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
     });
-    await persistSession(response.data);
+    // Do NOT persist session. Backend doesn't return tokens.
+    return response.data;
+  };
+
+  const verifyEmail = async (email, code) => {
+    // Pass email because user is not logged in yet
+    const response = await api.post("/auth/verify-email", { email, code });
+    
+    // Backend returns tokens on success, so log them in!
+    if (response.data.token) {
+      await persistSession(response.data);
+    }
+    
+    setSessionExpired(false);
+    return response.data;
   };
 
   const googleLogin = async (idToken) => {
@@ -98,14 +112,6 @@ export const AuthProvider = ({ children }) => {
   const completeOnboarding = async (onboardingData) => {
     const response = await api.put("/auth/onboarding", onboardingData);
     const updatedUser = { ...user, ...response.data };
-    await tokenStorage.setUser(updatedUser);
-    setUser(updatedUser);
-    return response.data;
-  };
-
-  const verifyEmail = async (code) => {
-    const response = await api.post("/auth/verify-email", { code });
-    const updatedUser = { ...user, emailVerified: true };
     await tokenStorage.setUser(updatedUser);
     setUser(updatedUser);
     return response.data;
