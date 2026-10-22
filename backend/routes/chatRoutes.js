@@ -4,11 +4,20 @@ const { protect } = require("../middleware/authMiddleware");
 const {
   chat,
   getCurrentConversation,
+  archiveCurrentConversation,
+  getChatHistory,
+  getArchivedConversation
 } = require("../controllers/chatController");
 
 const router = express.Router();
 
 router.use(protect);
+
+router.post("/current/archive", archiveCurrentConversation);
+
+router.get("/history", getChatHistory);
+
+router.get("/history/:id", getArchivedConversation);
 
 router.get("/current", getCurrentConversation);
 
