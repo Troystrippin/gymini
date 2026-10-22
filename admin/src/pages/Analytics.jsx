@@ -13,6 +13,10 @@ import WorkoutIcon from "../icons/WorkoutIcon";
 import LightningIcon from "../icons/LightningIcon";
 import RetryIcon from "../icons/RetryIcon";
 import CheckCircleIcon from "../icons/CheckCircleIcon";
+import NewUserChart from "../components/NewUserChart";
+import ActiveUserChart from "../components/ActiveUserChart";
+import NewUserBar from "../components/NewUserBar";
+import GoalPieChart from "../components/GoalPieChart";
 
 const CARD_SHADOW = `
   inset 1px 1px 2px rgba(255, 255, 255, 0.9),
@@ -118,7 +122,13 @@ export default function Analytics() {
     );
   }
 
-  const { growth, engagement, leaderboards, retention } = data;
+  const {
+    growth,
+    engagement,
+    leaderboards,
+    retention,
+    userGoals = [],
+  } = data;
 
   const newUsers = summarize(growth.newUsersByDay);
   const activeUsers = summarize(growth.activeUsersByDay);
@@ -128,6 +138,14 @@ export default function Analytics() {
   }));
 
   const daysWithSignups = newUsers.values.filter((v) => v > 0).length;
+  const usersWithGoal = sum(userGoals.map((goal) => goal.value));
+  const mostPopularGoal = userGoals.reduce(
+    (top, goal) => (!top || goal.value > top.value ? goal : top),
+    null,
+  );
+  const topGoalShare = usersWithGoal
+    ? Math.round((mostPopularGoal.value / usersWithGoal) * 100)
+    : 0;
 
   return (
     <div>
@@ -177,7 +195,12 @@ export default function Analytics() {
               },
             ]}
           >
-            <Sparkline data={newUsers.values} color={COLORS.primary} />
+            <NewUserChart
+              data={newUsers.values.map((v, i) => ({
+                user: v,
+                date: growth.newUsersByDay[i]?.date,
+              }))}
+            />
           </ChartCard>
           <ChartCard
             title="Active users per day"
@@ -201,7 +224,12 @@ export default function Analytics() {
               },
             ]}
           >
-            <Sparkline data={activeUsers.values} color={COLORS.success} />
+            <ActiveUserChart
+              data={activeUsers.values.map((v, i) => ({
+                user: v,
+                date: growth.activeUsersByDay[i]?.date,
+              }))}
+            />
           </ChartCard>
         </div>
       </Section>
@@ -211,7 +239,7 @@ export default function Analytics() {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 16,
+            gap: 20,
           }}
         >
           <StatCard
@@ -254,103 +282,177 @@ export default function Analytics() {
       </Section>
 
       <Section
-        title="Daily new users"
-        subtitle="Signups per day over the last 30 days"
+        title="Daily new users & Goals Distribution"
+        subtitle="Signup per day and distribution of user goals"
       >
         <div
           style={{
-            background: COLORS.cardBackground,
-            borderRadius: 16,
-            padding: 24,
-            border: `1px solid ${COLORS.border}`,
-            boxShadow: CARD_SHADOW,
+            display: "flex", // ← was "1"
+            gap: 20,
+            flexDirection: "row",
+            flexWrap: "wrap",
           }}
         >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 16,
-              marginBottom: 20,
+              flex: 1,
+              minWidth: 340,
+              background: COLORS.cardBackground,
+              borderRadius: 16,
+              padding: 24,
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: CARD_SHADOW,
             }}
           >
-            <Metric label="TOTAL SIGNUPS" value={newUsers.total} />
-            <Metric
-              label="AVG / DAY"
-              value={fmtNumber(newUsers.avg)}
-              hint={`${daysWithSignups} of ${newUsers.values.length} days had signups`}
-            />
-            <Metric
-              label="BEST DAY"
-              value={newUsers.peak.count}
-              hint={newUsers.peak.date ? fmtDate(newUsers.peak.date) : "–"}
-            />
-            <Metric
-              label="LAST 7 DAYS"
-              value={newUsers.last7}
-              hint={
-                newUsers.hasPrev ? (
-                  <Delta change={newUsers.change} prev={newUsers.prev7} />
-                ) : (
-                  "Not enough data to compare"
-                )
-              }
-            />
-          </div>
-
-          {newUsers.total === 0 ? (
             <div
               style={{
-                color: COLORS.textSecondary,
-                fontSize: 13,
-                padding: "24px 0",
-                textAlign: "center",
+                display: "grid", // ← was "1"
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 10,
+                marginBottom: 20,
               }}
             >
-              No signups in this period yet.
-            </div>
-          ) : (
-            <>
-              <BarChart
-                data={newUserBars}
-                width={800}
-                height={100}
-                color={COLORS.primary}
+              <Metric label="TOTAL SIGNUPS" value={newUsers.total} />
+              <Metric
+                label="AVG / DAY"
+                value={fmtNumber(newUsers.avg)}
+                hint={`${daysWithSignups} of ${newUsers.values.length} days had signups`}
               />
+              <Metric
+                label="BEST DAY"
+                value={newUsers.peak.count}
+                hint={newUsers.peak.date ? fmtDate(newUsers.peak.date) : "–"}
+              />
+              <Metric
+                label="LAST 7 DAYS"
+                value={newUsers.last7}
+                hint={
+                  newUsers.hasPrev ? (
+                    <Delta change={newUsers.change} prev={newUsers.prev7} />
+                  ) : (
+                    "Not enough data to compare"
+                  )
+                }
+              />
+            </div>
+
+            {newUsers.total === 0 ? (
               <div
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 8,
-                  fontSize: 11,
                   color: COLORS.textSecondary,
+                  fontSize: 13,
+                  padding: "24px 0",
+                  textAlign: "center",
                 }}
               >
-                <span>{fmtDate(growth.newUsersByDay[0]?.date)}</span>
-                <span>
-                  {fmtDate(
-                    growth.newUsersByDay[
-                      Math.floor(growth.newUsersByDay.length / 2)
-                    ]?.date,
-                  )}
-                </span>
-                <span>
-                  {fmtDate(
-                    growth.newUsersByDay[growth.newUsersByDay.length - 1]?.date,
-                  )}
-                </span>
+                No signups in this period yet.
               </div>
+            ) : (
+              <>
+                <NewUserBar data={newUserBars} />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 8,
+                    fontSize: 11,
+                    color: COLORS.textSecondary,
+                  }}
+                >
+                  <span>{fmtDate(growth.newUsersByDay[0]?.date)}</span>
+                  <span>
+                    {fmtDate(
+                      growth.newUsersByDay[
+                        Math.floor(growth.newUsersByDay.length / 2)
+                      ]?.date,
+                    )}
+                  </span>
+                  <span>
+                    {fmtDate(
+                      growth.newUsersByDay[growth.newUsersByDay.length - 1]
+                        ?.date,
+                    )}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: 11,
+                    color: COLORS.textSecondary,
+                  }}
+                >
+                  Each bar is one day. Taller bars = more new signups.
+                </div>
+              </>
+            )}
+          </div>
+
+          <div
+            style={{
+              flex: 1,
+              minWidth: 340,
+              background: COLORS.cardBackground,
+              borderRadius: 16,
+              padding: 24,
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: CARD_SHADOW,
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 10,
+                marginBottom: 20,
+              }}
+            >
+              <Metric
+                label="USERS WITH A GOAL"
+                value={usersWithGoal}
+              />
+              <Metric
+                label="MOST POPULAR GOAL"
+                value={mostPopularGoal?.value ?? 0}
+                hint={mostPopularGoal?.name ?? "No selections yet"}
+              />
+              <Metric
+                label="TOP GOAL SHARE"
+                value={`${topGoalShare}%`}
+                hint="of users with a selected goal"
+              />
+              <Metric
+                label="GOAL TYPES IN USE"
+                value={`${userGoals.length} / 5`}
+                hint="available onboarding choices"
+              />
+            </div>
+
+            {usersWithGoal === 0 ? (
               <div
                 style={{
-                  marginTop: 12,
-                  fontSize: 11,
                   color: COLORS.textSecondary,
+                  fontSize: 13,
+                  padding: "24px 0",
+                  textAlign: "center",
                 }}
               >
-                Each bar is one day. Taller bars = more new signups.
+                No users have selected an onboarding goal yet.
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <GoalPieChart data={userGoals} />
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: 11,
+                    color: COLORS.textSecondary,
+                  }}
+                >
+                  Each slice shows the share of users who selected that goal.
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </Section>
 
@@ -535,7 +637,7 @@ function ChartCard({ title, value, summary, unit, stats, footer, children }) {
           marginBottom: 4,
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 700 }}>{title}</div>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
         <div
           style={{
             fontSize: 11,

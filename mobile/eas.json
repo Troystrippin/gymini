@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://gymini.onrender.com/api"
       },
       "channel": "development"
     },
@@ -18,7 +18,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://gymini.onrender.com/api"
       },
       "channel": "preview"
     },
@@ -28,12 +28,12 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://gymini.onrender.com/api"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://gymini-production-c2e5.up.railway.app/api"
+        "EXPO_PUBLIC_API_URL": "https://gymini.onrender.com/api"
       },
       "channel": "production"
     }
