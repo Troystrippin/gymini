@@ -2,8 +2,9 @@ import axios from "axios";
 import { tokenStorage } from "../storage/tokenStorage";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_TIMEOUT_MS = 30000;
 
-const api = axios.create({ baseURL: API_URL });
+const api = axios.create({ baseURL: API_URL, timeout: API_TIMEOUT_MS });
 
 let onUnauthorized = null;
 export const registerUnauthorizedHandler = (fn) => {
@@ -40,9 +41,11 @@ const performRefresh = async () => {
   const refreshToken = await tokenStorage.getRefreshToken();
   if (!refreshToken) throw new Error("No refresh token");
 
-  const { data } = await axios.post(`${API_URL}/auth/refresh`, {
-    refreshToken,
-  });
+  const { data } = await axios.post(
+    `${API_URL}/auth/refresh`,
+    { refreshToken },
+    { timeout: API_TIMEOUT_MS },
+  );
 
   await tokenStorage.setAccessToken(data.token);
   await tokenStorage.setRefreshToken(data.refreshToken);

@@ -41,16 +41,11 @@ export default function Users() {
   }, [search, roleFilter]);
   useAdminPolling(fetchUsers);
 
-  const changeRole = async (userId, newRole) => {
-    try {
-      await api.put(`/admin/users/${userId}/role`, { role: newRole });
-      fetchUsers();
-    } catch (err) {
-      alert(err.response?.data?.message || err.message);
+  const deleteUser = async (userId, name, targetRole) => {
+    if (targetRole === "admin") {
+      alert("You cannot delete another administrator.");
+      return;
     }
-  };
-
-  const deleteUser = async (userId, name) => {
     if (!window.confirm(`Delete user "${name}"? This cannot be undone.`))
       return;
     try {
@@ -68,7 +63,7 @@ export default function Users() {
           Users
         </h1>
         <p style={{ color: COLORS.textSecondary, fontSize: 16 }}>
-          Manage roles and permissions
+          View users and manage permissions
         </p>
       </div>
 
@@ -230,44 +225,20 @@ export default function Users() {
                     {u.email}
                   </td>
                   <td style={{ padding: "14px 16px" }}>
-                    {currentUser.role === "admin" &&
-                    u._id !== currentUser._id ? (
-                      <select
-                        value={u.role}
-                        onChange={(e) => changeRole(u._id, e.target.value)}
-                        style={{
-                          padding: "6px 10px",
-                          borderRadius: 8,
-                          border: `1px solid ${
-                            ROLE_COLORS[u.role] || COLORS.border
-                          }`,
-                          background: COLORS.background,
-                          color: COLORS.text,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 800,
-                          padding: "4px 10px",
-                          borderRadius: 10,
-                          background:
-                            ROLE_COLORS[u.role] || COLORS.textSecondary,
-                          color: "#FFF",
-                          letterSpacing: 0.5,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {u.role}
-                      </span>
-                    )}
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: "4px 10px",
+                        borderRadius: 10,
+                        background: ROLE_COLORS[u.role] || COLORS.textSecondary,
+                        color: "#FFF",
+                        letterSpacing: 0.5,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {u.role}
+                    </span>
                   </td>
                   <td
                     style={{
@@ -280,9 +251,10 @@ export default function Users() {
                   </td>
                   <td style={{ padding: "14px 16px" }}>
                     {currentUser.role === "admin" &&
-                      u._id !== currentUser._id && (
+                      u._id !== currentUser._id &&
+                      u.role !== "admin" && (
                         <button
-                          onClick={() => deleteUser(u._id, u.fullName)}
+                          onClick={() => deleteUser(u._id, u.fullName, u.role)}
                           style={{
                             padding: "6px 12px",
                             borderRadius: 8,

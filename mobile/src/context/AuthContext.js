@@ -10,8 +10,11 @@ export const AuthProvider = ({ children }) => {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   const clearSession = useCallback(async () => {
-    await tokenStorage.clear();
-    setUser(null);
+    try {
+      await tokenStorage.clear();
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export const AuthProvider = ({ children }) => {
         if (!token || !storedUser) return;
 
         setUser(storedUser);
+        setIsLoading(false);
 
         try {
           const response = await api.get("/auth/me");
@@ -67,19 +71,16 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
     });
-    // Do NOT persist session. Backend doesn't return tokens.
     return response.data;
   };
 
   const verifyEmail = async (email, code) => {
-    // Pass email because user is not logged in yet
     const response = await api.post("/auth/verify-email", { email, code });
-    
-    // Backend returns tokens on success, so log them in!
+
     if (response.data.token) {
       await persistSession(response.data);
     }
-    
+
     setSessionExpired(false);
     return response.data;
   };
@@ -98,14 +99,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    let refreshToken = null;
+    let clearError = null;
+
     try {
-      const refreshToken = await tokenStorage.getRefreshToken();
-      if (refreshToken) {
-        await api.post("/auth/logout", { refreshToken }).catch(() => {});
-      }
-    } finally {
+      refreshToken = await tokenStorage.getRefreshToken();
+    } catch (err) {
+      console.warn(
+        "[auth] refresh-token lookup failed during logout:",
+        err.message,
+      );
+    }
+
+    try {
       await clearSession();
+    } catch (err) {
+      clearError = err;
+    } finally {
       setSessionExpired(false);
+    }
+
+    if (refreshToken) {
+      try {
+        await api.post("/auth/logout", { refreshToken });
+      } catch (err) {
+        console.warn("[auth] server logout failed:", err.message);
+      }
+    }
+
+    if (clearError) {
+      console.warn(
+        "[auth] local credential cleanup failed during logout:",
+        clearError.message,
+      );
+      throw clearError;
     }
   };
 
