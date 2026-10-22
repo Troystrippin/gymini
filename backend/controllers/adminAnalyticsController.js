@@ -95,6 +95,36 @@ const getAnalytics = async (req, res, next) => {
     const newUsersMap = new Map(newUsersRaw.map((r) => [r._id, r.count]));
     const activeUsersMap = new Map(activeUsersRaw.map((r) => [r._id, r.count]));
 
+    const userGoals = await User.aggregate([
+      {
+        $match: {
+          goal: {
+            $in: [
+              "Lose Weight",
+              "Build Muscle",
+              "Improve Endurance",
+              "Stay Active",
+              "Athletic Performance",
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$goal",
+          value: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          value: 1,
+        },
+      },
+      { $sort: { name: 1 } },
+    ]);
+
     const days = lastNDays(30);
     const newUsersByDay = days.map((d) => ({
       date: d,
@@ -223,6 +253,7 @@ const getAnalytics = async (req, res, next) => {
     };
 
     res.json({
+      userGoals,
       growth: {
         newUsersByDay,
         activeUsersByDay,

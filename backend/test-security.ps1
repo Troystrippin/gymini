@@ -1,5 +1,5 @@
 
-$API = "https://gymini-production-c2e5.up.railway.app"
+$API = "https://gymini.onrender.com"
 
 $TEST_USER_EMAIL = "secur-test-user@example.com"
 $TEST_USER_PASS  = "Test1234!"
