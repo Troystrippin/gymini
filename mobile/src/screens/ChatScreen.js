@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "../theme/theme";
 import ChatMessageBubble from "../components/ChatMessageBubble";
+import CheckConvo from "../icons/CheckConvo";
+import ArchiveIcon from "../icons/ArchiveIcon";
 import api from "../api/api";
 
 export default function ChatScreen() {
@@ -149,9 +151,9 @@ export default function ChatScreen() {
     setHistoryLoading(true);
 
     try {
-      const { data } = await api.get("/chat/history")
+      const { data } = await api.get("/chat/history");
       setHistory(data);
-    } catch(err) {
+    } catch (err) {
       setHistoryError(
         err.response?.data?.message || "Could not load chat history.",
       );
@@ -197,43 +199,50 @@ export default function ChatScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.headerButton}
-            accessibilityRole="button"
-            accessibilityLabel="Return to previous screen"
-          >
-            <Text style={[styles.returnText, { color: colors.buttonText }]}>
-              Return
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.headerButton}
+              accessibilityRole="button"
+              accessibilityLabel="Return to previous screen"
+            >
+              <Text style={[styles.returnText, { color: colors.buttonText }]}>
+                Return
+              </Text>
+            </TouchableOpacity>
 
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            AI Coach
-          </Text>
-
-          <TouchableOpacity
-          onPress={archiveConversation}
-          disabled={sending}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel="Archive conversation"
-          >
-            <Text style={[styles.returnText, {color: colors.buttonText}]}>
-              🗃️
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              AI Coach
             </Text>
-          </TouchableOpacity>
 
-          <TouchableOpacity
-          onPress={openHistory}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel="View archived conversations"
-          >
-            <Text style={[styles.returnText, { color: colors.buttonText }]}>
-              ↺
-            </Text>
-          </TouchableOpacity>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+                alignItems: "center",
+                justifyContent: "right",
+              }}
+            >
+              <TouchableOpacity
+                onPress={archiveConversation}
+                disabled={sending}
+                style={styles.headerButton}
+                accessibilityRole="button"
+                accessibilityLabel="Archive conversation"
+              >
+                <ArchiveIcon width={20} height={20} fill={colors.buttonText} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={openHistory}
+                style={styles.headerButton}
+                accessibilityRole="button"
+                accessibilityLabel="View archived conversations"
+              >
+                <CheckConvo width={20} height={20} fill={colors.buttonText} />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <View style={styles.headerSide} />
         </View>
@@ -292,77 +301,82 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
 
       <Modal
-      visible={historyVisible}
-      animationType="slide"
-      onRequestClose={() => setHistoryVisible(false)}
+        visible={historyVisible}
+        animationType="slide"
+        onRequestClose={() => setHistoryVisible(false)}
       >
-        <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]}>
-    <View style={styles.historyHeader}>
-      {selectedHistory ? (
-        <TouchableOpacity onPress={() => setSelectedHistory(null)}>
-          <Text style={{ color: colors.primary }}>Back</Text>
-        </TouchableOpacity>
-      ) : null}
+        <SafeAreaView
+          style={[styles.flex, { backgroundColor: colors.background }]}
+        >
+          <View style={styles.historyHeader}>
+            {selectedHistory ? (
+              <TouchableOpacity onPress={() => setSelectedHistory(null)}>
+                <Text style={{ color: colors.primary }}>Back</Text>
+              </TouchableOpacity>
+            ) : null}
 
-      <Text style={[styles.headerTitle, { color: colors.text }]}>
-        {selectedHistory ? "Archived chat" : "Chat history"}
-      </Text>
-
-      <TouchableOpacity onPress={() => setHistoryVisible(false)}>
-        <Text style={{ color: colors.primary }}>Close</Text>
-      </TouchableOpacity>
-    </View>
-
-    {historyLoading ? (
-      <Text style={[styles.historyStatus, { color: colors.textSecondary }]}>
-        Loading…
-      </Text>
-    ) : historyError ? (
-      <Text style={[styles.historyStatus, { color: colors.text }]}>
-        {historyError}
-      </Text>
-    ) : selectedHistory ? (
-      <FlatList
-        data={selectedHistory.messages}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ChatMessageBubble
-            text={item.text}
-            isSender={item.sender === "user"}
-          />
-        )}
-        contentContainerStyle={styles.messageList}
-      />
-    ) : (
-      <FlatList
-        data={history}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        ListEmptyComponent={
-          <Text style={{ color: colors.textSecondary, textAlign: "center" }}>
-            No archived conversations yet.
-          </Text>
-        }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.historyItem, { backgroundColor: colors.card }]}
-            onPress={() => openArchivedConversation(item)}
-          >
-            <Text style={{ color: colors.text }} numberOfLines={2}>
-              {item.preview}
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              {selectedHistory ? "Archived chat" : "Chat history"}
             </Text>
-            <Text style={{ color: colors.textSecondary, marginTop: 6 }}>
-              {item.archivedAt
-                ? new Date(item.archivedAt).toLocaleDateString()
-                : ""}
+
+            <TouchableOpacity onPress={() => setHistoryVisible(false)}>
+              <Text style={{ color: colors.primary }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {historyLoading ? (
+            <Text
+              style={[styles.historyStatus, { color: colors.textSecondary }]}
+            >
+              Loading…
             </Text>
-          </TouchableOpacity>
-        )}
-      />
-    )}
-  </SafeAreaView>
+          ) : historyError ? (
+            <Text style={[styles.historyStatus, { color: colors.text }]}>
+              {historyError}
+            </Text>
+          ) : selectedHistory ? (
+            <FlatList
+              data={selectedHistory.messages}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <ChatMessageBubble
+                  text={item.text}
+                  isSender={item.sender === "user"}
+                />
+              )}
+              contentContainerStyle={styles.messageList}
+            />
+          ) : (
+            <FlatList
+              data={history}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messageList}
+              ListEmptyComponent={
+                <Text
+                  style={{ color: colors.textSecondary, textAlign: "center" }}
+                >
+                  No archived conversations yet.
+                </Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.historyItem, { backgroundColor: colors.card }]}
+                  onPress={() => openArchivedConversation(item)}
+                >
+                  <Text style={{ color: colors.text }} numberOfLines={2}>
+                    {item.preview}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, marginTop: 6 }}>
+                    {item.archivedAt
+                      ? new Date(item.archivedAt).toLocaleDateString()
+                      : ""}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </SafeAreaView>
       </Modal>
-
     </SafeAreaView>
   );
 }
@@ -426,20 +440,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   historyHeader: {
-  minHeight: 56,
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: 16,
-  borderBottomWidth: StyleSheet.hairlineWidth,
-},
-historyStatus: {
-  padding: 16,
-  textAlign: "center",
-},
-historyItem: {
-  padding: 14,
-  borderRadius: 12,
-  marginBottom: 10,
-},
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  historyStatus: {
+    padding: 16,
+    textAlign: "center",
+  },
+  historyItem: {
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
 });
