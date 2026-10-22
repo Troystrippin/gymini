@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Backend: deployed at https://gymini-production-c2e5.up.railway.app
+- Backend: deployed at https://gymini.onrender.com
 - Mobile: deployed via Expo EAS
 - Admin: local only — deploying now
 
@@ -11,5 +11,5 @@
 ## Cloudinary image storage
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
-`CLOUDINARY_API_SECRET` in the backend environment (including Railway). For
+`CLOUDINARY_API_SECRET` in the backend environment (including Render). For
 local development, use `backend/.env`; `backend/.env.example` lists the keys.

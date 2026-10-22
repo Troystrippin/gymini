@@ -32,7 +32,7 @@ Log in as mod@test.com:
 - [ ] Direct API test blocked (see curl below)
 
 Backend RBAC test from a terminal:
-curl -X PUT https://gymini-production-c2e5.up.railway.app/api/admin/users/SOME_ID/role -H "Authorization: Bearer MOD_TOKEN" -H "Content-Type: application/json" -d "{\"role\":\"admin\"}"
+curl -X PUT https://gymini.onrender.com/api/admin/users/SOME_ID/role -H "Authorization: Bearer MOD_TOKEN" -H "Content-Type: application/json" -d "{\"role\":\"admin\"}"
 Expected: {"message":"Forbidden: requires role admin","yourRole":"moderator"}
 
 ---
@@ -59,7 +59,7 @@ Reason: AuthContext re-checks role via /auth/me on restore.
 Access token TTL = 15 minutes.
 1. Log in
 2. Open DevTools -> Network
-3. Wait 16 minutes (or temporarily set ACCESS_TOKEN_TTL=1m in Railway)
+3. Wait 16 minutes (or temporarily set ACCESS_TOKEN_TTL=1m in Render)
 4. Click Users
 - [ ] You see POST /auth/refresh in Network
 - [ ] The /admin/users call succeeds right after
@@ -71,7 +71,7 @@ Access token TTL = 15 minutes.
 1. Log in, note admin_refresh_token in DevTools -> Application -> Local Storage
 2. Log out
 - [ ] admin_refresh_token cleared
-- [ ] Railway logs show [logout] refresh token revoked
+- [ ] Render logs show [logout] refresh token revoked
 - [ ] Old refresh token rejected by /api/auth/refresh -> 401
 
 ---
@@ -79,7 +79,7 @@ Access token TTL = 15 minutes.
 ## Test 7 — CORS lockdown
 From the deployed Vercel admin console:
 - [ ] No CORS errors during login
-- [ ] fetch('https://gymini-production-c2e5.up.railway.app/api/auth/me') from a random origin (e.g. codepen.io console) -> CORS-blocked in browser
+- [ ] fetch('https://gymini.onrender.com/api/auth/me') from a random origin (e.g. codepen.io console) -> CORS-blocked in browser
 
 ---
 
@@ -94,4 +94,4 @@ From the deployed Vercel admin console:
 - [ ] Regular user logs in on mobile
 - [ ] Onboarding works
 - [ ] Plans / workouts / history / stats load
-- [ ] No new errors in Railway logs
+- [ ] No new errors in Render logs

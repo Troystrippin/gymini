@@ -110,14 +110,6 @@ export default function Sidebar() {
             </>
           )}
         </NavLink>
-        <NavLink to="/exercises" style={linkStyle}>
-          {({ isActive }) => (
-            <>
-              <WorkoutIcon {...iconProps(isActive)} />
-              <span>Exercises</span>
-            </>
-          )}
-        </NavLink>
         <NavLink to="/activity-logs" style={linkStyle}>
           {({ isActive }) => (
             <>
@@ -137,6 +129,14 @@ export default function Sidebar() {
                 />
               </svg>
               <span>Activity Logs</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink to="/exercises" style={linkStyle}>
+          {({ isActive }) => (
+            <>
+              <WorkoutIcon {...iconProps(isActive)} />
+              <span>Exercises</span>
             </>
           )}
         </NavLink>
